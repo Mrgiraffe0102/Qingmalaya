@@ -1,0 +1,46 @@
+{
+  "name": "@qingmalaya/root",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Qing Malaya campus podcast platform monorepo",
+  "scripts": {
+    "dev:mobile": "pnpm --filter @qingmalaya/mobile dev:h5",
+    "dev:server": "pnpm --filter @qingmalaya/server dev",
+    "dev:admin": "pnpm --filter @qingmalaya/admin dev",
+    "build:all": "pnpm -r --filter @qingmalaya/shared --filter @qingmalaya/server --filter @qingmalaya/admin --filter @qingmalaya/mobile build",
+    "build:mobile:h5": "pnpm --filter @qingmalaya/mobile build:h5",
+    "build:mobile:weapp": "pnpm --filter @qingmalaya/mobile build:weapp",
+    "build:mobile:rn": "pnpm --filter @qingmalaya/mobile build:rn",
+    "build:server": "pnpm --filter @qingmalaya/server build",
+    "build:admin": "pnpm --filter @qingmalaya/admin build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.3.2",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "@swc/core",
+      "@tarojs/binding",
+      "@tarojs/cli",
+      "bcrypt",
+      "core-js",
+      "core-js-pure",
+      "esbuild",
+      "prisma"
+    ]
+  }
+}

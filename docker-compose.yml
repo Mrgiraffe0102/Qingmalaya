@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # ------------------------------------------------------------------ #
+  # MySQL 8 database
+  # ------------------------------------------------------------------ #
+  mysql:
+    image: mysql:8.0
+    container_name: qingmalaya-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: qingmalaya
+      MYSQL_USER: qingmalaya
+      MYSQL_PASSWORD: qingmalaya123
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-proot123']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ------------------------------------------------------------------ #
+  # NestJS backend (apps/server)
+  # ------------------------------------------------------------------ #
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: qingmalaya-server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      # DATABASE_URL points at the mysql service (Docker internal DNS).
+      DATABASE_URL: 'mysql://qingmalaya:qingmalaya123@mysql:3306/qingmalaya'
+      # JWT — change JWT_SECRET before deploying to production.
+      JWT_SECRET: change-me-in-production-please
+      JWT_ACCESS_TTL: 2h
+      JWT_REFRESH_TTL: 7d
+      # Upload limits (match apps/server/.env).
+      UPLOAD_DIR: /app/uploads
+      MAX_COVER_SIZE: '5242880'
+      MAX_AUDIO_SIZE: '209715200'
+      MAX_AUDIO_DURATION: '3600'
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./uploads:/app/uploads
+
+  # ------------------------------------------------------------------ #
+  # Admin console (apps/admin) — nginx-served Vite SPA
+  # ------------------------------------------------------------------ #
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    container_name: qingmalaya-admin
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - '5174:80'
+
+  # ------------------------------------------------------------------ #
+  # Mobile H5 (apps/mobile) — nginx-served Taro H5 bundle
+  # ------------------------------------------------------------------ #
+  mobile:
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile
+    container_name: qingmalaya-mobile
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - '10086:80'
+
+volumes:
+  mysql_data:

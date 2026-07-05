@@ -1,0 +1,58 @@
+# Keep the Docker build context small and prevent local artifacts from
+# leaking into the image (which would override the in-container install).
+
+# Dependencies — installed fresh inside each Dockerfile.
+node_modules/
+**/node_modules/
+
+# Build outputs — produced inside the builder stage.
+dist/
+build/
+**/dist/
+**/build/
+.taro-cache/
+.cache/
+
+# Environment files — must not be baked into images.
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+
+# Test coverage
+coverage/
+
+# Runtime uploads
+uploads/
+
+# Agent state
+.trae/
+
+# Git
+.git/
+.gitignore
+
+# Design docs & reference assets (not needed at build time).
+DESIGN.md
+移动端UI参考/
+
+# Docker artifacts themselves (avoid recursive context issues).
+docker-compose.yml
+docker/

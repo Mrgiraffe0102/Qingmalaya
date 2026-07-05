@@ -1,0 +1,348 @@
+<!DOCTYPE html><html lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Qing Malaya - Browse</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#bbe9ff",
+                    "on-surface": "#1b1c1c",
+                    "surface-container": "#efeded",
+                    "tertiary-fixed": "#d9e6da",
+                    "primary": "#4d6265",
+                    "primary-fixed-dim": "#b4cbce",
+                    "surface-dim": "#dbdad9",
+                    "surface-container-low": "#f5f3f3",
+                    "tertiary-container": "#e9f6ea",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed-variant": "#364a4d",
+                    "primary-fixed": "#d0e7ea",
+                    "on-error-container": "#93000a",
+                    "surface-bright": "#fbf9f8",
+                    "surface-container-high": "#e9e8e7",
+                    "primary-container": "#e0f7fa",
+                    "on-secondary-container": "#37697d",
+                    "surface-variant": "#e3e2e2",
+                    "tertiary-fixed-dim": "#bdcabe",
+                    "on-tertiary-fixed-variant": "#3e4a41",
+                    "surface": "#fbf9f8",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed-variant": "#154d5f",
+                    "on-primary-fixed": "#091f21",
+                    "on-background": "#1b1c1c",
+                    "inverse-on-surface": "#f2f0f0",
+                    "secondary-fixed-dim": "#9ccee4",
+                    "on-tertiary-container": "#657168",
+                    "on-tertiary-fixed": "#131e17",
+                    "secondary-container": "#b5e7fe",
+                    "on-primary": "#ffffff",
+                    "on-surface-variant": "#424849",
+                    "outline": "#727879",
+                    "surface-tint": "#4d6265",
+                    "on-primary-container": "#5d7275",
+                    "inverse-primary": "#b4cbce",
+                    "secondary": "#326578",
+                    "background": "#fbf9f8",
+                    "outline-variant": "#c2c7c8",
+                    "on-secondary-fixed": "#001f29",
+                    "error-container": "#ffdad6",
+                    "tertiary": "#556158",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "inverse-surface": "#303031",
+                    "surface-container-highest": "#e3e2e2"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "12px",
+                    "gutter": "12px",
+                    "xs": "8px",
+                    "base": "4px",
+                    "xl": "32px",
+                    "container-padding": "20px",
+                    "md": "16px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "headline-md-mobile": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c2c7c8;
+            border-radius: 10px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen">
+<!-- Top AppBar + Search (Fixed) -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl transition-all duration-300">
+<div class="flex justify-between items-center px-gutter h-16 w-full">
+<h1 class="font-display-lg text-headline-sm text-primary">Qing Malaya</h1>
+<div class="flex gap-md">
+
+</div>
+</div>
+<!-- Search Bar -->
+<div class="px-container-padding pb-4">
+<div class="relative flex items-center bg-surface-container-high rounded-full px-4 h-11">
+<span class="material-symbols-outlined text-outline mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-body-md text-on-surface placeholder-on-surface-variant/60" placeholder="搜索播客、作者、标签" type="text">
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<main class="pt-32 pb-48 px-container-padding">
+<!-- Filter/Sort Bar -->
+<section class="mb-lg">
+<div class="flex items-center justify-between mb-sm">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">探索发现</h2>
+<button class="flex items-center gap-2 text-primary bg-primary-container px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity active:scale-95" onclick="toggleFilters()">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span class="text-label-md font-label-md">筛选器</span>
+</button>
+</div>
+<!-- Expandable Panel -->
+<div class="hidden overflow-hidden transition-all duration-500 ease-in-out" id="filter-panel">
+<div class="bg-surface-container-low rounded-xl p-md mb-md border border-outline-variant/20 shadow-sm space-y-md">
+<div>
+<p class="text-label-sm font-label-sm text-outline-variant mb-base">排序依据</p>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 bg-primary text-on-primary rounded-full text-label-md">最新发布</button>
+<button class="px-4 py-2 bg-white border border-outline-variant/30 text-on-surface-variant rounded-full text-label-md">最多点赞</button>
+<button class="px-4 py-2 bg-white border border-outline-variant/30 text-on-surface-variant rounded-full text-label-md">播放次数</button>
+<button class="px-4 py-2 bg-white border border-outline-variant/30 text-on-surface-variant rounded-full text-label-md">名称 (A-Z)</button>
+</div>
+</div>
+<div>
+<p class="text-label-sm font-label-sm text-outline-variant mb-base">热门标签</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-secondary/15 text-secondary rounded-full text-label-sm">#哲学</span>
+<span class="px-3 py-1 bg-tertiary/15 text-tertiary rounded-full text-label-sm">#设计</span>
+<span class="px-3 py-1 bg-primary/15 text-primary rounded-full text-label-sm">#经济学</span>
+<span class="px-3 py-1 bg-error/15 text-error rounded-full text-label-sm">#历史</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Podcast List (Vertical Cards) -->
+<div class="space-y-md">
+<!-- Podcast Card 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="flex gap-4 p-md">
+<div class="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-surface-dim">
+<img class="w-full h-full object-cover" data-alt="A moody, high-contrast studio photograph of vintage headphones resting on a stack of academic journals. Soft morning light enters from a side window, highlighting the texture of the leather and the aged paper. The color palette consists of deep muted greens and soft grays, evoking a scholarly and focused atmosphere typical of a high-end educational podcast cover." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsuIWOE-W0rM9mkTY_OsjNXT5RG04lVW4ukUu1XrU9dvAiNvxlQdHIUXNptY6pQNWvB-ej3zufVo7EVVpHBBa99M-fsxhwVrB5pJ_yE-07rAVflt0vfIZ3RfhZV384e-nAOuDSR5Tn2Ajx_9167CkihW5vPcYEBUJ87E-7dysy74vc33HY4N0QwM5ENNc4tB-H75Oj4eqHRzUadLzCUBY3v6YwcJxK9TwrO7O_uXeAuXW9f8g3LTG0vw">
+</div>
+<div class="flex flex-col justify-between flex-1">
+<div>
+<div class="flex justify-between items-start">
+<span class="text-label-sm font-label-sm text-secondary-fixed-dim uppercase tracking-wider">哲学 • 周一课堂</span>
+<span class="material-symbols-outlined text-outline-variant text-[20px]">more_vert</span>
+</div>
+<h3 class="font-headline-sm text-body-lg text-on-surface mt-1 line-clamp-1">解析《理想国》：正义的本质</h3>
+<p class="text-label-md text-on-surface-variant mt-1">王教授 • 2023年10月12日</p>
+</div>
+<div class="flex items-center gap-4 mt-2">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">favorite</span>
+<span class="text-label-sm text-on-surface-variant">1.2k</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">headphones</span>
+<span class="text-label-sm text-on-surface-variant">3.5k</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Podcast Card 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="flex gap-4 p-md">
+<div class="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-surface-dim">
+<img class="w-full h-full object-cover" data-alt="A minimalist digital illustration showing a series of intersecting geometric arcs in shades of teal and muted blue. The composition is clean and modern, with significant white space. It represents an abstract visualization of economic growth and continuous motion. The aesthetic is professional yet youthful, fitting for a modern student-led discourse on global economics." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFFp5XpH-aSFaCXjY0UHGVqFeHJNgAOpzXBxpw4zRLrXojbPBK6MeJi2jBZGTZK5JF9bdRcG6NPQ2Py5z7s61ellKGFjD01_t8S7KMIBTVCrmis87VOpZ901FoVNG82hBgvWHheNA3DEeF0ToYGD2VEwEYxBENisFoKjD9voYl43VzpShu86mIlgYGygyOxttMA6qyc1bJGRGoHswon_FQ4ZtCSz4sco9zA5Sb2XG94ylj-AdSKEAHWQ">
+</div>
+<div class="flex flex-col justify-between flex-1">
+<div>
+<div class="flex justify-between items-start">
+<span class="text-label-sm font-label-sm text-tertiary-fixed-dim uppercase tracking-wider">经济 • 创新社团</span>
+<span class="material-symbols-outlined text-outline-variant text-[20px]">more_vert</span>
+</div>
+<h3 class="font-headline-sm text-body-lg text-on-surface mt-1 line-clamp-1">全球化 2.0：数字货币的影响</h3>
+<p class="text-label-md text-on-surface-variant mt-1">李明 • 2023年10月10日</p>
+</div>
+<div class="flex items-center gap-4 mt-2">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">favorite</span>
+<span class="text-label-sm text-on-surface-variant">856</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">headphones</span>
+<span class="text-label-sm text-on-surface-variant">2.1k</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Podcast Card 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="flex gap-4 p-md">
+<div class="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-surface-dim">
+<img class="w-full h-full object-cover" data-alt="A close-up photograph of a vibrant architectural sketch on a designer's desk, with natural wooden textures and a warm ambient glow. Colored pencils and a small green plant are visible in the soft-focus background. The style is focused and calm, using a palette of earthy tones and mint green to emphasize creativity and academic clarity in the design field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTzp4us0YOXl4DXuuUfZcC0ijAsWeKhXxuIrU9-alJXbKwE21KTWt9OxlEu_OR8haBzQHVi8xF44E3iQ9LKp3_cjRNhz0UtVCxoedQ_ZG50D3zHnuk_nCN7Ggrg2y3lXkY39P4kAWxEXYE_NGBxPHxXblU1qakYgafgQm82fUQRlNHV8CRWwjWxkKeIfmnVHzHSO6bYuQMvCEsUxBakfWME0t7whvq7vutHvd3PmSwO8JIlD53X_yuSg">
+</div>
+<div class="flex flex-col justify-between flex-1">
+<div>
+<div class="flex justify-between items-start">
+<span class="text-label-sm font-label-sm text-primary-fixed-dim uppercase tracking-wider">设计 • 艺术工作坊</span>
+<span class="material-symbols-outlined text-outline-variant text-[20px]">more_vert</span>
+</div>
+<h3 class="font-headline-sm text-body-lg text-on-surface mt-1 line-clamp-1">极简主义与现代建筑美学</h3>
+<p class="text-label-md text-on-surface-variant mt-1">张艺 • 2023年10月08日</p>
+</div>
+<div class="flex items-center gap-4 mt-2">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">favorite</span>
+<span class="text-label-sm text-on-surface-variant">2.4k</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">headphones</span>
+<span class="text-label-sm text-on-surface-variant">5.9k</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Load More Interaction -->
+<div class="py-md flex flex-col items-center justify-center gap-sm">
+<div class="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+<span class="text-label-md text-on-surface-variant">正在加载更多...</span>
+</div>
+</div>
+</main>
+<!-- Mini-Player Bar (Fixed above BottomNav) -->
+<div class="fixed bottom-24 left-4 right-4 rounded-xl z-40 bg-surface/80 backdrop-blur-xl border-t border-primary/10 shadow-sm flex items-center justify-between px-4 h-14">
+<div class="flex items-center gap-3 overflow-hidden flex-1">
+<div class="w-9 h-9 rounded bg-surface-dim overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A small square thumbnail featuring abstract wave patterns in calming primary teal and gray. Minimalist and professional style for a podcast player interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDozODj2v4HJOV1WuevhNqO3C-0mESmt49-nMjaCZAO5zWRWrItLzbKOZucVP9akYG2KG9F4ks1AO5HeXEcOGLlORZMo665MFI_Kugm6O4N_ba_X635hxeF-hYZwHeLQBTKo1SZ6qSM-fkHNo7uFK_aCaq1j0Azc1SmArDvqSXHFpTVnPGWDj7V_InuyhY_KIfYWzzlxbVYztOiX1afE_iu4gL4tbegSa0OopvTP5QuAIKGA-2iZngMvw">
+</div>
+<div class="flex flex-col justify-center min-w-0">
+<span class="text-label-md font-label-md text-primary truncate">正在播放：解析《理想国》</span>
+<span class="text-[10px] text-on-surface-variant/80 truncate">王教授 - 22:45 / 45:00</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="material-symbols-outlined text-primary hover:bg-primary/5 transition-colors p-2 active:scale-95 duration-200">pause</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-primary/5 transition-colors p-2 active:scale-95 duration-200">favorite</button>
+</div>
+<!-- Simple Progress Bar at the top of the mini player -->
+<div class="absolute top-0 left-0 w-full h-[2px] bg-primary/10">
+<div class="h-full bg-primary w-[50%]"></div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-4 left-4 right-4 rounded-full z-50 bg-surface/80 backdrop-blur-xl border border-outline-variant/20 shadow-sm flex justify-around items-center h-16 px-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full transition-all active:scale-95 duration-200 w-12 h-12" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-sm text-label-sm">Discovery</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary rounded-full transition-all active:scale-95 duration-200 w-12 h-12" href="#">
+<span class="material-symbols-outlined fill-icon" style="font-variation-settings: &quot;FILL&quot; 1;">search</span>
+<span class="font-label-sm text-label-sm">Browse</span>
+<div class="w-1 h-1 bg-primary rounded-full mt-0.5"></div>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full transition-all active:scale-95 duration-200 w-12 h-12" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-label-sm text-label-sm">+</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full transition-all active:scale-95 duration-200 w-12 h-12" href="#">
+<span class="material-symbols-outlined">mic</span>
+<span class="font-label-sm text-label-sm">Creation</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full transition-all active:scale-95 duration-200 w-12 h-12" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        function toggleFilters() {
+            const panel = document.getElementById('filter-panel');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                panel.style.maxHeight = '0px';
+                setTimeout(() => {
+                    panel.style.maxHeight = '500px';
+                }, 10);
+            } else {
+                panel.style.maxHeight = '0px';
+                setTimeout(() => {
+                    panel.classList.add('hidden');
+                }, 500);
+            }
+        }
+
+        // Scroll listener for header elevation
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 20) {
+                header.classList.add('shadow-md');
+                header.classList.add('bg-surface');
+            } else {
+                header.classList.remove('shadow-md');
+                header.classList.remove('bg-surface');
+            }
+        });
+    </script>
+
+
+</body></html>

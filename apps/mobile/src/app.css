@@ -1,0 +1,39 @@
+/* Global styles — Inter font + base surface background.
+ * The Inter font is also linked in src/index.html for H5; for WeApp we rely
+ * on the @font-face below (or system fallback). Tailwind utilities layer in
+ * via the `@tailwind` directives in this file. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+page {
+  margin: 0;
+  padding: 0;
+  background-color: #fbf9f8;
+  color: #1b1c1c;
+  font-family: 'Inter', system-ui, -apple-system, 'PingFang SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide native Taro tabBar — using a custom floating-island nav instead
+ * (src/components/AppLayout/TabBar). The tabBar.list is still declared in
+ * app.config.ts so `Taro.switchTab` keeps routing, but the native chrome
+ * itself must stay invisible.
+ *
+ * IMPORTANT: Only hide `.taro-tabbar` and `.taro-tabbar__tabbar` (the bottom
+ * navigation bar). Do NOT hide `.taro-tabbar__container` — that's the root
+ * element that holds ALL page content in Taro H5; hiding it blanks the app. */
+.taro-tabbar,
+.taro-tabbar__tabbar {
+  display: none !important;
+}
+
+/* Recording page animated waveform bars (weapp fallback for canvas) */
+@keyframes recobar {
+  from { transform: scaleY(0.3); }
+  to { transform: scaleY(1); }
+}

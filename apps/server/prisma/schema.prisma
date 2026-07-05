@@ -1,0 +1,269 @@
+// Qing Malaya campus podcast platform — Prisma schema (MySQL).
+//
+// This is the full domain schema. Task 6 will verify/refine it; later tasks
+// add the resource modules on top.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  OPERATOR
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum PodcastStatus {
+  PENDING
+  PUBLISHED
+  TAKEN_DOWN
+}
+
+// TagColor stores lowercase mint/purple/orange in the DB to match
+// @qingmalaya/shared TagColor values.
+enum TagColor {
+  mint
+  purple
+  orange
+}
+
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+}
+
+enum LikeTargetType {
+  PODCAST
+  COMMENT
+}
+
+enum BannerLinkType {
+  PODCAST
+  PODCAST_LIST
+  NONE
+}
+
+enum BannerStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model User {
+  id                 Int        @id @default(autoincrement())
+  studentId          String     @unique
+  name               String
+  classId            Int?
+  passwordHash       String
+  role               Role       @default(STUDENT)
+  avatar             String?
+  bio                String?    @db.Text
+  totalListens       Int        @default(0)
+  totalLikes         Int        @default(0)
+  status             UserStatus @default(ACTIVE)
+  firstLogin         Boolean    @default(true)
+  mustChangePassword Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  class         Class?        @relation(fields: [classId], references: [id])
+  podcasts      Podcast[]
+  comments      Comment[]
+  likes         Like[]
+  favorites     Favorite[]
+  playHistories PlayHistory[]
+  adminLogs     AdminLog[]
+
+  @@index([classId])
+  @@index([role])
+}
+
+model Class {
+  id         Int      @id @default(autoincrement())
+  name       String
+  grade      String?
+  department String?
+  createdAt  DateTime @default(now())
+
+  users    User[]
+  podcasts Podcast[]
+}
+
+model Podcast {
+  id           Int           @id @default(autoincrement())
+  title        String
+  description  String?       @db.Text
+  coverPath    String?
+  audioPath    String
+  duration     Int
+  authorId     Int
+  classId      Int?
+  status       PodcastStatus @default(PENDING)
+  playCount    Int           @default(0)
+  likeCount    Int           @default(0)
+  commentCount Int           @default(0)
+  publishedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  author      User          @relation(fields: [authorId], references: [id])
+  class       Class?        @relation(fields: [classId], references: [id])
+  tags        PodcastTag[]
+  comments    Comment[]
+  likes       Like[]
+  favorites   Favorite[]
+  PlayHistory PlayHistory[]
+
+  @@index([authorId])
+  @@index([classId])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([playCount])
+  @@index([likeCount])
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  weight    Int      @default(0)
+  color     TagColor @default(mint)
+  createdAt DateTime @default(now())
+
+  podcasts PodcastTag[]
+}
+
+model PodcastTag {
+  podcastId Int
+  tagId     Int
+  podcast   Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([podcastId, tagId])
+  @@index([tagId])
+}
+
+model Comment {
+  id        Int           @id @default(autoincrement())
+  podcastId Int
+  userId    Int
+  content   String        @db.Text
+  parentId  Int?
+  likeCount Int           @default(0)
+  status    CommentStatus @default(VISIBLE)
+  createdAt DateTime      @default(now())
+
+  podcast Podcast   @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+  likes   Like[]
+
+  @@index([podcastId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model Like {
+  id         Int            @id @default(autoincrement())
+  userId     Int
+  targetType LikeTargetType
+  targetId   Int
+  createdAt  DateTime       @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Podcast   Podcast? @relation(fields: [podcastId], references: [id])
+  podcastId Int?
+  Comment   Comment? @relation(fields: [commentId], references: [id])
+  commentId Int?
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  podcastId Int
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, podcastId])
+}
+
+model PlayHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  podcastId Int
+  position  Int      @default(0)
+  playedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+
+  @@index([userId, podcastId])
+}
+
+model Banner {
+  id         Int            @id @default(autoincrement())
+  title      String
+  coverPath  String
+  linkType   BannerLinkType @default(NONE)
+  linkTarget String?
+  sort       Int            @default(0)
+  status     BannerStatus   @default(ONLINE)
+  startAt    DateTime?
+  endAt      DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@index([status, sort])
+}
+
+model Announcement {
+  id          Int                @id @default(autoincrement())
+  title       String
+  content     String             @db.Text
+  status      AnnouncementStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime           @default(now())
+
+  @@index([status, publishedAt])
+}
+
+model AdminLog {
+  id         Int      @id @default(autoincrement())
+  adminId    Int
+  action     String
+  targetType String?
+  targetId   Int?
+  detail     Json?
+  createdAt  DateTime @default(now())
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}

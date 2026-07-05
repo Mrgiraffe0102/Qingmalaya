@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["@tarojs/taro", "node"],
+    "paths": {
+      "@qingmalaya/shared": ["../../packages/shared/src"],
+      "@qingmalaya/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src", "config", "global.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Qing Malaya - Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        body {
+            background-color: #fbf9f8;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bento-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .bento-card:active {
+            transform: scale(0.98);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#bbe9ff",
+                        "on-surface": "#1b1c1c",
+                        "surface-container": "#efeded",
+                        "tertiary-fixed": "#d9e6da",
+                        "primary": "#4d6265",
+                        "primary-fixed-dim": "#b4cbce",
+                        "surface-dim": "#dbdad9",
+                        "surface-container-low": "#f5f3f3",
+                        "tertiary-container": "#e9f6ea",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#364a4d",
+                        "primary-fixed": "#d0e7ea",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#fbf9f8",
+                        "surface-container-high": "#e9e8e7",
+                        "primary-container": "#e0f7fa",
+                        "on-secondary-container": "#37697d",
+                        "surface-variant": "#e3e2e2",
+                        "tertiary-fixed-dim": "#bdcabe",
+                        "on-tertiary-fixed-variant": "#3e4a41",
+                        "surface": "#fbf9f8",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#154d5f",
+                        "on-primary-fixed": "#091f21",
+                        "on-background": "#1b1c1c",
+                        "inverse-on-surface": "#f2f0f0",
+                        "secondary-fixed-dim": "#9ccee4",
+                        "on-tertiary-container": "#657168",
+                        "on-tertiary-fixed": "#131e17",
+                        "secondary-container": "#b5e7fe",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#424849",
+                        "outline": "#727879",
+                        "surface-tint": "#4d6265",
+                        "on-primary-container": "#5d7275",
+                        "inverse-primary": "#b4cbce",
+                        "secondary": "#326578",
+                        "background": "#fbf9f8",
+                        "outline-variant": "#c2c7c8",
+                        "on-secondary-fixed": "#001f29",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#556158",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#303031",
+                        "surface-container-highest": "#e3e2e2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "12px",
+                        "gutter": "12px",
+                        "xs": "8px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "container-padding": "20px",
+                        "md": "16px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl flex justify-between items-center px-gutter h-16 w-full border-none">
+<div class="flex items-center gap-4">
+<h1 class="font-headline-sm text-headline-sm text-primary">Profile</h1>
+</div>
+<button class="active:scale-95 transition-transform duration-200 text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+</header>
+<main class="pt-24 pb-48 px-container-padding max-w-md mx-auto space-y-lg">
+<!-- Profile Header Section -->
+<section class="flex flex-col items-center text-center space-y-md">
+<div class="relative">
+<div class="w-24 h-24 rounded-full border-4 border-primary-container overflow-hidden shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A professional studio portrait of a young Southeast Asian university student with a friendly smile, wearing a clean academic blazer. The lighting is soft and natural, emphasizing a bright, minimalist educational atmosphere with a soft-focus library background in cool tones of teal and grey." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUH2C_R61fV8Qn0xyhp7YpXPZ4jRnUzE-WxD0kHRwnk-mTyG2tS2TMtYMQ7wsN5sONHGNgNN2w7Yp2AucCb7NF1oblkY4geL0vjtdSLoaeUiTqrFRKSD2XyoN_VWhl6F2Xx0DD_6ijrEOAVQuZz52U6D_ICDwoPDSIFJcJ8eaeDCxh8v0xdmdkmIS-XNjsSEtxzNg5GXlb9PJQEkqz2cRO4lPrN-5tKbxf1smKCStKBTPk3falpeoENA"/>
+</div>
+<div class="absolute bottom-0 right-0 bg-primary text-on-primary rounded-full p-1.5 border-2 border-surface">
+<span class="material-symbols-outlined text-[16px]" data-icon="edit">edit</span>
+</div>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Ahmad Rizwan</h2>
+<div class="flex items-center justify-center gap-2 mt-1">
+<span class="px-2 py-0.5 rounded-full bg-secondary-container/30 text-on-secondary-container font-label-sm text-label-sm">Faculty of Design</span>
+<span class="text-outline text-label-sm">•</span>
+<span class="text-outline font-label-sm text-label-sm">ID: UM-2023-4402</span>
+</div>
+</div>
+</section>
+<!-- Stats Grid (Bento Style) -->
+<section class="grid grid-cols-2 gap-md">
+<div class="bg-surface-container-low p-md rounded-xl bento-card border border-outline-variant/20">
+<div class="flex items-center gap-2 text-primary mb-1">
+<span class="material-symbols-outlined text-[20px]" data-icon="headphones">headphones</span>
+<span class="font-label-md text-label-md">TOTAL LISTENS</span>
+</div>
+<p class="font-display-lg text-display-lg text-on-surface">1,284</p>
+</div>
+<div class="bg-surface-container-low p-md rounded-xl bento-card border border-outline-variant/20">
+<div class="flex items-center gap-2 text-secondary mb-1">
+<span class="material-symbols-outlined text-[20px]" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="font-label-md text-label-md">TOTAL LIKES</span>
+</div>
+<p class="font-display-lg text-display-lg text-on-surface">432</p>
+</div>
+</section>
+<!-- Function List -->
+<section class="space-y-xs">
+<h3 class="font-label-md text-label-md text-outline ml-base uppercase tracking-widest">General</h3>
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/10">
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-variant transition-colors active:scale-[0.99] duration-150">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="manage_accounts">manage_accounts</span>
+</div>
+<span class="font-body-lg text-body-lg text-on-surface">Account Settings</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</button>
+<div class="h-[1px] bg-outline-variant/10 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-variant transition-colors active:scale-[0.99] duration-150">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="bookmarks">bookmarks</span>
+</div>
+<span class="font-body-lg text-body-lg text-on-surface">My Favorites</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</button>
+<div class="h-[1px] bg-outline-variant/10 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-variant transition-colors active:scale-[0.99] duration-150">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</div>
+<span class="font-body-lg text-body-lg text-on-surface">History</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<h3 class="font-label-md text-label-md text-outline ml-base uppercase tracking-widest pt-md">Support</h3>
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/10">
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-variant transition-colors active:scale-[0.99] duration-150">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-on-surface-variant/10 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="info">info</span>
+</div>
+<span class="font-body-lg text-body-lg text-on-surface">About Us</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</button>
+<div class="h-[1px] bg-outline-variant/10 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-error/5 transition-colors active:scale-[0.99] duration-150">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+</div>
+<span class="font-body-lg text-body-lg text-error">Logout</span>
+</div>
+<span class="material-symbols-outlined text-error/40" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Mini-Player Bar -->
+<div class="fixed bottom-24 left-4 right-4 rounded-xl z-40 bg-surface/80 backdrop-blur-xl border-t border-primary/10 shadow-sm flex items-center justify-between px-4 h-14 active:scale-[0.98] transition-transform duration-200">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="w-10 h-10 rounded-lg bg-surface-variant flex-shrink-0">
+<img class="w-full h-full object-cover rounded-lg" data-alt="A minimalist album cover for an academic podcast titled 'Modern Design Ethics'. The artwork features clean typography on a textured cream background with an abstract geometric shape in primary teal. High-end, academic, and calm aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcO0FWRuIrQp_-vPkpjmqu-0IO6aCHwBabhtdvGwKOuWsvdPA06eAlEywtUM-CEDhgRpQF8SISzMmj02XnZMfzjaKr4ToXlS-hWvq2bNcCWYAuF7-Nc-hjl6d3iIAntFapN8jbBGmI53XgmEUZeD4LcZSSC6-fhXA3bDVY9G4V5llWpRJ3axVxvp5S5duaPIcaCepyguY56CFquA6v7lMLxtWwxPLBUSyxb47_-S2_GG8V2KHGt9HVrQ"/>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="font-label-md text-label-md text-on-surface truncate">Lecture 4: Design Ethics</span>
+<span class="font-label-sm text-label-sm text-outline-variant truncate">Prof. Sarah Jenkins</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-primary">
+<button class="active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="pause">pause</span>
+</button>
+</div>
+<!-- Progress Bar at top edge -->
+<div class="absolute top-0 left-0 h-[2px] bg-primary/20 w-full">
+<div class="h-full bg-primary" style="width: 65%;"></div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-4 left-4 right-4 rounded-full z-50 bg-surface/80 backdrop-blur-xl border border-outline-variant/20 shadow-sm flex justify-around items-center h-16 px-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full px-2 active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-label-sm text-label-sm mt-1">Discovery</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full px-2 active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-label-sm text-label-sm mt-1">Browse</span>
+</a>
+<button class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-on-primary shadow-lg shadow-primary/20 active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="add">add</span>
+</button>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full px-2 active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="mic">mic</span>
+<span class="font-label-sm text-label-sm mt-1">Creation</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-secondary-fixed-dim hover:bg-primary/5 rounded-full px-2 active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for list items
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('touchstart', () => {
+                btn.style.opacity = '0.7';
+            });
+            btn.addEventListener('touchend', () => {
+                btn.style.opacity = '1';
+            });
+        });
+
+        // Atmospheric Scroll Effect
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 20) {
+                header.classList.add('shadow-sm');
+                header.classList.remove('bg-surface/80');
+                header.classList.add('bg-surface/95');
+            } else {
+                header.classList.remove('shadow-sm');
+                header.classList.add('bg-surface/80');
+                header.classList.remove('bg-surface/95');
+            }
+        });
+    </script>
+</body></html>

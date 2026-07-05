@@ -1,0 +1,515 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Qing Malaya - Discovery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fbf9f8;
+            -webkit-font-smoothing: antialiased;
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#bbe9ff",
+                        "on-surface": "#1b1c1c",
+                        "surface-container": "#efeded",
+                        "tertiary-fixed": "#d9e6da",
+                        "primary": "#4d6265",
+                        "primary-fixed-dim": "#b4cbce",
+                        "surface-dim": "#dbdad9",
+                        "surface-container-low": "#f5f3f3",
+                        "tertiary-container": "#e9f6ea",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#364a4d",
+                        "primary-fixed": "#d0e7ea",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#fbf9f8",
+                        "surface-container-high": "#e9e8e7",
+                        "primary-container": "#e0f7fa",
+                        "on-secondary-container": "#37697d",
+                        "surface-variant": "#e3e2e2",
+                        "tertiary-fixed-dim": "#bdcabe",
+                        "on-tertiary-fixed-variant": "#3e4a41",
+                        "surface": "#fbf9f8",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#154d5f",
+                        "on-primary-fixed": "#091f21",
+                        "on-background": "#1b1c1c",
+                        "inverse-on-surface": "#f2f0f0",
+                        "secondary-fixed-dim": "#9ccee4",
+                        "on-tertiary-container": "#657168",
+                        "on-tertiary-fixed": "#131e17",
+                        "secondary-container": "#b5e7fe",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#424849",
+                        "outline": "#727879",
+                        "surface-tint": "#4d6265",
+                        "on-primary-container": "#5d7275",
+                        "inverse-primary": "#b4cbce",
+                        "secondary": "#326578",
+                        "background": "#fbf9f8",
+                        "outline-variant": "#c2c7c8",
+                        "on-secondary-fixed": "#001f29",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#556158",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#303031",
+                        "surface-container-highest": "#e3e2e2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "12px",
+                        "gutter": "12px",
+                        "xs": "8px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "container-padding": "20px",
+                        "md": "16px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface pb-48">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl flex justify-between items-center px-gutter h-16 border-none">
+<div class="flex items-center gap-4">
+
+<h1 class="font-display-lg text-headline-sm text-primary">Qing Malaya</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="text-on-surface-variant hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<main class="mt-16 px-gutter max-w-screen-xl mx-auto">
+<!-- Promotion Banner (Horizontal Scroll) -->
+<section class="mt-lg overflow-hidden -mx-gutter px-gutter">
+<div class="flex gap-md overflow-x-auto hide-scrollbar snap-x">
+<div class="min-w-[85%] md:min-w-[45%] h-48 rounded-xl bg-primary-container relative overflow-hidden snap-center flex-shrink-0 group cursor-pointer" style="transform: translateY(0px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="A serene academic library setting with soft morning sunlight streaming through tall windows. In the center, a modern high-end studio microphone sits on a minimalist wooden desk, representing educational podcasting. The color palette features calm teal and soft cream tones, reflecting an atmosphere of focused intellectual growth. High-resolution, professional photography style." style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuBQ48jLbKo928YRdweDE19ziaCBZRK5oSaXRp4sQ12x9FjBJlZh_JHzosk6MxkpikFYG35ZF5gRwZ9terWcn5skXnTPMeBjes_8Tg_cY55bl-Amv2uJsH14psVY_7EIh-u4wsQ8j9t3X-zVdUCP2NCgulJCqDS1DD_MXX46W0UOy2pLDJxMV-cn1jPSoqwBu02yO4wxtwht2SusihOzInBsHgccO2yOMw7mIxjGDQQi30qvRIB4WlPYSQ&quot;);"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4 right-4">
+<span class="bg-secondary-container text-on-secondary-container text-label-sm px-2 py-1 rounded-full mb-2 inline-block">Featured</span>
+<h2 class="text-white font-headline-sm text-headline-sm">Global Ethics in AI</h2>
+<p class="text-white/80 font-body-md text-body-md">Series by Dr. Alani • 12 Episodes</p>
+</div>
+</div>
+<div class="min-w-[85%] md:min-w-[45%] h-48 rounded-xl bg-tertiary-container relative overflow-hidden snap-center flex-shrink-0 group cursor-pointer" style="transform: translateY(0px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="A clean, minimalist workspace featuring a pair of high-fidelity headphones and a tablet displaying colorful audio waveforms. The setting is a modern student lounge with glass walls and lush greenery in the background. Soft, diffused lighting highlights the tech-focused aesthetic. The visual uses professional studio lighting with a focus on deep blues and mint green accents." style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuCPEiJw5ORv7NlNMznWY-vKqCfjkiLODPWUmPu2j_EBPsubvu5w176TDJwDSIBzkCi9BDCLGyC7GvSsGVV3HV8bNiudESTRw90MmFhxlpe4Wxh7UJK1LJBbDrzX5Qw1THuiapZ_ZIIvNh9qnHHAlxuqYce8527Sdk836smdid8olO5Zd2by1GFdCnlOrxtFnwLVAsorBREZNourRLdGfzPPMBpZNBb6bjNxi-oofVIbnHFEG7WFbuBgVw&quot;);"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-tertiary/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4 right-4">
+<span class="bg-secondary-container text-on-secondary-container text-label-sm px-2 py-1 rounded-full mb-2 inline-block">Trending</span>
+<h2 class="text-white font-headline-sm text-headline-sm">Modern Architecture</h2>
+<p class="text-white/80 font-body-md text-body-md">Design Studio III • Live Now</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Popular Podcasts (Vertical List) -->
+<section class="mt-xl">
+<div class="flex justify-between items-center mb-md"><h3 class="font-headline-sm text-headline-sm text-on-surface">热门榜单</h3></div>
+<div class="flex gap-md overflow-x-auto hide-scrollbar -mx-gutter px-gutter pb-2 snap-x">
+    <!-- Most Played Card -->
+    <div class="min-w-[280px] bg-surface-container-low rounded-xl p-4 border border-outline-variant/10 snap-center">
+        <h4 class="text-label-md text-primary mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">equalizer</span>最多播放
+        </h4>
+        <div class="space-y-3">
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-primary w-4">1</span>
+                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOU9FxJaf_rasH5e7h99X_1uq3i0KVcvKtsQmWnVtRPMsRc1UBRwKl3EIw2pmvXuXQU8WAy1yfz9i8Nz_Mx9LLMz4M_9GkTN_94ViYuz-BN1XLfGjfZUVI0FiOtu3k1tlazIZKEH0Sih2nc2_arWj_2-vDlTgFl0Vb7Dzn0pOFPT0hNBmuscw-pfZEV0miqbEhVoUs-CGRTk6f0E1jJEo0J6SCog_MIsKUMdQCK0SRbw77KdR8GhbWSA" class="w-10 h-10 rounded object-cover">
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Neural Networks</p>
+                    <p class="text-[10px] text-on-surface-variant">12.4k plays</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-on-surface-variant w-4">2</span>
+                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuByYddQpnfPz_28I5XOJCrMIhIKBsC-6pWjlHtlpNoZz1qKCGWNw7hsA9B3SwZPDcbSUiYIjGLlOfqmZ7Wpo80yETFTxMDC-knRVetLqQMECu-0bmL-5WLhGlQCgU-Y81RJUz763zy5xRdATWlNSuEg38INQhDiqqLwn5x9Lnog8p1HoHsNuCebL26Kc6_XGMxd3emBoXQdUdT-IF4hApK9NMB6CXF_ELDbBqm30CUGCX7ZtZu_5VRztg" class="w-10 h-10 rounded object-cover">
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Urban Planning</p>
+                    <p class="text-[10px] text-on-surface-variant">8.1k plays</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary-fixed rounded flex items-center justify-center text-primary font-bold text-xs">3</div>
+                <div class="min-w-0 ml-7">
+                    <p class="text-label-md font-bold truncate">Data Ethics</p>
+                    <p class="text-[10px] text-on-surface-variant">5.2k plays</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Most Liked Card -->
+    <div class="min-w-[280px] bg-surface-container-low rounded-xl p-4 border border-outline-variant/10 snap-center">
+        <h4 class="text-label-md text-primary mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">favorite</span>最多点赞
+        </h4>
+        <div class="space-y-3">
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-primary w-4">1</span>
+                <div class="w-10 h-10 bg-secondary-container rounded flex items-center justify-center text-on-secondary-container font-bold text-xs">AI</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Global Ethics</p>
+                    <p class="text-[10px] text-on-surface-variant">1.2k likes</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-on-surface-variant w-4">2</span>
+                <div class="w-10 h-10 bg-tertiary-container rounded flex items-center justify-center text-on-tertiary-container font-bold text-xs">DS</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Design Studio</p>
+                    <p class="text-[10px] text-on-surface-variant">940 likes</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-on-surface-variant w-4">3</span>
+                <div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center text-on-surface-variant font-bold text-xs">PH</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Philosophy</p>
+                    <p class="text-[10px] text-on-surface-variant">820 likes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Most Commented Card -->
+    <div class="min-w-[280px] bg-surface-container-low rounded-xl p-4 border border-outline-variant/10 snap-center">
+        <h4 class="text-label-md text-primary mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">chat_bubble</span>最多评论
+        </h4>
+        <div class="space-y-3">
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-primary w-4">1</span>
+                <div class="w-10 h-10 bg-primary-container rounded flex items-center justify-center text-primary font-bold text-xs">ME</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Microeconomics</p>
+                    <p class="text-[10px] text-on-surface-variant">450 comments</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-on-surface-variant w-4">2</span>
+                <div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center text-on-surface-variant font-bold text-xs">VS</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Visual Storytelling</p>
+                    <p class="text-[10px] text-on-surface-variant">312 comments</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-on-surface-variant w-4">3</span>
+                <div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center text-on-surface-variant font-bold text-xs">CS</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Cyber Security</p>
+                    <p class="text-[10px] text-on-surface-variant">288 comments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trending Card -->
+    <div class="min-w-[280px] bg-surface-container-low rounded-xl p-4 border border-outline-variant/10 snap-center">
+        <h4 class="text-label-md text-primary mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">trending_up</span>实时趋势
+        </h4>
+        <div class="space-y-3">
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-primary w-4">1</span>
+                <div class="w-10 h-10 bg-secondary-container rounded flex items-center justify-center text-on-secondary-container font-bold text-xs">MA</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Modern Architecture</p>
+                    <p class="text-[10px] text-primary font-bold">+240%</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-on-surface-variant w-4">2</span>
+                <div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center text-on-surface-variant font-bold text-xs">MB</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">Molecular Biology</p>
+                    <p class="text-[10px] text-primary font-bold">+180%</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="font-bold text-on-surface-variant w-4">3</span>
+                <div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center text-on-surface-variant font-bold text-xs">HA</div>
+                <div class="min-w-0">
+                    <p class="text-label-md font-bold truncate">History of Art</p>
+                    <p class="text-[10px] text-primary font-bold">+120%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+<!-- Recent Uploads (Grid) -->
+<section class="mt-xl">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">最近上传</h3>
+<button class="text-on-surface-variant active:rotate-180 transition-transform duration-500">
+<span class="material-symbols-outlined">refresh</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-3">
+                            <div class="group cursor-pointer" style="transform: translateY(0px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);"><div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-xl border border-outline-variant/10">
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img src="placeholder" class="w-full h-full object-cover">
+    </div>
+    <div class="flex-grow min-w-0">
+        <h5 class="text-label-md font-headline-sm text-on-surface truncate">Microeconomics 101</h5>
+        <p class="text-[10px] text-on-surface-variant">Prof. Zhang</p>
+    </div>
+</div></div>
+                        
+                            <div class="group cursor-pointer" style="transform: translateY(0px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);"><div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-xl border border-outline-variant/10">
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img src="placeholder" class="w-full h-full object-cover">
+    </div>
+    <div class="flex-grow min-w-0">
+        <h5 class="text-label-md font-headline-sm text-on-surface truncate">Visual Storytelling</h5>
+        <p class="text-[10px] text-on-surface-variant">Mia Wong</p>
+    </div>
+</div></div>
+                        
+                            <div class="group cursor-pointer"><div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-xl border border-outline-variant/10">
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img src="placeholder" class="w-full h-full object-cover">
+    </div>
+    <div class="flex-grow min-w-0">
+        <h5 class="text-label-md font-headline-sm text-on-surface truncate">Philosophy of Mind</h5>
+        <p class="text-[10px] text-on-surface-variant">David K.</p>
+    </div>
+</div></div>
+                        
+                            <div class="group cursor-pointer" style="transform: translateY(0px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);"><div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-xl border border-outline-variant/10">
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img src="placeholder" class="w-full h-full object-cover">
+    </div>
+    <div class="flex-grow min-w-0">
+        <h5 class="text-label-md font-headline-sm text-on-surface truncate">Molecular Biology</h5>
+        <p class="text-[10px] text-on-surface-variant">Lab Group B</p>
+    </div>
+</div></div>
+                        
+                            <div class="group cursor-pointer" style="transform: translateY(0px); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);"><div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-xl border border-outline-variant/10">
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img src="placeholder" class="w-full h-full object-cover">
+    </div>
+    <div class="flex-grow min-w-0">
+        <h5 class="text-label-md font-headline-sm text-on-surface truncate">Data Ethics</h5>
+        <p class="text-[10px] text-on-surface-variant">J. Peterson</p>
+    </div>
+</div></div>
+                        
+                            <div class="group cursor-pointer"><div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-xl border border-outline-variant/10">
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img src="placeholder" class="w-full h-full object-cover">
+    </div>
+    <div class="flex-grow min-w-0">
+        <h5 class="text-label-md font-headline-sm text-on-surface truncate">History of Art</h5>
+        <p class="text-[10px] text-on-surface-variant">Elena R.</p>
+    </div>
+</div></div>
+                        
+                            <div class="group cursor-pointer"><div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-xl border border-outline-variant/10">
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img src="placeholder" class="w-full h-full object-cover">
+    </div>
+    <div class="flex-grow min-w-0">
+        <h5 class="text-label-md font-headline-sm text-on-surface truncate">Cyber Security</h5>
+        <p class="text-[10px] text-on-surface-variant">Code Club</p>
+    </div>
+</div></div>
+                        
+                            <div class="group cursor-pointer"><div class="flex items-center gap-3 p-2 bg-surface-container-low rounded-xl border border-outline-variant/10">
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img src="placeholder" class="w-full h-full object-cover">
+    </div>
+    <div class="flex-grow min-w-0">
+        <h5 class="text-label-md font-headline-sm text-on-surface truncate">Marketing 4.0</h5>
+        <p class="text-[10px] text-on-surface-variant">Alex Rivera</p>
+    </div>
+</div></div>
+                        </div>
+</section>
+<!-- Classmate Creations (Horizontal Scroll) -->
+<section class="mt-xl mb-12">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">同班同学</h3>
+<span class="text-label-md text-on-tertiary-container bg-tertiary-container px-3 py-1 rounded-full">Class of 2024</span>
+</div>
+<div class="flex gap-md overflow-x-auto hide-scrollbar -mx-gutter px-gutter pb-4">
+<div class="min-w-[160px] group cursor-pointer">
+<div class="w-40 h-56 rounded-2xl bg-surface-container-high overflow-hidden mb-3 relative shadow-sm border border-outline-variant/10">
+<img class="w-full h-full object-cover" data-alt="A bright university classroom with modern furniture and a large window overlooking a green campus. Several students are blurred in the background, creating a sense of community. The focus is on a colorful backpack on a chair. Light and airy aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7corARjnlnCGTedaiS9fmFoY0Op3ow6UlyvwD_NGYZGRZoL416fe1Y_T1zJCPiXfSbPluEwBTfd1Ej-AiXZ-8wJvj0tjywrNPvuBSADypX6fT3W09ttU_eK9hEu4NsY197JXwt8p0RToUIbsstEg-onMBK_Mosis9E73jfeD9r19Qz0veVMEcEJ1UsXuFYr6WgAHLuMslA1xRj3ogSUUrMmrwCJD4lERHXvdeIWc2stp9kIU4UkGWMw">
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<p class="text-[10px] opacity-90">Design Ethics</p>
+<p class="font-bold text-sm">Kevin's Diary</p>
+</div>
+</div>
+</div>
+<div class="min-w-[160px] group cursor-pointer">
+<div class="w-40 h-56 rounded-2xl bg-surface-container-high overflow-hidden mb-3 relative shadow-sm border border-outline-variant/10">
+<img class="w-full h-full object-cover" data-alt="An overhead view of an architectural blueprint spread across a white desk, with a pair of glasses and a mechanical pencil. Soft neutral tones and professional workspace aesthetic. Represents student project work." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_j5oawBsvG-ZxZAKcM0oxT2tgST5uSpTHvQ-gCnNzqb3IW0eczRz8ijNtYf90H2FeFMWewa4KgyZUueX69CX3s7KyeQwRLIUHqVPFQbcGBe8FR3ZvrAtiaE0hblxuD80qNy3Kvwkp_hZwhSIOdm5Xw6p2YkJqsHVqvAAoUW5TWqgEUemi0hcpo_vDsuBf8GabQOeHJTPEUKJdT9rIn01ESpOAD31lJ9WzfFcuEQ9waqPcjVPI8iHESw">
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<p class="text-[10px] opacity-90">Architecture</p>
+<p class="font-bold text-sm">Space &amp; Flow</p>
+</div>
+</div>
+</div>
+<div class="min-w-[160px] group cursor-pointer">
+<div class="w-40 h-56 rounded-2xl bg-surface-container-high overflow-hidden mb-3 relative shadow-sm border border-outline-variant/10">
+<img class="w-full h-full object-cover" data-alt="A lush greenhouse interior with exotic plants and botanical labels. Sunlight filters through the glass roof, creating a warm and organic atmosphere. Soft greens and earthy brown tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXcAtnhcuH99sOVxTPCR8N2DQFsRjWPdcA6XYd8JSvVnWlxEymDLiZ0C1a9laQt_zb8KHcT5ymOf--s8WH7vEpl77jeGOf663bKKNvDKLjdjre68b8ENg9dxg4PFiYSnNSVXG6oP6zZMZstIHIJmMhNSSyJn72YkrCMITlZQmMSSL0vUMg_6TrC93JmWV6PWB8AlTaCsDVOVn8aaFVVCYOXZYbZnXLOFmkrOm-pvkubjsbt0hfEdOtwQ">
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<p class="text-[10px] opacity-90">Biology Dept</p>
+<p class="font-bold text-sm">Plant Wisdom</p>
+</div>
+</div>
+</div>
+<div class="min-w-[160px] group cursor-pointer">
+<div class="w-40 h-56 rounded-2xl bg-surface-container-high overflow-hidden mb-3 relative shadow-sm border border-outline-variant/10">
+<img class="w-full h-full object-cover" data-alt="A close-up of a vintage vinyl record player in a cozy, book-filled student room. The warm glow of a desk lamp creates a nostalgic and focused learning environment. Soft, rich color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmK0f7E-Jfgr1SW5RRObyEdmc4hOkg8VtAEijDFSoyg6FMWhjA5iITCVZ-LGfb9zmARbo1q0ZfpS0ePYJtzr9TUbDrmFZQRryqRTtcYhF9lYA_THwXdzRSBf4LMoftbqiOm4BVk7-gIM6dFYmoPccTbFhKSTdXaKmDlnzky-tHkPYOuvGNcm2wHNJKMJ_k74ybk79dJ4pkSwg6aF-Tg_E110nC8i_8SCoXavs4kh9argFfEJoWe3-3Aw">
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<p class="text-[10px] opacity-90">Music Theory</p>
+<p class="font-bold text-sm">Sonic Roots</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Mini-Player Bar -->
+<div class="fixed bottom-24 left-4 right-4 rounded-xl z-40 bg-surface/80 backdrop-blur-xl border-t border-primary/10 shadow-sm flex items-center justify-between px-4 h-14 active:scale-[0.98] transition-transform duration-200">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden bg-primary-fixed">
+<img class="w-full h-full object-cover" data-alt="Abstract minimalist representation of soundwaves in soft gradient colors of blue and teal. Modern digital art style with clean lines and a sense of rhythm and motion." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIYqDnL0xLZ53zWYRELPuZsX-tONRiDf1qzyUCUiJ0X9ifcv3euoevgoZ_oQrOPOv7SUfRC6Srz5C4EAnjqjhGddPnsDWg0LV7j2h-55O29C_oCgMLBuy9QVIm7FqSXxU2CapXpWqLUk3roTaS4c6st6tN-63DKtHY_oSvvpeQbX8vFhf7_arGo2r1iKiZiqea8YmgoX4omkUPe2mK5dYbqXjentXlr07AZs0D-rffrSqjiYpTAm--tQ">
+</div>
+<div class="flex flex-col">
+<span class="text-body-md font-headline-sm text-primary truncate w-32 md:w-auto">Social Psychology Intro</span>
+<span class="text-[10px] text-on-surface-variant">Playing from: My Library</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-primary hover:bg-primary/5 p-1 rounded transition-colors">
+<span class="material-symbols-outlined">pause</span>
+</button>
+<button class="text-primary hover:bg-primary/5 p-1 rounded transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">favorite</span>
+</button>
+</div>
+<!-- Simple Mini-Progress Bar -->
+<div class="absolute top-0 left-0 h-[2px] bg-primary/20 w-full">
+<div class="h-full bg-primary w-[35%]"></div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-4 left-4 right-4 rounded-full z-50 bg-surface/80 backdrop-blur-xl border border-outline-variant/20 shadow-sm flex justify-around items-center h-16 px-2">
+<a class="flex flex-col items-center justify-center text-primary hover:bg-primary/5 rounded-full transition-all duration-200 active:scale-95 px-4 py-2" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">explore</span>
+<span class="font-label-sm text-label-sm">Discovery</span>
+<div class="w-1 h-1 bg-primary rounded-full mt-1"></div>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full transition-all duration-200 active:scale-95 px-4 py-2" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-label-sm text-label-sm">Browse</span>
+</a>
+<button class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform -mt-2">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full transition-all duration-200 active:scale-95 px-4 py-2" href="#">
+<span class="material-symbols-outlined">mic</span>
+<span class="font-label-sm text-label-sm">Creation</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-primary/5 rounded-full transition-all duration-200 active:scale-95 px-4 py-2" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for mini-player
+        const miniPlayer = document.querySelector('.fixed.bottom-24');
+        miniPlayer.addEventListener('click', () => {
+            miniPlayer.classList.add('bg-primary-container/90');
+            setTimeout(() => miniPlayer.classList.remove('bg-primary-container/90'), 300);
+        });
+
+        // Hover effect for grid items
+        const gridItems = document.querySelectorAll('.group.cursor-pointer');
+        gridItems.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                item.style.transform = 'translateY(-4px)';
+                item.style.transition = 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            });
+            item.addEventListener('mouseleave', () => {
+                item.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+
+
+
+
+</body></html>
