@@ -151,19 +151,11 @@ export default function Profile() {
   return (
     <AppLayout currentTab='profile'>
       <View
-        className='mx-auto max-w-md px-5 pt-6 pb-4'
+        className='mx-auto max-w-md px-4 pb-4 pt-4'
         style={isDesktop ? { maxWidth: '672px' } : undefined}
       >
         {/* Page title */}
-        <Text
-          className='block text-primary'
-          style={{
-            fontSize: '20px',
-            fontWeight: '600',
-            lineHeight: '28px',
-            marginBottom: '20px'
-          }}
-        >
+        <Text className='mb-5 block text-xl font-bold tracking-tight text-primary'>
           我的
         </Text>
 

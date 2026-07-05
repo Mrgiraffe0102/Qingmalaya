@@ -1,5 +1,6 @@
 import { Component, PropsWithChildren } from 'react'
 import './app.css'
+import GlobalAudioPlayer from './components/GlobalAudioPlayer'
 
 class App extends Component<PropsWithChildren> {
   componentDidMount() {}
@@ -10,7 +11,12 @@ class App extends Component<PropsWithChildren> {
   // componentDidHide() {}
 
   render() {
-    return this.props.children
+    return (
+      <>
+        <GlobalAudioPlayer />
+        {this.props.children}
+      </>
+    )
   }
 }
 

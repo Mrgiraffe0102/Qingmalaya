@@ -76,6 +76,13 @@ export function batchTakedownAdminPodcasts(
   return post<AdminBatchResult>('/admin/podcasts/batch-takedown', { ids });
 }
 
+/** POST /admin/podcasts/batch-publish — bulk set status PUBLISHED (审核通过). */
+export function batchPublishAdminPodcasts(
+  ids: number[],
+): Promise<AdminBatchResult> {
+  return post<AdminBatchResult>('/admin/podcasts/batch-publish', { ids });
+}
+
 /** POST /admin/podcasts/batch-tag — bulk add tags (merge, no replace). */
 export function batchTagAdminPodcasts(
   ids: number[],

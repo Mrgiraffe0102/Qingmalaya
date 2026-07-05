@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AdminPodcastListDto } from './dto/admin-podcast-list.dto';
 import { AdminPodcastUpdateDto } from './dto/admin-podcast-update.dto';
 import { AdminPodcastBatchTakedownDto } from './dto/admin-podcast-batch-takedown.dto';
+import { AdminPodcastBatchPublishDto } from './dto/admin-podcast-batch-publish.dto';
 import { AdminPodcastBatchTagDto } from './dto/admin-podcast-batch-tag.dto';
 import { AdminCommentListDto } from './dto/admin-comment-list.dto';
 
@@ -347,6 +348,45 @@ export class AdminPodcastsService {
       data: {
         adminId,
         action: 'batch_takedown_podcast',
+        targetType: 'Podcast',
+        targetId: null,
+        detail: { ids: dto.ids, count: result.count },
+      },
+    });
+
+    return { success: true, count: result.count };
+  }
+
+  /**
+   * Batch publish (POST /admin/podcasts/batch-publish). Sets status to
+   * PUBLISHED for every podcast in `ids`. publishedAt is stamped only on
+   * first publish (re-publishing after takedown preserves the original date),
+   * matching the single-publish semantics. Done as two updateMany calls
+   * because Prisma can't conditionally set a field per-row: the first sets
+   * status for all matched rows; the second stamps publishedAt=now for the
+   * subset that had no publishedAt. Missing IDs are silently skipped. A
+   * single AdminLog entry is written with the full ID list.
+   */
+  async batchPublish(
+    dto: AdminPodcastBatchPublishDto,
+    adminId: number,
+  ): Promise<{ success: true; count: number }> {
+    const result = await this.prisma.podcast.updateMany({
+      where: { id: { in: dto.ids } },
+      data: { status: 'PUBLISHED' },
+    });
+
+    if (result.count > 0) {
+      await this.prisma.podcast.updateMany({
+        where: { id: { in: dto.ids }, publishedAt: null },
+        data: { publishedAt: new Date() },
+      });
+    }
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'batch_publish_podcast',
         targetType: 'Podcast',
         targetId: null,
         detail: { ids: dto.ids, count: result.count },

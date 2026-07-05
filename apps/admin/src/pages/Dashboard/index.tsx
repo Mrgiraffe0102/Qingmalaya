@@ -12,7 +12,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { ProCard } from '@ant-design/pro-components';
-import { Typography, Spin, App as AntdApp, Table, Image } from 'antd';
+import { Typography, Spin, App as AntdApp, Table, Image, Badge } from 'antd';
 import { Statistic } from 'antd';
 import { Line, Bar } from '@ant-design/charts';
 import {
@@ -21,7 +21,9 @@ import {
   UploadOutlined,
   PlayCircleOutlined,
   HeartOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import {
   getDashboardStats,
   type DashboardStats,
@@ -34,6 +36,7 @@ const PRIMARY = '#4d6265';
 
 const DashboardPage: React.FC = () => {
   const { message } = AntdApp.useApp();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
 
@@ -204,6 +207,27 @@ const DashboardPage: React.FC = () => {
             prefix={<SoundOutlined style={{ color: PRIMARY }} />}
           />
         </ProCard>
+        <ProCard
+          colSpan={{ xs: 24, sm: 12, md: 8, lg: 6, xl: 4 }}
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/podcasts?status=PENDING')}
+        >
+          <Statistic
+            title="待审核播客"
+            value={cards?.pendingReview ?? 0}
+            prefix={<AuditOutlined style={{ color: '#fa8c16' }} />}
+            valueStyle={
+              (cards?.pendingReview ?? 0) > 0
+                ? { color: '#fa8c16' }
+                : undefined
+            }
+          />
+          {(cards?.pendingReview ?? 0) > 0 && (
+            <div style={{ marginTop: 4 }}>
+              <Badge status="warning" text={<Typography.Link>去审核 →</Typography.Link>} />
+            </div>
+          )}
+        </ProCard>
         <ProCard colSpan={{ xs: 24, sm: 12, md: 8, lg: 6, xl: 4 }}>
           <Statistic
             title="今日上传"
@@ -225,8 +249,6 @@ const DashboardPage: React.FC = () => {
             prefix={<HeartOutlined style={{ color: PRIMARY }} />}
           />
         </ProCard>
-        {/* Spacer to keep 5-card layout balanced on xl (6-col grid → 1 empty) */}
-        <ProCard colSpan={{ xs: 0, sm: 0, md: 0, lg: 0, xl: 4 }} ghost />
       </ProCard>
 
       {/* Trend line charts */}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import AppLayout from '../../components/AppLayout'
@@ -20,6 +20,15 @@ const HOT_TOP_N = 5
 const CARD_STYLE: React.CSSProperties = {
   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
   border: '1px solid rgba(114, 120, 121, 0.10)',
+}
+
+/** Inline Material Symbols icon (font linked in src/index.html on H5). */
+function Icon({ name, className = '', style }: { name: string; className?: string; style?: CSSProperties }) {
+  return (
+    <Text className={`material-symbols-outlined ${className}`} style={{ fontSize: '16px', ...style }}>
+      {name}
+    </Text>
+  )
 }
 
 /** Navigate to the playback detail page for a podcast. */
@@ -202,18 +211,21 @@ export default function Discovery() {
             <View className='flex gap-3 px-4 pb-1'>
               <HotColumn
                 title='播放榜'
+                icon='play_arrow'
                 accent='primary'
                 items={byPlay}
                 metricLabel={(p) => `${formatCount(p.playCount)} 播放`}
               />
               <HotColumn
                 title='点赞榜'
+                icon='thumb_up'
                 accent='secondary'
                 items={byLike}
                 metricLabel={(p) => `${formatCount(p.likeCount)} 赞`}
               />
               <HotColumn
                 title='评论榜'
+                icon='chat_bubble'
                 accent='tertiary'
                 items={byComment}
                 metricLabel={(p) => `${formatCount(p.commentCount)} 评`}
@@ -286,12 +298,13 @@ export default function Discovery() {
 
 interface HotColumnProps {
   title: string
+  icon: string
   accent: 'primary' | 'secondary' | 'tertiary'
   items: PodcastWithRelations[]
   metricLabel: (p: PodcastWithRelations) => string
 }
 
-function HotColumn({ title, accent, items, metricLabel }: HotColumnProps) {
+function HotColumn({ title, icon, accent, items, metricLabel }: HotColumnProps) {
   const accentText =
     accent === 'primary'
       ? 'text-primary'
@@ -303,9 +316,12 @@ function HotColumn({ title, accent, items, metricLabel }: HotColumnProps) {
       className='w-[62%] shrink-0 rounded-xl bg-surface-container-lowest p-3'
       style={CARD_STYLE}
     >
-      <Text className={`mb-3 block text-sm font-semibold tracking-wider ${accentText}`}>
-        {title}
-      </Text>
+      <View className='mb-3 flex items-center gap-1'>
+        <Icon name={icon} className={accentText} style={{ fontSize: '16px' }} />
+        <Text className={`text-sm font-semibold tracking-wider ${accentText}`}>
+          {title}
+        </Text>
+      </View>
       <View className='flex flex-col gap-3'>
         {items.map((p, idx) => (
           <View
@@ -339,38 +355,48 @@ function RecentCard({ podcast }: { podcast: PodcastWithRelations }) {
   return (
     <View
       onClick={() => goToPodcast(podcast.id)}
-      className='overflow-hidden rounded-xl bg-surface-container-lowest'
-      style={CARD_STYLE}
+      className='relative overflow-hidden rounded-xl bg-surface-container-lowest'
+      style={{ ...CARD_STYLE, height: '200px' }}
     >
       <Cover
         path={podcast.coverPath}
         title={podcast.title}
-        className='h-28 w-full'
-        letterClass='text-2xl text-on-primary-container font-semibold'
+        className='absolute inset-0 h-full w-full'
+        letterClass='text-5xl text-on-primary-container font-semibold'
       />
-      <View className='p-2.5'>
+      {/*
+        Gradient overlay: fully transparent through the middle-upper region,
+        transitioning to opaque dark at the bottom so text stays readable.
+      */}
+      <View
+        className='absolute inset-0'
+        style={{
+          background:
+            'linear-gradient(to bottom, rgba(77,98,101,0) 0%, rgba(77,98,101,0) 25%, rgba(77,98,101,0.95) 100%)',
+        }}
+      />
+      <View className='absolute bottom-0 left-0 right-0 p-2.5'>
         <Text
-          className='block text-sm font-medium text-on-surface'
-          // Clamp title to 2 lines via webkit box on H5.
+          className='block text-base font-medium text-white'
           style={{
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
-            lineHeight: '20px',
-            minHeight: '40px',
+            lineHeight: '22px',
+            minHeight: '44px',
           }}
         >
           {podcast.title}
         </Text>
-        <Text className='mt-1 block truncate text-xs text-on-surface-variant'>
+        <Text className='mt-1 block truncate text-xs text-white'>
           {podcast.author.name}
         </Text>
         <View className='mt-1 flex items-center justify-between'>
-          <Text className='text-xs text-outline'>
+          <Text className='text-xs text-white'>
             {formatDuration(podcast.duration)}
           </Text>
-          <Text className='text-xs text-on-surface-variant'>
+          <Text className='text-xs text-white'>
             {formatCount(podcast.playCount)} 播放
           </Text>
         </View>

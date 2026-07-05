@@ -1,10 +1,11 @@
 /**
  * 播客管理 (Task 27). ProTable with keyword + status search, row-level
- * view/edit/takedown/publish actions, and batch takedown / batch tag.
+ * view/edit/takedown/publish actions, batch takedown / batch publish /
+ * batch tag, plus a detail drawer with inline audio preview and an audit
+ * action panel for PENDING podcasts.
  *
- * The detail drawer shows the cover, an inline <audio> player for online
- * preview, the full description, tags, and the podcast's comment list
- * (fetched via the admin comments API with a podcastId filter).
+ * Supports deep-linking via ?status=PENDING (linked from the Dashboard
+ * "待审核播客" card) to land operators directly on the review queue.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -15,7 +16,9 @@ import {
   ProTable,
   type ActionType,
   type ProColumns,
+  type ProFormInstance,
 } from '@ant-design/pro-components';
+import { useSearchParams } from 'react-router-dom';
 import {
   App as AntdApp,
   Button,
@@ -31,6 +34,7 @@ import {
   Typography,
 } from 'antd';
 import {
+  AuditOutlined,
   CheckCircleOutlined,
   EditOutlined,
   EyeOutlined,
@@ -39,6 +43,7 @@ import {
 import dayjs from 'dayjs';
 import type { PodcastWithRelations, Tag as TagType } from '@qingmalaya/shared';
 import {
+  batchPublishAdminPodcasts,
   batchTagAdminPodcasts,
   batchTakedownAdminPodcasts,
   listAdminPodcasts,
@@ -56,7 +61,7 @@ const { Paragraph, Text, Title } = Typography;
 
 /** Status → display color + Chinese label. */
 const STATUS_CONFIG: Record<string, { color: string; text: string }> = {
-  PENDING: { color: 'orange', text: '待发布' },
+  PENDING: { color: 'orange', text: '待审核' },
   PUBLISHED: { color: 'green', text: '已发布' },
   TAKEN_DOWN: { color: 'red', text: '已下架' },
 };
@@ -90,7 +95,14 @@ interface EditFormValues {
 
 const PodcastsPage: React.FC = () => {
   const actionRef = useRef<ActionType>();
+  const formRef = useRef<ProFormInstance>();
   const { message } = AntdApp.useApp();
+
+  // Allow deep-linking with a preset status filter (e.g. from the Dashboard
+  // "待审核播客" card → /podcasts?status=PENDING). The value seeds the search
+  // form so the operator lands on a pre-filtered list.
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status');
 
   // Detail drawer state
   const [detailOpen, setDetailOpen] = useState(false);
@@ -161,24 +173,40 @@ const PodcastsPage: React.FC = () => {
   };
 
   // --- Takedown / Publish ---
-  const handleTakedown = async (id: number): Promise<void> => {
+  const handleTakedown = async (id: number): Promise<boolean> => {
     try {
       await takedownAdminPodcast(id);
       message.success('已下架');
       actionRef.current?.reload();
+      return true;
     } catch (e) {
       message.error(e instanceof Error ? e.message : '操作失败');
+      return false;
     }
   };
 
-  const handlePublish = async (id: number): Promise<void> => {
+  const handlePublish = async (id: number): Promise<boolean> => {
     try {
       await publishAdminPodcast(id);
       message.success('已发布');
       actionRef.current?.reload();
+      return true;
     } catch (e) {
       message.error(e instanceof Error ? e.message : '操作失败');
+      return false;
     }
+  };
+
+  // Audit actions from the detail drawer — close the drawer on success so the
+  // operator can move on to the next pending podcast.
+  const handleDetailPublish = async (id: number): Promise<void> => {
+    const ok = await handlePublish(id);
+    if (ok) setDetailOpen(false);
+  };
+
+  const handleDetailReject = async (id: number): Promise<void> => {
+    const ok = await handleTakedown(id);
+    if (ok) setDetailOpen(false);
   };
 
   // --- Batch operations ---
@@ -187,6 +215,18 @@ const PodcastsPage: React.FC = () => {
     try {
       const res = await batchTakedownAdminPodcasts(ids);
       message.success(`已下架 ${res.count} 个播客`);
+      setSelectedRowKeys([]);
+      actionRef.current?.reload();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '操作失败');
+    }
+  };
+
+  const handleBatchPublish = async (): Promise<void> => {
+    const ids = selectedRowKeys.map((k) => Number(k));
+    try {
+      const res = await batchPublishAdminPodcasts(ids);
+      message.success(`已通过审核 ${res.count} 个播客`);
       setSelectedRowKeys([]);
       actionRef.current?.reload();
     } catch (e) {
@@ -271,7 +311,7 @@ const PodcastsPage: React.FC = () => {
       dataIndex: 'status',
       valueType: 'select',
       valueEnum: {
-        PENDING: { text: '待发布' },
+        PENDING: { text: '待审核' },
         PUBLISHED: { text: '已发布' },
         TAKEN_DOWN: { text: '已下架' },
       },
@@ -310,7 +350,7 @@ const PodcastsPage: React.FC = () => {
       title: '操作',
       dataIndex: 'option',
       valueType: 'option',
-      width: 220,
+      width: 240,
       fixed: 'right',
       render: (_, row) => [
         <a key="view" onClick={() => handleViewDetail(row)}>
@@ -319,17 +359,7 @@ const PodcastsPage: React.FC = () => {
         <a key="edit" onClick={() => handleEdit(row)}>
           <EditOutlined /> 编辑
         </a>,
-        row.status === 'TAKEN_DOWN' ? (
-          <Popconfirm
-            key="publish"
-            title="确认发布该播客？"
-            onConfirm={() => handlePublish(row.id)}
-          >
-            <a>
-              <CheckCircleOutlined /> 发布
-            </a>
-          </Popconfirm>
-        ) : (
+        row.status === 'PUBLISHED' ? (
           <Popconfirm
             key="takedown"
             title="确认下架该播客？"
@@ -339,7 +369,28 @@ const PodcastsPage: React.FC = () => {
               <StopOutlined /> 下架
             </a>
           </Popconfirm>
+        ) : (
+          <Popconfirm
+            key="publish"
+            title={row.status === 'PENDING' ? '确认通过审核并发布该播客？' : '确认重新发布该播客？'}
+            onConfirm={() => handlePublish(row.id)}
+          >
+            <a>
+              <CheckCircleOutlined /> {row.status === 'PENDING' ? '通过审核' : '重新发布'}
+            </a>
+          </Popconfirm>
         ),
+        row.status === 'PENDING' ? (
+          <Popconfirm
+            key="reject"
+            title="确认驳回该播客（下架处理）？"
+            onConfirm={() => handleTakedown(row.id)}
+          >
+            <a style={{ color: '#ba1a1a' }}>
+              <StopOutlined /> 驳回
+            </a>
+          </Popconfirm>
+        ) : null,
       ],
     },
   ];
@@ -349,9 +400,15 @@ const PodcastsPage: React.FC = () => {
       <ProTable<PodcastWithRelations>
         headerTitle="播客管理"
         actionRef={actionRef}
+        formRef={formRef}
         rowKey="id"
         columns={columns}
         scroll={{ x: 1200 }}
+        form={{
+          // Seed the status filter when arriving via /podcasts?status=PENDING
+          // so the review queue is loaded without an extra click.
+          initialValues: initialStatus ? { status: initialStatus } : undefined,
+        }}
         request={async (params) => {
           try {
             const res = await listAdminPodcasts({
@@ -376,6 +433,14 @@ const PodcastsPage: React.FC = () => {
         }}
         tableAlertOptionRender={() => (
           <Space>
+            <Popconfirm
+              title={`确认通过审核选中的 ${selectedRowKeys.length} 个播客？`}
+              onConfirm={handleBatchPublish}
+            >
+              <Button type="primary" size="small">
+                批量通过审核
+              </Button>
+            </Popconfirm>
             <Popconfirm
               title={`确认下架选中的 ${selectedRowKeys.length} 个播客？`}
               onConfirm={handleBatchTakedown}
@@ -497,6 +562,40 @@ const PodcastsPage: React.FC = () => {
                 <Empty description="暂无评论" style={{ marginTop: 16 }} />
               )}
             </div>
+
+            {detailPodcast.status === 'PENDING' && (
+              <div
+                style={{
+                  marginTop: 24,
+                  padding: 16,
+                  background: '#fafafa',
+                  borderRadius: 8,
+                  textAlign: 'center',
+                }}
+              >
+                <Text strong style={{ display: 'block', marginBottom: 12 }}>
+                  <AuditOutlined /> 审核操作
+                </Text>
+                <Space>
+                  <Popconfirm
+                    title="确认通过审核并发布该播客？"
+                    onConfirm={() => handleDetailPublish(detailPodcast.id)}
+                  >
+                    <Button type="primary">
+                      <CheckCircleOutlined /> 通过审核
+                    </Button>
+                  </Popconfirm>
+                  <Popconfirm
+                    title="确认驳回该播客（下架处理）？"
+                    onConfirm={() => handleDetailReject(detailPodcast.id)}
+                  >
+                    <Button danger>
+                      <StopOutlined /> 驳回
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              </div>
+            )}
           </div>
         )}
       </Drawer>

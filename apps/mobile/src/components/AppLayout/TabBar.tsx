@@ -1,6 +1,7 @@
 import { Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useIsDesktop } from './useIsDesktop'
+import { usePlayerStore } from '../../store/player'
 
 /** Keys for the four real tab pages. The "+" create button is never "selected". */
 export type TabKey = 'discovery' | 'browse' | 'create' | 'profile'
@@ -48,6 +49,7 @@ interface TabBarProps {
  */
 export default function TabBar({ currentTab }: TabBarProps) {
   const isDesktop = useIsDesktop()
+  const hasPodcast = usePlayerStore((s) => s.currentPodcast !== null)
 
   if (isDesktop) {
     return (
@@ -89,9 +91,15 @@ export default function TabBar({ currentTab }: TabBarProps) {
   }
 
   // Mobile: pill-shaped floating nav bar matching 移动端UI参考 design.
+  // When a podcast is playing, the PlaybackBar sits directly above this bar.
+  // Flatten the top corners and remove the top border so the two bars fuse
+  // into one continuous glass element.
+  const radiusClass = hasPodcast ? 'rounded-b-xl' : 'rounded-full'
+  const borderClass = hasPodcast ? 'border-x border-b' : 'border'
+
   return (
     <View
-      className='fixed bottom-4 left-4 right-4 z-50 flex h-16 items-center justify-around rounded-full border border-outline-variant/20 px-2 shadow-sm'
+      className={`fixed bottom-4 left-4 right-4 z-50 flex h-16 items-center justify-around ${radiusClass} ${borderClass} border-outline-variant/20 px-2 shadow-sm`}
       style={GLASS_STYLE}
     >
       {TABS.map((tab) => {

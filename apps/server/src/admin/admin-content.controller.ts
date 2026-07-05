@@ -18,6 +18,7 @@ import { AdminPodcastsService, AdminCommentsService } from './admin-content.serv
 import { AdminPodcastListDto } from './dto/admin-podcast-list.dto';
 import { AdminPodcastUpdateDto } from './dto/admin-podcast-update.dto';
 import { AdminPodcastBatchTakedownDto } from './dto/admin-podcast-batch-takedown.dto';
+import { AdminPodcastBatchPublishDto } from './dto/admin-podcast-batch-publish.dto';
 import { AdminPodcastBatchTagDto } from './dto/admin-podcast-batch-tag.dto';
 import { AdminCommentListDto } from './dto/admin-comment-list.dto';
 import { AdminCommentBatchDeleteDto } from './dto/admin-comment-batch-delete.dto';
@@ -35,6 +36,7 @@ import { AdminCommentBatchDeleteDto } from './dto/admin-comment-batch-delete.dto
  *     PUT    /:id/takedown    — set status TAKEN_DOWN
  *     PUT    /:id/publish     — set status PUBLISHED + publishedAt = now
  *     POST   /batch-takedown  — bulk TAKEN_DOWN
+ *     POST   /batch-publish   — bulk PUBLISHED (审核通过)
  *     POST   /batch-tag       — bulk add tags (merge, no replace)
  *
  *   AdminCommentsController  — /admin/comments
@@ -79,6 +81,15 @@ export class AdminPodcastsController {
     @CurrentUser('id') adminId: number,
   ) {
     return this.podcasts.batchTag(dto, adminId);
+  }
+
+  /** POST /admin/podcasts/batch-publish — bulk set status PUBLISHED (审核通过). */
+  @Post('batch-publish')
+  batchPublish(
+    @Body() dto: AdminPodcastBatchPublishDto,
+    @CurrentUser('id') adminId: number,
+  ) {
+    return this.podcasts.batchPublish(dto, adminId);
   }
 
   /** GET /admin/podcasts/:id — detail with author + tags + commentCount. */

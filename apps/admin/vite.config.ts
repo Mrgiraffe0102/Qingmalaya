@@ -22,6 +22,13 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      // Uploaded covers/audio are served by the NestJS ServeStaticModule
+      // under /static (not under the /api global prefix), so proxy them to
+      // the server too — otherwise the dev server 404s on cover/audio URLs.
+      '/static': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
   build: {

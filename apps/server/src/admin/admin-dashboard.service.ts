@@ -10,6 +10,7 @@ export interface DashboardStats {
   cards: {
     totalUsers: number;
     totalPodcasts: number;
+    pendingReview: number;
     todayUploads: number;
     todayPlays: number;
     totalLikes: number;
@@ -76,6 +77,7 @@ export class AdminDashboardService {
     const [
       totalUsers,
       totalPodcasts,
+      pendingReview,
       todayUploads,
       todayPlays,
       totalLikes,
@@ -86,6 +88,7 @@ export class AdminDashboardService {
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.podcast.count(),
+      this.prisma.podcast.count({ where: { status: 'PENDING' } }),
       this.prisma.podcast.count({ where: { createdAt: { gte: today } } }),
       this.prisma.playHistory.count({ where: { playedAt: { gte: today } } }),
       this.prisma.like.count({ where: { targetType: 'PODCAST' } }),
@@ -140,6 +143,7 @@ export class AdminDashboardService {
       cards: {
         totalUsers,
         totalPodcasts,
+        pendingReview,
         todayUploads,
         todayPlays,
         totalLikes,

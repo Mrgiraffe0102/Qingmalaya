@@ -11,6 +11,7 @@ import { get } from '@/utils/request';
 export interface DashboardCards {
   totalUsers: number;
   totalPodcasts: number;
+  pendingReview: number;
   todayUploads: number;
   todayPlays: number;
   totalLikes: number;

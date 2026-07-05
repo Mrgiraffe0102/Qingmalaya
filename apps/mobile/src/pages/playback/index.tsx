@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Image, Slider, ScrollView } from '@tarojs/components'
+import { View, Text, Image, ScrollView } from '@tarojs/components'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
-import { usePlayerStore } from '../../store/player'
+import { usePlayerStore, setSeeking } from '../../store/player'
 import { get, post, del } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
 import CommentDrawer from '../../components/CommentDrawer'
@@ -12,18 +12,17 @@ import type { PodcastWithRelations, Class, TagColor } from '@qingmalaya/shared'
 /**
  * Playback detail page (Task 19).
  *
- * Full-screen page (no AppLayout) with its own custom nav bar. Hosts a single
- * HTML5 Audio element (H5-only for now — other platforms deferred to Task 36)
- * wired to the global player store so the PlaybackBar in AppLayout stays in
- * sync when the user navigates back.
+ * Full-screen page (no AppLayout) with its own custom nav bar. Audio playback
+ * is handled by the global <GlobalAudioPlayer> (mounted at the app root) — this
+ * page only drives the store via `load`/`togglePlayPause`/`seek`. Because the
+ * Audio element is global, playback continues and the PlaybackBar stays visible
+ * when the user navigates back.
  *
  * Layout: flex column — pinned top bar, scrollable cover/info, pinned controls
  * (progress + play/pause + speed), pinned bottom action bar (like/comment/fav),
  * and the comment drawer overlay.
  */
 
-const STATIC_ORIGIN = 'http://localhost:3000'
-const REPORT_INTERVAL_MS = 5000
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2]
 
 /** Tag chip palette — 15% tint background + matching text (matches browse page). */
@@ -66,8 +65,11 @@ export default function Playback() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [commentCount, setCommentCount] = useState(0)
 
-  // --- Description expand ---
-  const [expanded, setExpanded] = useState(false)
+  // --- Description modal (picture-in-picture for long descriptions) ---
+  const [showDescModal, setShowDescModal] = useState(false)
+
+  // --- Local slider drag value (decouples drag from store position updates) ---
+  const [dragValue, setDragValue] = useState<number | null>(null)
 
   // --- Player store ---
   const {
@@ -75,22 +77,28 @@ export default function Playback() {
     position,
     duration,
     playbackRate,
-    play: storePlay,
+    load,
     togglePlayPause,
     setPosition,
+    seek,
     setPlaybackRate,
-    stop,
   } = usePlayerStore()
 
-  // --- Audio element + seeking guard ---
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const seekingRef = useRef(false)
-  const reportTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const hasResumedRef = useRef(false)
+  // Ref for the custom progress bar track element (pointer events).
+  const trackRef = useRef<HTMLElement | null>(null)
+  // Local drag guard — distinct from the global setSeeking flag so pointer
+  // handlers can synchronously check if a drag is active.
+  const draggingRef = useRef(false)
 
-  // Resolve the podcast ID from the route query.
-  const instance = Taro.getCurrentInstance()
-  const podcastId = Number(instance.router?.params.id)
+  // Resolve the podcast ID from the route query ONCE. Recomputing on every
+  // render breaks because Taro.getCurrentInstance().router changes during
+  // navigateBack — the param becomes undefined, podcastId turns NaN, and the
+  // fetch effect re-fires showing "无效的播客ID".
+  const [podcastId] = useState(() => {
+    const instance = Taro.getCurrentInstance()
+    const id = Number(instance.router?.params.id)
+    return Number.isNaN(id) ? 0 : id
+  })
 
   // Class name lookup.
   const classMap = new Map<number, string>()
@@ -99,7 +107,7 @@ export default function Playback() {
   // --- Fetch podcast detail + class catalog on mount ---
   useEffect(() => {
     if (!ok) return
-    if (!podcastId || Number.isNaN(podcastId)) {
+    if (!podcastId) {
       Taro.showToast({ title: '无效的播客ID', icon: 'none' })
       setLoading(false)
       return
@@ -113,11 +121,19 @@ export default function Playback() {
         setLikeCount(p.likeCount)
         setFavorited(!!p.favorited)
         setCommentCount(p.commentCount)
-        // Seed the store so the PlaybackBar stays in sync. `play` sets
-        // isPlaying=true; we immediately toggle it back to false so the
-        // podcast is loaded but not auto-playing.
-        storePlay(p)
-        togglePlayPause()
+
+        // Load into the global player. If this is a fresh load (different
+        // podcast), fetch the resume position and seek to it. If the podcast
+        // is already loaded (user returning to the page), the global player
+        // already has the correct position — do nothing.
+        const wasNew = load(p)
+        if (wasNew) {
+          post<{ position: number }>(`/podcasts/${p.id}/play`, { position: 0 })
+            .then((res) => {
+              if (res.position > 0) seek(res.position)
+            })
+            .catch(() => {})
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -128,142 +144,14 @@ export default function Playback() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok, podcastId])
 
-  // --- Set up the HTML5 Audio element + resume position ---
-  useEffect(() => {
-    if (!ok || !podcast) return
-    if (typeof window === 'undefined') return
-
-    const audio = new Audio()
-    audioRef.current = audio
-    audio.src = `${STATIC_ORIGIN}/static/${podcast.audioPath}`
-    audio.preload = 'metadata'
-    audio.playbackRate = playbackRate
-
-    // `loadedmetadata` → set duration in store (overrides the podcast.duration
-    // placeholder with the actual audio duration if available).
-    const onLoaded = () => {
-      if (Number.isFinite(audio.duration) && audio.duration > 0) {
-        // Don't use setDuration (not in store); instead update via a local
-        // override. The store's duration stays as podcast.duration which is
-        // close enough for the UI. We update position tracking from timeupdate.
-      }
-    }
-
-    const onTimeUpdate = () => {
-      if (seekingRef.current) return
-      setPosition(audio.currentTime)
-    }
-
-    const onPlay = () => {
-      if (!usePlayerStore.getState().isPlaying) togglePlayPause()
-    }
-
-    const onPause = () => {
-      if (usePlayerStore.getState().isPlaying) togglePlayPause()
-    }
-
-    const onEnded = () => {
-      if (usePlayerStore.getState().isPlaying) togglePlayPause()
-      setPosition(0)
-    }
-
-    const onError = () => {
-      // Audio file may not exist (seed uses fake paths). Fail gracefully —
-      // the UI just shows a paused state.
-      if (usePlayerStore.getState().isPlaying) togglePlayPause()
-    }
-
-    audio.addEventListener('loadedmetadata', onLoaded)
-    audio.addEventListener('timeupdate', onTimeUpdate)
-    audio.addEventListener('play', onPlay)
-    audio.addEventListener('pause', onPause)
-    audio.addEventListener('ended', onEnded)
-    audio.addEventListener('error', onError)
-
-    // Resume position: call play tracking with position 0 to get the previous
-    // position, then seek to it. This also bumps playCount on first play.
-    if (!hasResumedRef.current) {
-      hasResumedRef.current = true
-      post<{ position: number }>(`/podcasts/${podcast.id}/play`, { position: 0 })
-        .then((res) => {
-          if (res.position > 0 && audio) {
-            audio.currentTime = res.position
-            setPosition(res.position)
-          }
-        })
-        .catch(() => {})
-    }
-
-    return () => {
-      audio.removeEventListener('loadedmetadata', onLoaded)
-      audio.removeEventListener('timeupdate', onTimeUpdate)
-      audio.removeEventListener('play', onPlay)
-      audio.removeEventListener('pause', onPause)
-      audio.removeEventListener('ended', onEnded)
-      audio.removeEventListener('error', onError)
-      audio.pause()
-      audioRef.current = null
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ok, podcast])
-
-  // --- Progress reporting: every 5s while playing ---
-  useEffect(() => {
-    if (!ok || !podcast) return
-    if (!isPlaying) {
-      if (reportTimerRef.current) {
-        clearInterval(reportTimerRef.current)
-        reportTimerRef.current = null
-      }
-      return
-    }
-
-    reportTimerRef.current = setInterval(() => {
-      const audio = audioRef.current
-      const pos = audio ? audio.currentTime : usePlayerStore.getState().position
-      post(`/podcasts/${podcast.id}/play`, { position: Math.floor(pos) }).catch(
-        () => {},
-      )
-    }, REPORT_INTERVAL_MS)
-
-    return () => {
-      if (reportTimerRef.current) {
-        clearInterval(reportTimerRef.current)
-        reportTimerRef.current = null
-      }
-    }
-  }, [ok, podcast, isPlaying])
-
-  // --- Cleanup on unmount: stop playback + clear store ---
-  useEffect(() => {
-    return () => {
-      if (reportTimerRef.current) clearInterval(reportTimerRef.current)
-      stop()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // --- Playback controls ---
   const handleTogglePlay = useCallback((): void => {
-    const audio = audioRef.current
-    if (!audio) {
-      // No audio element (e.g. load failed) — just toggle the UI state.
-      togglePlayPause()
-      return
-    }
-    if (audio.paused) {
-      audio.play().catch(() => {
-        // play() rejects on media error or autoplay policy — revert.
-        if (usePlayerStore.getState().isPlaying) togglePlayPause()
-      })
-    } else {
-      audio.pause()
-    }
+    togglePlayPause()
   }, [togglePlayPause])
 
   const handleSeeking = useCallback(
     (val: number): void => {
-      seekingRef.current = true
+      setDragValue(val)
       const d = duration || podcast?.duration || 0
       const newPos = d > 0 ? (val / 100) * d : 0
       setPosition(newPos)
@@ -275,19 +163,70 @@ export default function Playback() {
     (val: number): void => {
       const d = duration || podcast?.duration || 0
       const newPos = d > 0 ? (val / 100) * d : 0
-      const audio = audioRef.current
-      if (audio) audio.currentTime = newPos
-      setPosition(newPos)
-      seekingRef.current = false
+      seek(newPos)
+      setSeeking(false)
+      setDragValue(null)
     },
-    [duration, podcast, setPosition],
+    [duration, podcast, seek],
   )
+
+  // --- Progress bar pointer events (works with both mouse and touch) ---
+  useEffect(() => {
+    const el = trackRef.current
+    if (!el) return
+
+    const getVal = (clientX: number): number => {
+      const rect = el.getBoundingClientRect()
+      return Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
+    }
+
+    const onDown = (e: PointerEvent): void => {
+      e.preventDefault()
+      try {
+        el.setPointerCapture(e.pointerId)
+      } catch {
+        // setPointerCapture not supported
+      }
+      setSeeking(true)
+      draggingRef.current = true
+      const val = getVal(e.clientX)
+      setDragValue(val)
+      handleSeeking(val)
+    }
+
+    const onMove = (e: PointerEvent): void => {
+      if (!draggingRef.current) return
+      e.preventDefault()
+      const val = getVal(e.clientX)
+      setDragValue(val)
+      handleSeeking(val)
+    }
+
+    const onUp = (e: PointerEvent): void => {
+      if (!draggingRef.current) return
+      draggingRef.current = false
+      const val = getVal(e.clientX)
+      handleSeek(val)
+    }
+
+    el.addEventListener('pointerdown', onDown)
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerup', onUp)
+    el.addEventListener('pointercancel', onUp)
+
+    return () => {
+      el.removeEventListener('pointerdown', onDown)
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerup', onUp)
+      el.removeEventListener('pointercancel', onUp)
+      // Reset the global seeking flag in case the component unmounts mid-drag.
+      setSeeking(false)
+    }
+  }, [handleSeeking, handleSeek])
 
   const handleSpeedCycle = useCallback((): void => {
     const idx = SPEEDS.indexOf(playbackRate)
     const next = SPEEDS[(idx + 1) % SPEEDS.length]
-    const audio = audioRef.current
-    if (audio) audio.playbackRate = next
     setPlaybackRate(next)
   }, [playbackRate, setPlaybackRate])
 
@@ -378,19 +317,20 @@ export default function Playback() {
     effectiveDuration > 0
       ? Math.min(100, (position / effectiveDuration) * 100)
       : 0
+  const sliderValue = dragValue !== null ? dragValue : progress
   const speedLabel = `${playbackRate}x`
   const authorClass = podcast.author.classId
     ? classMap.get(podcast.author.classId)
     : null
 
-  const descStyle: CSSProperties = expanded
-    ? {}
-    : {
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-      }
+  const isLongDesc = !!podcast.description && podcast.description.length > 80
+
+  const clampedDescStyle: CSSProperties = {
+    display: '-webkit-box',
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+  }
 
   return (
     <View className='flex h-screen flex-col overflow-hidden bg-surface'>
@@ -419,8 +359,12 @@ export default function Playback() {
       {/* ---- Scrollable content: cover + meta ---- */}
       <ScrollView scrollY className='flex-1' style={{ minHeight: 0 }}>
         <View
-          className='mx-auto max-w-md px-5'
-          style={isDesktop ? { maxWidth: '672px' } : undefined}
+          className='mx-auto flex max-w-md flex-col px-5'
+          style={{
+            minHeight: '100%',
+            justifyContent: 'center',
+            ...(isDesktop ? { maxWidth: '672px' } : {}),
+          }}
         >
           {/* Cover */}
           <View className='flex items-center justify-center py-6'>
@@ -477,31 +421,34 @@ export default function Playback() {
               {podcast.author.name}
             </Text>
             {authorClass && (
-              <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-[11px] font-medium text-on-tertiary-container'>
+              <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-sm font-medium text-on-tertiary-container'>
                 {authorClass}
               </Text>
             )}
             {podcast.author.role === 'TEACHER' && (
-              <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-[11px] font-medium text-on-secondary-container'>
+              <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-sm font-medium text-on-secondary-container'>
                 教师
               </Text>
             )}
           </View>
 
-          {/* Description (expandable) */}
+          {/* Description — short ones show fully; long ones clamp
+              with a "更多" button that opens a picture-in-picture modal */}
           {podcast.description && (
             <View className='mt-3'>
               <Text
                 className='block text-sm leading-relaxed text-on-surface-variant'
-                style={descStyle}
+                style={isLongDesc ? clampedDescStyle : undefined}
               >
                 {podcast.description}
               </Text>
-              <View onClick={() => setExpanded((v) => !v)} className='mt-1'>
-                <Text className='text-xs font-semibold text-primary'>
-                  {expanded ? '收起' : '展开'}
-                </Text>
-              </View>
+              {isLongDesc && (
+                <View onClick={() => setShowDescModal(true)} className='mt-1'>
+                  <Text className='text-xs font-semibold text-primary'>
+                    更多
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -512,19 +459,53 @@ export default function Playback() {
         className='mx-auto w-full max-w-md flex-shrink-0 px-5 pb-2 pt-4'
         style={isDesktop ? { maxWidth: '672px' } : undefined}
       >
-        {/* Progress bar */}
-        <Slider
-          min={0}
-          max={100}
-          step={0.1}
-          value={progress}
-          activeColor='#4d6265'
-          backgroundColor='#e3e2e2'
-          blockColor='#4d6265'
-          blockSize={18}
-          onChanging={(e) => handleSeeking(e.detail.value)}
-          onChange={(e) => handleSeek(e.detail.value)}
-        />
+        {/* Progress bar — custom pointer-events track (Taro Slider only
+            supports touch on the knob, which breaks desktop drag) */}
+        <View
+          ref={trackRef as any}
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            touchAction: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              height: '4px',
+              borderRadius: '2px',
+              backgroundColor: '#e3e2e2',
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              height: '4px',
+              borderRadius: '2px',
+              backgroundColor: '#4d6265',
+              width: `${sliderValue}%`,
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              left: `${sliderValue}%`,
+              width: '18px',
+              height: '18px',
+              borderRadius: '50%',
+              backgroundColor: '#4d6265',
+              transform: 'translateX(-50%)',
+              boxShadow: '0 0 4px rgba(0,0,0,0.2)',
+            }}
+          />
+        </View>
         <View className='flex justify-between px-1'>
           <Text className='text-xs text-outline'>
             {formatDuration(position)}
@@ -535,26 +516,46 @@ export default function Playback() {
         </View>
 
         {/* Play/pause + speed */}
-        <View className='mt-3 flex items-center justify-center gap-6'>
+        <View className='relative mt-3 flex items-center justify-center'>
           <View
             onClick={handleTogglePlay}
-            className='flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-lg active:scale-95'
+            className='flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-primary shadow-lg active:scale-95'
             style={{ transition: 'transform 0.15s' }}
           >
             {isPlaying ? (
-              <View className='flex items-center gap-[3px]'>
-                <View className='h-5 w-[4px] rounded-sm bg-on-primary' />
-                <View className='h-5 w-[4px] rounded-sm bg-on-primary' />
+              <View
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <View
+                  style={{
+                    width: '5px',
+                    height: '22px',
+                    borderRadius: '2px',
+                    backgroundColor: '#ffffff',
+                  }}
+                />
+                <View
+                  style={{
+                    width: '5px',
+                    height: '22px',
+                    borderRadius: '2px',
+                    backgroundColor: '#ffffff',
+                  }}
+                />
               </View>
             ) : (
               <View
                 style={{
                   width: 0,
                   height: 0,
-                  borderTop: '10px solid transparent',
-                  borderBottom: '10px solid transparent',
-                  borderLeft: '16px solid #ffffff',
-                  marginLeft: '3px',
+                  borderTop: '11px solid transparent',
+                  borderBottom: '11px solid transparent',
+                  borderLeft: '18px solid #ffffff',
+                  marginLeft: '4px',
                 }}
               />
             )}
@@ -562,7 +563,7 @@ export default function Playback() {
 
           <View
             onClick={handleSpeedCycle}
-            className='flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-on-surface-variant'
+            className='absolute right-0 flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-on-surface-variant'
             style={{ border: '1px solid #c2c7c8' }}
           >
             <Text>{speedLabel}</Text>
@@ -633,6 +634,54 @@ export default function Playback() {
         onCommentAdded={() => setCommentCount((c) => c + 1)}
         onCommentDeleted={() => setCommentCount((c) => Math.max(0, c - 1))}
       />
+
+      {/* ---- Description picture-in-picture modal ---- */}
+      {showDescModal && (
+        <View
+          onClick={() => setShowDescModal(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '24px',
+          }}
+        >
+          <View
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              ...GLASS_STYLE,
+              maxWidth: '400px',
+              width: '100%',
+              maxHeight: '70vh',
+              borderRadius: '16px',
+              padding: '24px',
+              overflowY: 'auto',
+            }}
+          >
+            <Text className='block text-base font-semibold text-on-surface'>
+              简介
+            </Text>
+            <Text className='mt-3 block text-sm leading-relaxed text-on-surface-variant'>
+              {podcast.description}
+            </Text>
+            <View
+              onClick={() => setShowDescModal(false)}
+              className='mt-4 flex justify-center'
+            >
+              <Text className='rounded-full bg-primary px-6 py-2 text-sm font-semibold text-on-primary'>
+                关闭
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

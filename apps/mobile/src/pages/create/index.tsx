@@ -139,11 +139,11 @@ export default function Create() {
       >
         {/* ---- Pinned header ---- */}
         <View
-          className='flex-shrink-0 border-b border-outline-variant/30 bg-surface/95 px-5 pb-3 pt-4'
+          className='flex-shrink-0 border-b border-outline-variant/30 bg-surface/95 px-4 pb-2 pt-4'
           style={{ backdropFilter: 'blur(12px)' }}
         >
           <View className='flex items-center justify-between'>
-            <Text className='text-primary' style={{ fontSize: '22px', fontWeight: '600', lineHeight: '28px' }}>
+            <Text className='text-xl font-bold tracking-tight text-primary'>
               我的创作
             </Text>
             <Text className='text-xs text-on-surface-variant'>
@@ -233,7 +233,7 @@ function CreationCard({ podcast, onMore, onTap }: CreationCardProps) {
           className='absolute left-1 top-1 rounded-full'
           style={{ backgroundColor: status.bg, padding: '1px 6px' }}
         >
-          <Text style={{ fontSize: '10px', fontWeight: '700', color: status.text, lineHeight: '14px' }}>
+          <Text style={{ display: 'block', textAlign: 'center', fontSize: '10px', fontWeight: '700', color: status.text, lineHeight: '14px' }}>
             {status.label}
           </Text>
         </View>

@@ -3,20 +3,13 @@ import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { usePlayerStore } from '../../store/player'
 import { useIsDesktop } from './useIsDesktop'
+import { coverUrl } from '../../utils/format'
 
 /** Glassmorphism spec from DESIGN.md: 20px backdrop-blur + 80% white fill. */
 const GLASS_STYLE: React.CSSProperties = {
   backdropFilter: 'blur(20px)',
   WebkitBackdropFilter: 'blur(20px)',
   backgroundColor: 'rgba(255,255,255,0.8)',
-}
-
-/** Resolve a cover path into a usable image src. */
-function coverSrc(coverPath: string): string {
-  if (/^https?:\/\//.test(coverPath)) return coverPath
-  // Backend serves uploaded files under /static; prepend API origin on H5.
-  if (coverPath.startsWith('/static')) return `http://localhost:3000${coverPath}`
-  return coverPath
 }
 
 export default function PlaybackBar() {
@@ -36,7 +29,7 @@ export default function PlaybackBar() {
 
   const cover = (
     <Image
-      src={coverSrc(currentPodcast.coverPath)}
+      src={coverUrl(currentPodcast.coverPath)}
       className='h-10 w-10 shrink-0 rounded-md bg-surface-container object-cover'
       mode='aspectFill'
     />
@@ -63,21 +56,42 @@ export default function PlaybackBar() {
       className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary'
     >
       {isPlaying ? (
-        // Pause icon (two bars)
-        <View className='flex items-center gap-[3px]'>
-          <View className='h-3 w-[3px] rounded-sm bg-on-primary' />
-          <View className='h-3 w-[3px] rounded-sm bg-on-primary' />
+        // Pause icon (two bars) — inline styles because Tailwind flex/gap on
+        // taro-view-core can stack the bars vertically instead of side-by-side.
+        <View
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <View
+            style={{
+              width: '4px',
+              height: '14px',
+              borderRadius: '2px',
+              backgroundColor: '#ffffff',
+            }}
+          />
+          <View
+            style={{
+              width: '4px',
+              height: '14px',
+              borderRadius: '2px',
+              backgroundColor: '#ffffff',
+            }}
+          />
         </View>
       ) : (
         // Play icon (triangle)
         <View
-          className='ml-0.5'
           style={{
             width: 0,
             height: 0,
-            borderTop: '6px solid transparent',
-            borderBottom: '6px solid transparent',
-            borderLeft: '9px solid #ffffff',
+            borderTop: '7px solid transparent',
+            borderBottom: '7px solid transparent',
+            borderLeft: '11px solid #ffffff',
+            marginLeft: '2px',
           }}
         />
       )}
@@ -97,9 +111,12 @@ export default function PlaybackBar() {
     </View>
   )
 
-  // 1px primary progress bar pinned to the top edge of the bar.
+  // Progress bar pinned to the top edge of the bar.
   const progressBar = (
-    <View className='absolute left-0 right-0 top-0 h-px bg-outline-variant'>
+    <View
+      className='absolute left-0 right-0 top-0 bg-outline-variant'
+      style={{ height: '2px' }}
+    >
       <View className='h-full bg-primary' style={{ width: `${progress}%` }} />
     </View>
   )
@@ -122,9 +139,11 @@ export default function PlaybackBar() {
   }
 
   // Mobile: sits above the floating island (bottom-4 + island h-14 + 8px gap ≈ 80px).
+  // Bottom corners are flat so the bar fuses visually with the TabBar below
+  // when a podcast is playing.
   return (
     <View
-      className='fixed bottom-20 left-4 right-4 z-40 flex items-center gap-3 rounded-xl px-3 py-2 shadow-md'
+      className='fixed bottom-20 left-4 right-4 z-40 flex items-center gap-3 overflow-hidden rounded-t-xl px-3 py-2 shadow-md'
       style={GLASS_STYLE}
       onClick={openDetail}
     >

@@ -209,11 +209,11 @@ export default function Browse() {
       >
         {/* ---- Pinned search header ---- */}
         <View
-          className='flex-shrink-0 border-b border-outline-variant/30 bg-surface/95 px-4 pb-3 pt-3'
+          className='flex-shrink-0 border-b border-outline-variant/30 bg-surface/95 px-4 pb-2 pt-4'
           style={{ backdropFilter: 'blur(12px)' }}
         >
           <View className='mb-2 flex items-center justify-between'>
-            <Text className='text-xl font-semibold text-on-surface'>浏览</Text>
+            <Text className='text-xl font-bold tracking-tight text-primary'>浏览</Text>
             <Text className='text-xs text-on-surface-variant'>
               {items.length > 0 ? `${items.length} 期` : ''}
             </Text>
