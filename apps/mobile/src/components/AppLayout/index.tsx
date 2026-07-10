@@ -28,13 +28,11 @@ export default function AppLayout({ children, currentTab, hideChrome }: AppLayou
   // Pad content clear of the fixed nav. Desktop chrome sits at the top
   // (menu + optional playback bar); mobile chrome sits at the bottom
   // (island + optional playback bar stacked above it).
-  // When hideChrome is set, only pad for the PlaybackBar (if a podcast is playing).
+  // When hideChrome is set, the TabBar, MessageBell AND PlaybackBar are all
+  // hidden — detail pages (collection, markdown, account-settings, favorites,
+  // history) manage their own layout and back nav, so no bottom padding is needed.
   const padClass = hideChrome
-    ? hasPodcast
-      ? isDesktop
-        ? 'pt-32'
-        : 'pb-36'
-      : ''
+    ? ''
     : isDesktop
       ? hasPodcast
         ? 'pt-36'
@@ -46,7 +44,7 @@ export default function AppLayout({ children, currentTab, hideChrome }: AppLayou
   return (
     <View className={`min-h-screen bg-surface ${padClass}`}>
       {children}
-      <PlaybackBar />
+      {!hideChrome && <PlaybackBar />}
       {!hideChrome && <TabBar currentTab={currentTab} />}
       {!hideChrome && <MessageBell />}
     </View>

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { TagColor } from '@qingmalaya/shared';
 import type { Announcement, Banner, Tag } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -99,11 +100,12 @@ export class AdminTagsService {
   }
 
   async create(dto: AdminTagCreateDto, adminId: number): Promise<Tag> {
+    const colors = Object.values(TagColor);
     const tag = await this.prisma.tag.create({
       data: {
         name: dto.name,
         weight: dto.weight ?? 0,
-        color: dto.color ?? 'mint',
+        color: dto.color ?? colors[Math.floor(Math.random() * colors.length)],
       },
     });
     await this.prisma.adminLog.create({

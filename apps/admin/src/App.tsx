@@ -11,6 +11,7 @@ import UsersPage from '@/pages/Users';
 import ClassesPage from '@/pages/Classes';
 import PodcastsPage from '@/pages/Podcasts';
 import CommentsPage from '@/pages/Comments';
+import BannedKeywordsPage from '@/pages/BannedKeywords';
 import TagsPage from '@/pages/Tags';
 import BannersPage from '@/pages/Banners';
 import CollectionsPage from '@/pages/Collections';
@@ -47,6 +48,7 @@ const App: React.FC = () => {
           <Route path="classes" element={<ClassesPage />} />
           <Route path="podcasts" element={<PodcastsPage />} />
           <Route path="comments" element={<CommentsPage />} />
+          <Route path="banned-keywords" element={<BannedKeywordsPage />} />
           <Route path="tags" element={<TagsPage />} />
           <Route path="banners" element={<BannersPage />} />
           <Route path="collections" element={<CollectionsPage />} />

@@ -233,6 +233,18 @@ export class CommentService {
       }
     }
 
+    // Banned-keyword interception: reject the comment outright (not stored)
+    // if the content matches any blacklisted word, case-insensitively.
+    const banned = await this.prisma.bannedKeyword.findMany({
+      select: { keyword: true },
+    });
+    if (banned.length > 0) {
+      const lower = dto.content.toLowerCase();
+      if (banned.some((b) => lower.includes(b.keyword.toLowerCase()))) {
+        throw new BadRequestException('评论包含敏感词，请修改后重试');
+      }
+    }
+
     const created = await this.prisma.$transaction(async (tx) => {
       const comment = await tx.comment.create({
         data: {

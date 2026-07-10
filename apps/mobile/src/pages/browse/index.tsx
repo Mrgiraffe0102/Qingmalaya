@@ -52,7 +52,12 @@ const PAGE_SIZE = 20
 const TAG_COLORS: Record<TagColor, { text: string; bg: string }> = {
   mint: { text: '#2f8f5e', bg: 'rgba(47, 143, 94, 0.15)' },
   purple: { text: '#7c4dd1', bg: 'rgba(124, 77, 209, 0.15)' },
-  orange: { text: '#c9701f', bg: 'rgba(201, 112, 31, 0.15)' }
+  orange: { text: '#c9701f', bg: 'rgba(201, 112, 31, 0.15)' },
+  rose: { text: '#d6336c', bg: 'rgba(214, 51, 108, 0.15)' },
+  sky: { text: '#1c7ed6', bg: 'rgba(28, 126, 214, 0.15)' },
+  teal: { text: '#0ca678', bg: 'rgba(12, 166, 120, 0.15)' },
+  indigo: { text: '#4263eb', bg: 'rgba(66, 99, 235, 0.15)' },
+  amber: { text: '#b8860b', bg: 'rgba(184, 134, 11, 0.15)' },
 }
 
 function tagColors(color: TagColor): { text: string; bg: string } {

@@ -45,6 +45,8 @@ export interface PlayerState {
   /** User-initiated seek — updates position AND seeks the audio element. */
   seek: (pos: number) => void
   setPlaybackRate: (rate: number) => void
+  /** Sync liked/likeCount on the current podcast after a like API call. */
+  setLiked: (liked: boolean, likeCount: number) => void
   stop: () => void
 }
 
@@ -101,6 +103,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setPlaybackRate: (rate) => {
     set({ playbackRate: rate })
     if (audioEl) audioEl.playbackRate = rate
+  },
+
+  setLiked: (liked, likeCount) => {
+    const cur = get().currentPodcast
+    if (!cur) return
+    set({ currentPodcast: { ...cur, liked, likeCount } })
   },
 
   stop: () => {

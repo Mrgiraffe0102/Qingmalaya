@@ -480,16 +480,16 @@ function CommentItem({
         <View className='flex flex-wrap items-center gap-1.5'>
           <Text className='text-sm font-medium text-on-surface'>{comment.user.name}</Text>
           {comment.user.role === 'TEACHER' && (
-            <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-[10px] font-medium text-on-secondary-container'>
+            <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-xs font-medium text-on-secondary-container'>
               教师
             </Text>
           )}
           {comment.user.classId != null && (
-            <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-[10px] font-medium text-on-tertiary-container'>
+            <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-xs font-medium text-on-tertiary-container'>
               {classMap.get(comment.user.classId) ?? '未分班'}
             </Text>
           )}
-          <Text className='text-[11px] text-outline'>
+          <Text className='text-xs text-outline'>
             {formatRelativeTime(comment.createdAt)}
           </Text>
         </View>
@@ -544,16 +544,16 @@ function CommentItem({
                         {reply.user.name}
                       </Text>
                       {reply.user.role === 'TEACHER' && (
-                        <Text className='rounded-full bg-secondary-container px-1.5 py-0.5 text-[10px] font-medium text-on-secondary-container'>
+                        <Text className='rounded-full bg-secondary-container px-1.5 py-0.5 text-xs font-medium text-on-secondary-container'>
                           教师
                         </Text>
                       )}
                       {reply.user.classId != null && (
-                        <Text className='rounded-full bg-tertiary-container px-1.5 py-0.5 text-[10px] font-medium text-on-tertiary-container'>
+                        <Text className='rounded-full bg-tertiary-container px-1.5 py-0.5 text-xs font-medium text-on-tertiary-container'>
                           {classMap.get(reply.user.classId) ?? '未分班'}
                         </Text>
                       )}
-                      <Text className='text-[10px] text-outline'>
+                      <Text className='text-xs text-outline'>
                         {formatRelativeTime(reply.createdAt)}
                       </Text>
                     </View>
@@ -571,13 +571,13 @@ function CommentItem({
                         >
                           {reply.liked ? '♥' : '♡'}
                         </Text>
-                        <Text className='text-[11px] text-outline'>
+                        <Text className='text-xs text-outline'>
                           {formatCount(reply.likeCount)}
                         </Text>
                       </View>
                       {replyCanDelete && (
                         <View onClick={() => onDeleteReply(reply.id, comment.id)}>
-                          <Text className='text-[11px] text-outline'>删除</Text>
+                          <Text className='text-xs text-outline'>删除</Text>
                         </View>
                       )}
                     </View>

@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import { usePlayerStore } from '../../store/player'
 import { useIsDesktop } from './useIsDesktop'
 import { coverUrl } from '../../utils/format'
+import { post, del } from '../../utils/request'
 
 /** Glassmorphism spec from DESIGN.md: 20px backdrop-blur + 80% white fill. */
 const GLASS_STYLE: React.CSSProperties = {
@@ -14,13 +15,12 @@ const GLASS_STYLE: React.CSSProperties = {
 
 export default function PlaybackBar() {
   const isDesktop = useIsDesktop()
-  const { currentPodcast, isPlaying, position, duration, togglePlayPause } = usePlayerStore()
-  // Local like mirror — the real like API is wired up in a later task; we only
-  // need optimistic UI here so the heart responds instantly.
-  const [liked, setLiked] = useState(false)
+  const { currentPodcast, isPlaying, position, duration, togglePlayPause, setLiked } = usePlayerStore()
+  const [likePending, setLikePending] = useState(false)
 
   if (!currentPodcast) return null
 
+  const liked = !!currentPodcast.liked
   const progress = duration > 0 ? Math.min(100, (position / duration) * 100) : 0
 
   const openDetail = () => {
@@ -98,12 +98,30 @@ export default function PlaybackBar() {
     </View>
   )
 
+  const handleLike = async (e: { stopPropagation?: () => void }): Promise<void> => {
+    e.stopPropagation?.()
+    const pod = currentPodcast
+    if (!pod || likePending) return
+    const wasLiked = !!pod.liked
+    const nextCount = pod.likeCount + (wasLiked ? -1 : 1)
+    setLiked(!wasLiked, nextCount)
+    setLikePending(true)
+    try {
+      if (wasLiked) {
+        await del<{ liked: boolean; likeCount: number }>(`/podcasts/${pod.id}/like`)
+      } else {
+        await post<{ liked: boolean; likeCount: number }>(`/podcasts/${pod.id}/like`)
+      }
+    } catch {
+      setLiked(wasLiked, pod.likeCount)
+    } finally {
+      setLikePending(false)
+    }
+  }
+
   const likeBtn = (
     <View
-      onClick={(e) => {
-        e.stopPropagation?.()
-        setLiked((v) => !v)
-      }}
+      onClick={handleLike}
       className='flex h-9 w-9 shrink-0 items-center justify-center text-xl'
       style={{ color: liked ? '#ba1a1a' : '#727879' }}
     >

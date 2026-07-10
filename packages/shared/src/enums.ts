@@ -35,14 +35,28 @@ export type PodcastStatus = (typeof PodcastStatus)[keyof typeof PodcastStatus];
 export const podcastStatusSchema = z.enum(['PENDING', 'PUBLISHED', 'TAKEN_DOWN']);
 
 // --- TagColor ---
-// Spec stores lowercase mint/purple/orange in DB; uppercase keys are the TS accessors.
+// Spec stores lowercase color names in DB; uppercase keys are the TS accessors.
 export const TagColor = {
   MINT: 'mint',
   PURPLE: 'purple',
   ORANGE: 'orange',
+  ROSE: 'rose',
+  SKY: 'sky',
+  TEAL: 'teal',
+  INDIGO: 'indigo',
+  AMBER: 'amber',
 } as const;
 export type TagColor = (typeof TagColor)[keyof typeof TagColor];
-export const tagColorSchema = z.enum(['mint', 'purple', 'orange']);
+export const tagColorSchema = z.enum([
+  'mint',
+  'purple',
+  'orange',
+  'rose',
+  'sky',
+  'teal',
+  'indigo',
+  'amber',
+]);
 
 // --- CommentStatus ---
 export const CommentStatus = {

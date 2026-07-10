@@ -105,7 +105,7 @@ export default function MessagesPage() {
           item.id === n.id ? { ...item, read: true } : item,
         ),
       )
-      setHasUnread((prev) => {
+      setHasUnread(() => {
         const stillUnread = items.some(
           (item) => item.id !== n.id && !item.read,
         )

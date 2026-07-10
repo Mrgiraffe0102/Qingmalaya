@@ -30,12 +30,17 @@ enum PodcastStatus {
   TAKEN_DOWN
 }
 
-// TagColor stores lowercase mint/purple/orange in the DB to match
+// TagColor stores lowercase color names in the DB to match
 // @qingmalaya/shared TagColor values.
 enum TagColor {
   mint
   purple
   orange
+  rose
+  sky
+  teal
+  indigo
+  amber
 }
 
 enum CommentStatus {
@@ -281,6 +286,12 @@ model SystemSetting {
   key       String   @id
   value     String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+model BannedKeyword {
+  id        Int      @id @default(autoincrement())
+  keyword   String   @unique
+  createdAt DateTime @default(now())
 }
 
 model Collection {

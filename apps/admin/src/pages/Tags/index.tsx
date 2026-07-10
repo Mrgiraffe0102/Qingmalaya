@@ -28,18 +28,44 @@ import {
   type TagWithCount,
 } from '@/api/tags';
 
-/** TagColor → hex swatch. Mirrors the design-system mint/purple/orange tokens. */
+/** TagColor → hex swatch. Mirrors the design-system color tokens. */
 const COLOR_HEX: Record<Tag['color'], string> = {
   mint: '#7fb3a6',
   purple: '#8e7ec2',
   orange: '#e0a872',
+  rose: '#e88aa8',
+  sky: '#7bb8ee',
+  teal: '#5fcab0',
+  indigo: '#8a9bf5',
+  amber: '#d9b441',
 };
 
 const COLOR_LABEL: Record<Tag['color'], string> = {
   mint: '薄荷',
   purple: '紫色',
   orange: '橙色',
+  rose: '玫红',
+  sky: '天蓝',
+  teal: '青色',
+  indigo: '靛蓝',
+  amber: '琥珀',
 };
+
+/** All selectable tag colors — drives the form select + random assignment. */
+const TAG_COLOR_VALUES: Tag['color'][] = [
+  'mint',
+  'purple',
+  'orange',
+  'rose',
+  'sky',
+  'teal',
+  'indigo',
+  'amber',
+];
+
+function randomTagColor(): Tag['color'] {
+  return TAG_COLOR_VALUES[Math.floor(Math.random() * TAG_COLOR_VALUES.length)];
+}
 
 interface TagFormValues {
   name: string;
@@ -52,9 +78,12 @@ const TagsPage: React.FC = () => {
   const { message } = App.useApp();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TagWithCount | null>(null);
+  const [createColor, setCreateColor] = useState<Tag['color']>('mint');
 
   const openCreate = () => {
     setEditing(null);
+    // Pre-assign a random color each time the create form opens.
+    setCreateColor(randomTagColor());
     setModalOpen(true);
   };
 
@@ -202,7 +231,7 @@ const TagsPage: React.FC = () => {
         initialValues={
           editing
             ? { name: editing.name, weight: editing.weight, color: editing.color }
-            : { name: '', weight: 0, color: 'mint' }
+            : { name: '', weight: 0, color: createColor }
         }
         onFinish={handleSubmit}
         width={480}
@@ -227,11 +256,7 @@ const TagsPage: React.FC = () => {
         <ProFormSelect
           name="color"
           label="颜色"
-          options={[
-            { value: 'mint', label: '薄荷' },
-            { value: 'purple', label: '紫色' },
-            { value: 'orange', label: '橙色' },
-          ]}
+          options={TAG_COLOR_VALUES.map((c) => ({ value: c, label: COLOR_LABEL[c] }))}
           rules={[{ required: true, message: '请选择颜色' }]}
         />
       </ModalForm>
