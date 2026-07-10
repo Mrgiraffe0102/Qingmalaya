@@ -1,8 +1,12 @@
 import { diskStorage } from 'multer';
 import { BadRequestException } from '@nestjs/common';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { extname, join, relative } from 'path';
-import { mkdirSync } from 'fs';
+import { mkdirSync, promises as fsPromises } from 'fs';
 import { randomUUID } from 'crypto';
+
+const execFileAsync = promisify(execFile);
 
 /**
  * Upload helpers for the UploadModule.
@@ -104,4 +108,64 @@ function defaultExtForMime(mime: string): string {
  */
 export function toRelativePath(diskPath: string): string {
   return relative(UPLOAD_DIR, diskPath).split('\\').join('/');
+}
+
+/**
+ * Transcode an uploaded audio file to 320 kbps MP3 using ffmpeg.
+ *
+ * The MP3 is written to a temporary file first (to avoid read/write conflicts
+ * when the source is already .mp3), then renamed to the final path. After a
+ * successful transcode the source file is deleted so only the normalized MP3
+ * remains on disk.
+ *
+ * Returns the absolute path, byte size, and duration (whole seconds) of the
+ * resulting MP3.
+ */
+export async function transcodeToMp3(
+  sourcePath: string,
+): Promise<{ path: string; size: number; duration: number }> {
+  const stem = extname(sourcePath)
+    ? sourcePath.slice(0, -extname(sourcePath).length)
+    : sourcePath;
+  const mp3Path = `${stem}.mp3`;
+  const tmpPath = `${stem}.tmp.${randomUUID()}.mp3`;
+
+  await execFileAsync('ffmpeg', [
+    '-y',
+    '-i', sourcePath,
+    '-codec:a', 'libmp3lame',
+    '-b:a', '320k',
+    '-vn',
+    tmpPath,
+  ]);
+
+  // Replace the source (or existing mp3) with the transcoded file.
+  await fsPromises.rename(tmpPath, mp3Path);
+  if (mp3Path !== sourcePath) {
+    await fsPromises.unlink(sourcePath).catch(() => undefined);
+  }
+
+  const stat = await fsPromises.stat(mp3Path);
+  const duration = await getAudioDuration(mp3Path);
+
+  return { path: mp3Path, size: stat.size, duration };
+}
+
+/**
+ * Read the duration (in whole seconds) of an audio file via ffprobe.
+ * Returns 0 if ffprobe is unavailable or the duration can't be parsed.
+ */
+async function getAudioDuration(filePath: string): Promise<number> {
+  try {
+    const { stdout } = await execFileAsync('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ]);
+    const dur = parseFloat(stdout.trim());
+    return Number.isFinite(dur) && dur > 0 ? Math.floor(dur) : 0;
+  } catch {
+    return 0;
+  }
 }

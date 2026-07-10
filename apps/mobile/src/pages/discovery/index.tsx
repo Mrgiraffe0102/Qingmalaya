@@ -242,6 +242,7 @@ export default function Discovery() {
                 title='播放榜'
                 icon='play_arrow'
                 accent='primary'
+                tab='play'
                 items={byPlay}
                 metricLabel={(p) => `${formatCount(p.playCount)} 播放`}
               />
@@ -249,6 +250,7 @@ export default function Discovery() {
                 title='点赞榜'
                 icon='thumb_up'
                 accent='secondary'
+                tab='like'
                 items={byLike}
                 metricLabel={(p) => `${formatCount(p.likeCount)} 赞`}
               />
@@ -256,6 +258,7 @@ export default function Discovery() {
                 title='评论榜'
                 icon='chat_bubble'
                 accent='tertiary'
+                tab='comment'
                 items={byComment}
                 metricLabel={(p) => `${formatCount(p.commentCount)} 评`}
               />
@@ -310,11 +313,12 @@ interface HotColumnProps {
   title: string
   icon: string
   accent: 'primary' | 'secondary' | 'tertiary'
+  tab: 'play' | 'like' | 'comment'
   items: PodcastWithRelations[]
   metricLabel: (p: PodcastWithRelations) => string
 }
 
-function HotColumn({ title, icon, accent, items, metricLabel }: HotColumnProps) {
+function HotColumn({ title, icon, accent, tab, items, metricLabel }: HotColumnProps) {
   const accentText =
     accent === 'primary'
       ? 'text-primary'
@@ -326,11 +330,20 @@ function HotColumn({ title, icon, accent, items, metricLabel }: HotColumnProps) 
       className='w-[62%] shrink-0 rounded-xl bg-surface-container-lowest p-3'
       style={CARD_STYLE}
     >
-      <View className='mb-3 flex items-center gap-1'>
-        <Icon name={icon} className={accentText} style={{ fontSize: '16px' }} />
-        <Text className={`text-sm font-semibold tracking-wider ${accentText}`}>
-          {title}
-        </Text>
+      <View className='mb-3 flex items-center justify-between'>
+        <View className='flex items-center gap-1'>
+          <Icon name={icon} className={accentText} style={{ fontSize: '16px' }} />
+          <Text className={`text-sm font-semibold tracking-wider ${accentText}`}>
+            {title}
+          </Text>
+        </View>
+        <View
+          onClick={() => Taro.navigateTo({ url: `/pages/ranking/index?tab=${tab}` })}
+          className='flex items-center'
+        >
+          <Text className='text-xs text-on-surface-variant'>查看更多</Text>
+          <Icon name='chevron_right' className='text-on-surface-variant' style={{ fontSize: '14px' }} />
+        </View>
       </View>
       <View className='flex flex-col gap-3'>
         {items.map((p, idx) => (

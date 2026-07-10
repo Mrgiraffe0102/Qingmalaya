@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { promises as fsPromises } from 'fs';
+import { join } from 'path';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SystemSettingService } from '../system/system-setting.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,9 +17,11 @@ import {
   AUDIO_MIME_WHITELIST,
   COVER_MIME_WHITELIST,
   SAFETY_FILE_SIZE_CEILING,
+  UPLOAD_DIR,
   makeMimeFilter,
   multerDiskStorage,
   toRelativePath,
+  transcodeToMp3,
 } from './upload.helpers';
 
 /** Standard upload response returned to the client and stored in the DB. */
@@ -26,6 +29,8 @@ export interface UploadResult {
   path: string;
   size: number;
   mimetype: string;
+  /** Duration in whole seconds (audio uploads only). */
+  duration?: number;
 }
 
 /** Image upload response — includes the UploadedFile DB record id. */
@@ -73,7 +78,10 @@ export class UploadController {
 
   /**
    * POST /upload/audio — accept a podcast audio track (mpeg/mp3/aac/wav/m4a).
-   * Size limit comes from SystemSetting `max_audio_size` (default 200 MiB).
+   * The uploaded file is transcoded to 320 kbps MP3 via ffmpeg so playback is
+   * normalized regardless of the source format. Size limit comes from
+   * SystemSetting `max_audio_size` (default 200 MiB) and is checked against the
+   * original upload; the transcoded MP3 is typically smaller.
    */
   @Post('audio')
   @UseInterceptors(
@@ -86,7 +94,26 @@ export class UploadController {
   async uploadAudio(
     @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<UploadResult> {
-    return this.handleUpload(file, 'max_audio_size', 200 * 1024 * 1024);
+    const result = await this.handleUpload(
+      file,
+      'max_audio_size',
+      200 * 1024 * 1024,
+    );
+
+    // Transcode to 320 kbps MP3, then return the new path/size/duration.
+    try {
+      const mp3 = await transcodeToMp3(
+        join(UPLOAD_DIR, result.path),
+      );
+      return {
+        path: toRelativePath(mp3.path),
+        size: mp3.size,
+        mimetype: 'audio/mpeg',
+        duration: mp3.duration,
+      };
+    } catch {
+      throw new BadRequestException('音频转码失败，请检查文件是否损坏');
+    }
   }
 
   /**

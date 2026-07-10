@@ -7,14 +7,14 @@ export default {
     'pages/login/index',
     'pages/playback/index',
     'pages/upload/index',
-    'pages/recording/index',
     'pages/change-password/index',
     'pages/collection/index',
     'pages/markdown/index',
     'pages/messages/index',
     'pages/account-settings/index',
     'pages/favorites/index',
-    'pages/history/index'
+    'pages/history/index',
+    'pages/ranking/index'
   ],
   window: {
     backgroundTextStyle: 'light',

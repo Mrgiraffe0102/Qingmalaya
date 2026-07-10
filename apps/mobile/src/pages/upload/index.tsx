@@ -5,7 +5,6 @@ import { useAuthRedirect } from '../../utils/route-guard'
 import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
 import { get, post, put } from '../../utils/request'
 import { coverUrl, formatDuration } from '../../utils/format'
-import { useUploadCache } from '../../store/upload-cache'
 import type { Tag, PodcastWithRelations } from '@qingmalaya/shared'
 
 const API_BASE = 'http://localhost:3000/api'
@@ -16,34 +15,65 @@ interface UploadResult {
   path: string
   size: number
   mimetype: string
+  duration?: number
 }
 
 /**
- * Multipart upload helper for H5. Uses `fetch` + `FormData` directly because
- * Taro.uploadFile is clunky on H5. The browser sets the multipart boundary
- * automatically — do NOT set Content-Type manually.
+ * Multipart upload helper for H5. Uses XMLHttpRequest so we can report upload
+ * progress to the caller via the onProgress callback. The browser sets the
+ * multipart boundary automatically — do NOT set Content-Type manually.
  */
-async function uploadFileH5(file: File, type: 'cover' | 'audio'): Promise<UploadResult> {
-  const formData = new FormData()
-  formData.append('file', file)
-  const token = Taro.getStorageSync('token')
-  const res = await fetch(`${API_BASE}/upload/${type}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
+function uploadFileH5(
+  file: File,
+  type: 'cover' | 'audio',
+  onProgress?: (percent: number) => void,
+): Promise<UploadResult> {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const token = Taro.getStorageSync('token')
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${API_BASE}/upload/${type}`)
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    if (onProgress && xhr.upload) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          onProgress(Math.round((e.loaded / e.total) * 100))
+        }
+      }
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as UploadResult)
+        } catch {
+          reject(new Error('上传失败'))
+        }
+      } else {
+        const err = (() => {
+          try {
+            return JSON.parse(xhr.responseText) as { message?: string }
+          } catch {
+            return {}
+          }
+        })()
+        reject(new Error(err.message || '上传失败'))
+      }
+    }
+    xhr.onerror = () => reject(new Error('网络错误'))
+    xhr.send(formData)
   })
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { message?: string }
-    throw new Error(err.message || '上传失败')
-  }
-  return (await res.json()) as UploadResult
 }
 
 /** Weapp upload helper using Taro.uploadFile. */
-function uploadFileWeapp(filePath: string, type: 'cover' | 'audio'): Promise<UploadResult> {
+function uploadFileWeapp(
+  filePath: string,
+  type: 'cover' | 'audio',
+  onProgress?: (percent: number) => void,
+): Promise<UploadResult> {
   const token = Taro.getStorageSync('token')
   return new Promise((resolve, reject) => {
-    Taro.uploadFile({
+    const task = Taro.uploadFile({
       url: `${API_BASE}/upload/${type}`,
       filePath,
       name: 'file',
@@ -57,54 +87,11 @@ function uploadFileWeapp(filePath: string, type: 'cover' | 'audio'): Promise<Upl
       },
       fail: (err) => reject(new Error(err.errMsg || '上传失败')),
     })
-  })
-}
-
-/**
- * Read the duration (in whole seconds) of an audio File by loading it into a
- * temporary <audio> element. Resolves 0 if the metadata can't be read.
- * H5-only — weapp gets duration from the recorder or server.
- */
-function readAudioDuration(file: File): Promise<number> {
-  return new Promise((resolve) => {
-    const audio = new Audio()
-    const url = URL.createObjectURL(file)
-    audio.src = url
-    const cleanup = () => URL.revokeObjectURL(url)
-    audio.onloadedmetadata = () => {
-      const dur = audio.duration
-      cleanup()
-      resolve(Number.isFinite(dur) && dur > 0 ? Math.floor(dur) : 0)
+    if (onProgress) {
+      task.onProgressUpdate((res) => {
+        onProgress(res.progress)
+      })
     }
-    audio.onerror = () => {
-      cleanup()
-      resolve(0)
-    }
-  })
-}
-
-/**
- * Read the duration of a local audio file on weapp using InnerAudioContext.
- * Resolves 0 if the metadata can't be read within 3s.
- */
-function readAudioDurationWeapp(filePath: string): Promise<number> {
-  return new Promise((resolve) => {
-    const Taro = require('@tarojs/taro').default
-    const audio = Taro.createInnerAudioContext()
-    audio.src = filePath
-    let settled = false
-    const finish = (dur: number) => {
-      if (settled) return
-      settled = true
-      audio.destroy()
-      resolve(dur)
-    }
-    audio.onCanplay(() => {
-      const dur = audio.duration
-      finish(Number.isFinite(dur) && dur > 0 ? Math.floor(dur) : 0)
-    })
-    audio.onError(() => finish(0))
-    setTimeout(() => finish(0), 3000)
   })
 }
 
@@ -130,6 +117,8 @@ export default function Upload() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [audioUploading, setAudioUploading] = useState(false)
+  const [audioProgress, setAudioProgress] = useState(0)
 
   const coverInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
@@ -173,18 +162,6 @@ export default function Upload() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok])
-
-  // When the page is shown again (e.g. returning from the recording page),
-  // check the upload-cache for a recording result.
-  Taro.useDidShow(() => {
-    const result = useUploadCache.getState().recordingResult
-    if (result) {
-      setAudioPath(result.path)
-      setDuration(result.duration)
-      setAudioFileName('录音文件')
-      useUploadCache.getState().setRecordingResult(null)
-    }
-  })
 
   function addTag(rawName: string) {
     const name = rawName.trim()
@@ -234,17 +211,17 @@ export default function Upload() {
   async function onAudioChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    Taro.showLoading({ title: '上传中...' })
+    setAudioUploading(true)
+    setAudioProgress(0)
     try {
-      const result = await uploadFileH5(file, 'audio')
-      const dur = await readAudioDuration(file)
-      setDuration(dur)
+      const result = await uploadFileH5(file, 'audio', (p) => setAudioProgress(p))
+      setDuration(result.duration ?? 0)
       setAudioPath(result.path)
       setAudioFileName(file.name)
     } catch {
       Taro.showToast({ title: '音频上传失败', icon: 'none' })
     } finally {
-      Taro.hideLoading()
+      setAudioUploading(false)
       e.target.value = ''
     }
   }
@@ -264,7 +241,6 @@ export default function Upload() {
   }
 
   async function chooseAudioWeapp() {
-    Taro.showLoading({ title: '上传中...' })
     try {
       const res = await Taro.chooseMessageFile({
         count: 1,
@@ -272,17 +248,16 @@ export default function Upload() {
         extension: ['mp3', 'm4a', 'wav', 'aac', 'mp4'],
       })
       const file = res.tempFiles[0]
-      const [result, dur] = await Promise.all([
-        uploadFileWeapp(file.path, 'audio'),
-        readAudioDurationWeapp(file.path),
-      ])
-      setDuration(dur)
+      setAudioUploading(true)
+      setAudioProgress(0)
+      const result = await uploadFileWeapp(file.path, 'audio', (p) => setAudioProgress(p))
+      setDuration(result.duration ?? 0)
       setAudioPath(result.path)
       setAudioFileName(file.name)
     } catch {
       Taro.showToast({ title: '音频上传失败', icon: 'none' })
     } finally {
-      Taro.hideLoading()
+      setAudioUploading(false)
     }
   }
 
@@ -300,10 +275,6 @@ export default function Upload() {
     } else {
       audioInputRef.current?.click()
     }
-  }
-
-  function openRecording() {
-    Taro.navigateTo({ url: '/pages/recording/index' })
   }
 
   function goBack() {
@@ -568,14 +539,14 @@ export default function Upload() {
           )}
         </View>
 
-        {/* 5 & 6. Audio selection + Recording entry */}
+        {/* 5. Audio upload */}
         <View className='mb-6'>
           <Text className='mb-2 block px-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant'>
             音频
           </Text>
 
           {/* Current audio info */}
-          {audioPath && (
+          {audioPath && !audioUploading && (
             <View className='mb-3 flex items-center justify-between rounded-xl bg-surface-container-low p-4'>
               <View className='min-w-0 flex-1'>
                 <Text className='block truncate text-sm text-on-surface'>
@@ -586,7 +557,7 @@ export default function Upload() {
                 </Text>
               </View>
               <View
-                onClick={() => audioInputRef.current?.click()}
+                onClick={chooseAudio}
                 className='ml-3 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary active:scale-95'
               >
                 更换
@@ -594,29 +565,34 @@ export default function Upload() {
             </View>
           )}
 
-          {/* Action buttons */}
-          <View className='grid grid-cols-2 gap-4'>
+          {/* Upload progress bar */}
+          {audioUploading && (
+            <View className='mb-3 rounded-xl bg-surface-container-low p-4'>
+              <View className='mb-2 flex items-center justify-between'>
+                <Text className='text-sm text-on-surface-variant'>上传转码中...</Text>
+                <Text className='text-xs font-semibold text-primary'>{audioProgress}%</Text>
+              </View>
+              <View className='h-2 overflow-hidden rounded-full bg-surface-container-high'>
+                <View
+                  className='h-full rounded-full bg-primary transition-all duration-200'
+                  style={{ width: `${audioProgress}%` }}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Full-width upload button */}
+          {!audioUploading && (
             <View
               onClick={chooseAudio}
-              className='flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl bg-surface-container p-6 transition-all active:scale-[0.98]'
+              className='flex cursor-pointer items-center justify-center gap-3 rounded-xl bg-surface-container p-5 transition-all active:scale-[0.98]'
             >
               <View className='flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg text-primary shadow-sm'>
                 ♪
               </View>
-              <Text className='text-xs font-medium text-primary'>从本地选择音频</Text>
+              <Text className='text-sm font-medium text-primary'>从本地选择音频</Text>
             </View>
-            <View
-              onClick={openRecording}
-              className='flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl bg-primary-container p-6 transition-all active:scale-[0.98]'
-            >
-              <View className='flex h-10 w-10 items-center justify-center rounded-full bg-primary text-lg text-on-primary shadow-sm'>
-                ●
-              </View>
-              <Text className='text-xs font-medium text-on-primary-container'>
-                打开录音
-              </Text>
-            </View>
-          </View>
+          )}
         </View>
       </View>
     </View>
