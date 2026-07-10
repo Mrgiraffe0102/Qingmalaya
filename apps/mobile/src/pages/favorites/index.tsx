@@ -6,6 +6,7 @@ import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { get, del } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
+import { playPodcast } from '../../utils/play'
 import type { Paginated, PodcastWithRelations } from '@qingmalaya/shared'
 
 const PAGE_SIZE = 20
@@ -22,7 +23,7 @@ function handleBack(): void {
 }
 
 function goToPodcast(id: number): void {
-  Taro.navigateTo({ url: `/pages/playback/index?id=${id}` })
+  void playPodcast(id)
 }
 
 interface FavoriteResponse extends Paginated<PodcastWithRelations> {}

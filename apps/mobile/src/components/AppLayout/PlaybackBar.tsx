@@ -140,18 +140,43 @@ export default function PlaybackBar() {
   )
 
   if (isDesktop) {
-    // Sticky top bar, sitting just under the desktop menu (h-14 = 56px).
+    // Compact mini-player rendered inline inside AppLayout's top bar (right side).
+    // Shows cover thumbnail + title + play/pause only — the full player is in
+    // the DesktopPlayerPanel on the right column.
     return (
       <View
-        className='fixed left-0 right-0 top-14 z-40 flex items-center gap-3 px-6 py-2 shadow-sm'
-        style={GLASS_STYLE}
-        onClick={openDetail}
+        className='flex items-center gap-2 rounded-full bg-surface-container/60 py-1 pl-1 pr-2'
       >
-        {progressBar}
-        {cover}
-        {meta}
-        {playPauseBtn}
-        {likeBtn}
+        <Image
+          src={coverUrl(currentPodcast.coverPath)}
+          className='h-8 w-8 shrink-0 rounded-full bg-surface-container object-cover'
+          mode='aspectFill'
+        />
+        <Text className='max-w-[120px] truncate text-xs font-medium text-on-surface'>
+          {currentPodcast.title}
+        </Text>
+        <View
+          onClick={(e) => {
+            e.stopPropagation?.()
+            togglePlayPause()
+          }}
+          className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary'
+        >
+          {isPlaying ? (
+            <View style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <View style={{ width: '3px', height: '10px', borderRadius: '1.5px', backgroundColor: '#fff' }} />
+              <View style={{ width: '3px', height: '10px', borderRadius: '1.5px', backgroundColor: '#fff' }} />
+            </View>
+          ) : (
+            <View style={{
+              width: 0, height: 0,
+              borderTop: '6px solid transparent',
+              borderBottom: '6px solid transparent',
+              borderLeft: '9px solid #fff',
+              marginLeft: '2px',
+            }} />
+          )}
+        </View>
       </View>
     )
   }

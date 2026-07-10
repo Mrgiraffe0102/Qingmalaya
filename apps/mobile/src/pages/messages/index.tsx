@@ -5,6 +5,7 @@ import AppLayout from '../../components/AppLayout'
 import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { formatRelativeTime } from '../../utils/format'
+import { playPodcast } from '../../utils/play'
 import {
   listNotifications,
   markAsRead,
@@ -113,7 +114,7 @@ export default function MessagesPage() {
       })
     }
     if (n.podcastId) {
-      Taro.navigateTo({ url: `/pages/playback/index?id=${n.podcastId}` })
+      void playPodcast(n.podcastId)
     }
   }
 

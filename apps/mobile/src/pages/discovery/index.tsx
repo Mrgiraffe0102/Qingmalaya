@@ -6,6 +6,7 @@ import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { get } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
+import { playPodcast } from '../../utils/play'
 import {
   BannerLinkType,
   type Banner,
@@ -33,13 +34,13 @@ function Icon({ name, className = '', style }: { name: string; className?: strin
 
 /** Navigate to the playback detail page for a podcast. */
 function goToPodcast(id: number): void {
-  Taro.navigateTo({ url: `/pages/playback/index?id=${id}` })
+  void playPodcast(id)
 }
 
 /** Banner tap handler — routes by linkType. */
 function onBannerTap(banner: Banner): void {
   if (banner.linkType === BannerLinkType.PODCAST && banner.linkTarget) {
-    Taro.navigateTo({ url: `/pages/playback/index?id=${banner.linkTarget}` })
+    void playPodcast(Number(banner.linkTarget))
   } else if (banner.linkType === BannerLinkType.PODCAST_LIST) {
     Taro.switchTab({ url: '/pages/browse/index' })
   } else if (banner.linkType === BannerLinkType.COLLECTION && banner.linkTarget) {

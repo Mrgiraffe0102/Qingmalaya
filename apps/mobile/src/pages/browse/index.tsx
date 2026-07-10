@@ -7,6 +7,7 @@ import { useAuthRedirect } from '../../utils/route-guard'
 import { get } from '../../utils/request'
 import { usePlayerStore } from '../../store/player'
 import { coverUrl, formatCount, formatRelativeTime } from '../../utils/format'
+import { playPodcast } from '../../utils/play'
 import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
 import type {
   PodcastWithRelations,
@@ -111,16 +112,14 @@ export default function Browse() {
     void fetchList(true)
   })
 
-  // Desktop: top chrome (menu + optional playback bar) sits above the page,
-  // so the root height excludes that.
+  // Desktop split layout: left column height is viewport minus top bar (56px).
+  // The mini-player lives in the top bar, not below it, so no extra offset.
   // Mobile: the root fills the full viewport so the ScrollView content
   // scrolls *under* the floating TabBar (matching the discovery page). A
   // negative bottom margin cancels AppLayout's pb-24/pb-40 so the page
   // doesn't grow taller than the viewport.
   const rootHeight = isDesktop
-    ? hasPodcast
-      ? 'calc(100vh - 144px)'
-      : 'calc(100vh - 80px)'
+    ? 'calc(100vh - 56px)'
     : '100vh'
 
   const rootStyle: CSSProperties = {
@@ -442,7 +441,7 @@ export default function Browse() {
             ) : items.length === 0 ? (
               <EmptyState keyword={keyword} />
             ) : (
-              <View className='grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3'>
+              <View className='grid grid-cols-1 gap-3 md:grid-cols-2'>
                 {items.map((pod) => (
                   <PodcastCard key={pod.id} pod={pod} />
                 ))}
@@ -482,7 +481,7 @@ function PodcastCard({ pod }: { pod: PodcastWithRelations }) {
   const published = pod.publishedAt || pod.createdAt
 
   const openDetail = () => {
-    Taro.navigateTo({ url: `/pages/playback/index?id=${pod.id}` })
+    void playPodcast(pod.id)
   }
 
   return (

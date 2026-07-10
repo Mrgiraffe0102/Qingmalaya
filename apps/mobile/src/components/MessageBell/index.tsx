@@ -53,14 +53,16 @@ export default function MessageBell() {
 
   if (!token) return null
 
-  const positionClass = isDesktop
-    ? 'fixed top-3 right-6 z-50'
-    : 'fixed top-4 right-4 z-50'
+  // Desktop: rendered inline inside AppLayout's top bar (no fixed positioning).
+  // Mobile: fixed top-right corner.
+  const className = isDesktop
+    ? 'relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-container/60'
+    : 'fixed top-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/20 shadow-sm active:scale-90'
 
   return (
     <View
-      className={`${positionClass} flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/20 shadow-sm active:scale-90`}
-      style={GLASS_STYLE}
+      className={className}
+      style={isDesktop ? undefined : GLASS_STYLE}
       onClick={() => Taro.navigateTo({ url: '/pages/messages/index' })}
     >
       <Text

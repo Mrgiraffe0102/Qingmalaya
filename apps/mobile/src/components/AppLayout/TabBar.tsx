@@ -52,39 +52,34 @@ export default function TabBar({ currentTab }: TabBarProps) {
   const hasPodcast = usePlayerStore((s) => s.currentPodcast !== null)
 
   if (isDesktop) {
+    // Inline nav items rendered inside AppLayout's top bar (no outer container).
+    // Left side: 发现 / 浏览 / 创作 / 我的 + "上传作品" button.
     return (
-      <View
-        className='fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-center px-6 shadow-sm'
-        style={GLASS_STYLE}
-      >
-        <View className='flex items-center gap-1'>
-          {TABS.map((tab) => {
-            const isSelected = tab.key === currentTab
-            if (tab.isCreate) {
-              return (
-                <View
-                  key={tab.key}
-                  onClick={() => navigate(tab)}
-                  className='mx-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary text-lg font-semibold text-on-primary'
-                >
-                  +
-                </View>
-              )
-            }
-            return (
-              <View
-                key={tab.key}
-                onClick={() => navigate(tab)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  isSelected
-                    ? 'bg-primary text-on-primary'
-                    : 'text-primary/60 hover:text-primary'
-                }`}
-              >
-                {tab.label}
-              </View>
-            )
-          })}
+      <View className='flex items-center gap-1'>
+        {TABS.filter((t) => !t.isCreate).map((tab) => {
+          const isSelected = tab.key === currentTab
+          return (
+            <View
+              key={tab.key}
+              onClick={() => navigate(tab)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                isSelected
+                  ? 'bg-primary text-on-primary'
+                  : 'text-primary/60 hover:text-primary'
+              }`}
+            >
+              {tab.label}
+            </View>
+          )
+        })}
+        <View
+          onClick={() => navigate(TABS.find((t) => t.isCreate)!)}
+          className='ml-2 flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-on-primary'
+        >
+          <Text className='material-symbols-outlined' style={{ fontSize: '18px' }}>
+            upload
+          </Text>
+          上传作品
         </View>
       </View>
     )

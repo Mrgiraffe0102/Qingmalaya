@@ -11,6 +11,7 @@ import {
   formatCount,
   formatRelativeTime,
 } from '../../utils/format'
+import { playPodcast } from '../../utils/play'
 import type {
   Paginated,
   PlayHistory,
@@ -34,7 +35,7 @@ function handleBack(): void {
 }
 
 function goToPodcast(id: number): void {
-  Taro.navigateTo({ url: `/pages/playback/index?id=${id}` })
+  void playPodcast(id)
 }
 
 export default function HistoryPage() {

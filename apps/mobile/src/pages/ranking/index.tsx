@@ -6,6 +6,7 @@ import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { get } from '../../utils/request'
 import { coverUrl, formatCount, formatDuration } from '../../utils/format'
+import { playPodcast } from '../../utils/play'
 import type { DiscoveryResponse, PodcastWithRelations } from '@qingmalaya/shared'
 
 type Tab = 'play' | 'like' | 'comment'
@@ -28,7 +29,7 @@ function handleBack(): void {
 }
 
 function goToPodcast(id: number): void {
-  Taro.navigateTo({ url: `/pages/playback/index?id=${id}` })
+  void playPodcast(id)
 }
 
 function Cover({ path, title, className, letterClass }: {

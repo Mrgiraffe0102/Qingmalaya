@@ -6,6 +6,7 @@ import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { get } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
+import { playPodcast } from '../../utils/play'
 import type { CollectionWithPodcasts, PodcastWithRelations } from '@qingmalaya/shared'
 
 function handleBack(): void {
@@ -20,7 +21,7 @@ const CARD_STYLE: CSSProperties = {
 }
 
 function goToPodcast(id: number): void {
-  Taro.navigateTo({ url: `/pages/playback/index?id=${id}` })
+  void playPodcast(id)
 }
 
 function Cover({ path, title, className, letterClass }: {

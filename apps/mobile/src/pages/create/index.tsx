@@ -8,6 +8,7 @@ import { usePlayerStore } from '../../store/player'
 import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
 import { get, del } from '../../utils/request'
 import { coverUrl, formatCount, formatRelativeTime } from '../../utils/format'
+import { playPodcast } from '../../utils/play'
 import type { PodcastWithRelations, PodcastStatus } from '@qingmalaya/shared'
 
 /**
@@ -50,11 +51,10 @@ export default function Create() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
-  // Mirror AppLayout's padClass so the root fits the viewport exactly.
+  // Desktop split layout: left column height is viewport minus top bar (56px).
+  // Mobile: subtract bottom chrome (TabBar + optional PlaybackBar).
   const rootHeight = isDesktop
-    ? hasPodcast
-      ? 'calc(100vh - 144px)'
-      : 'calc(100vh - 80px)'
+    ? 'calc(100vh - 56px)'
     : hasPodcast
       ? 'calc(100vh - 160px)'
       : 'calc(100vh - 96px)'
@@ -97,7 +97,7 @@ export default function Create() {
   }
 
   function goToPlayback(id: number): void {
-    Taro.navigateTo({ url: `/pages/playback/index?id=${id}` })
+    void playPodcast(id)
   }
 
   function onMore(podcast: PodcastWithRelations): void {
@@ -177,7 +177,7 @@ export default function Create() {
           ) : items.length === 0 ? (
             <EmptyState onUpload={() => goToUpload()} />
           ) : (
-            <View className='grid grid-cols-1 gap-3 px-4 pb-6 pt-4 md:grid-cols-2 lg:grid-cols-3'>
+            <View className='grid grid-cols-1 gap-3 px-4 pb-6 pt-4 md:grid-cols-2'>
               {items.map((p) => (
                 <CreationCard
                   key={p.id}
@@ -324,7 +324,7 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
 /** Initial-load placeholder rows. */
 function LoadingState() {
   return (
-    <View className='grid grid-cols-1 gap-3 px-4 pt-4 md:grid-cols-2 lg:grid-cols-3'>
+    <View className='grid grid-cols-1 gap-3 px-4 pt-4 md:grid-cols-2'>
       {[0, 1, 2].map((i) => (
         <View
           key={i}
