@@ -1,15 +1,17 @@
 /**
- * Banner 管理 (Task 30).
+ * Banner 管理.
  *
  * ProTable listing all banners ordered by sort asc. ModalForm handles create
- * + edit (title, coverPath, linkType, linkTarget, sort, status, startAt,
- * endAt). Up/down buttons call the /sort endpoint to swap adjacent sort
- * values.
+ * + edit with three link types: NONE (display only), COLLECTION (jump to a
+ * curated collection), and MARKDOWN (open a markdown content page). Supports
+ * image upload for cover via ImagePicker and inline markdown images via
+ * MarkdownEditor.
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ModalForm,
   ProForm,
+  ProFormDependency,
   ProFormDatePicker,
   ProFormDigit,
   ProFormSelect,
@@ -30,10 +32,16 @@ import {
   updateBannerSort,
   type BannerCreatePayload,
 } from '@/api/banners';
+import { listCollections, type CollectionListItem } from '@/api/collections';
+import ImagePicker from '@/components/ImagePicker';
+import MarkdownEditor from '@/components/MarkdownEditor';
+import { coverUrl } from '@/utils/file';
 
 const LINK_TYPE_LABEL: Record<Banner['linkType'], string> = {
   PODCAST: '播客详情',
   PODCAST_LIST: '播客列表',
+  COLLECTION: '精选集',
+  MARKDOWN: 'Markdown',
   NONE: '无跳转',
 };
 
@@ -52,6 +60,7 @@ interface BannerFormValues {
   coverPath: string;
   linkType: Banner['linkType'];
   linkTarget?: string;
+  markdownContent?: string;
   sort: number;
   status: Banner['status'];
   startAt?: dayjs.Dayjs;
@@ -64,6 +73,17 @@ const BannersPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Banner | null>(null);
   const [rows, setRows] = useState<Banner[]>([]);
+  const [collectionMap, setCollectionMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    listCollections()
+      .then((cols: CollectionListItem[]) => {
+        const map: Record<string, string> = {};
+        for (const c of cols) map[String(c.id)] = c.title;
+        setCollectionMap(map);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const openCreate = () => {
     setEditing(null);
@@ -81,6 +101,7 @@ const BannersPage: React.FC = () => {
       coverPath: values.coverPath,
       linkType: values.linkType,
       linkTarget: values.linkTarget || undefined,
+      markdownContent: values.markdownContent || undefined,
       sort: values.sort,
       status: values.status,
       startAt: values.startAt?.toISOString(),
@@ -114,7 +135,6 @@ const BannersPage: React.FC = () => {
     if (swapIdx < 0 || swapIdx >= rows.length) return;
     const target = rows[swapIdx];
     try {
-      // Swap sort values between the two adjacent rows.
       await updateBannerSort(row.id, target.sort);
       await updateBannerSort(target.id, row.sort);
       message.success('排序已更新');
@@ -132,7 +152,7 @@ const BannersPage: React.FC = () => {
       render: (_, row) =>
         row.coverPath ? (
           <img
-            src={row.coverPath}
+            src={coverUrl(row.coverPath)}
             alt={row.title}
             style={{
               width: 80,
@@ -163,7 +183,13 @@ const BannersPage: React.FC = () => {
       dataIndex: 'linkTarget',
       width: 140,
       ellipsis: true,
-      render: (_, row) => row.linkTarget || '-',
+      render: (_, row) => {
+        if (!row.linkTarget) return '-';
+        if (row.linkType === 'COLLECTION') {
+          return collectionMap[row.linkTarget] ?? `#${row.linkTarget}`;
+        }
+        return row.linkTarget;
+      },
     },
     {
       title: '排序',
@@ -268,6 +294,7 @@ const BannersPage: React.FC = () => {
                 coverPath: editing.coverPath,
                 linkType: editing.linkType,
                 linkTarget: editing.linkTarget ?? '',
+                markdownContent: editing.markdownContent ?? '',
                 sort: editing.sort,
                 status: editing.status,
                 startAt: editing.startAt ? dayjs(editing.startAt) : undefined,
@@ -278,12 +305,13 @@ const BannersPage: React.FC = () => {
                 coverPath: '',
                 linkType: 'NONE',
                 linkTarget: '',
+                markdownContent: '',
                 sort: 0,
                 status: 'ONLINE',
               }
         }
         onFinish={handleSubmit}
-        width={560}
+        width={800}
       >
         <ProFormText
           name="title"
@@ -294,27 +322,56 @@ const BannersPage: React.FC = () => {
             { max: 60, message: '不超过 60 个字符' },
           ]}
         />
-        <ProFormText
+        <ProForm.Item
           name="coverPath"
-          label="封面路径"
-          placeholder="上传后返回的相对路径，如 2026/07/xxx.jpg"
-          rules={[{ required: true, message: '请输入封面路径' }]}
-        />
+          label="封面图"
+          rules={[{ required: true, message: '请上传封面图' }]}
+        >
+          <ImagePicker width={320} height={180} />
+        </ProForm.Item>
         <ProFormSelect
           name="linkType"
           label="跳转类型"
           options={[
-            { value: 'PODCAST', label: '播客详情' },
-            { value: 'PODCAST_LIST', label: '播客列表' },
             { value: 'NONE', label: '无跳转' },
+            { value: 'COLLECTION', label: '打开精选集' },
+            { value: 'MARKDOWN', label: '打开 Markdown' },
           ]}
           rules={[{ required: true, message: '请选择跳转类型' }]}
         />
-        <ProFormText
-          name="linkTarget"
-          label="跳转目标"
-          placeholder="播客 ID 或标签 ID（跳转类型为无时留空）"
-        />
+        <ProFormDependency name={['linkType']}>
+          {({ linkType }) => {
+            if (linkType === 'COLLECTION') {
+              return (
+                <ProFormSelect
+                  name="linkTarget"
+                  label="精选集"
+                  placeholder="选择精选集"
+                  request={async () => {
+                    const cols = await listCollections();
+                    return cols.map((c) => ({
+                      label: c.title,
+                      value: String(c.id),
+                    }));
+                  }}
+                  rules={[{ required: true, message: '请选择精选集' }]}
+                />
+              );
+            }
+            if (linkType === 'MARKDOWN') {
+              return (
+                <ProForm.Item
+                  name="markdownContent"
+                  label="Markdown 内容"
+                  rules={[{ required: true, message: '请输入 Markdown 内容' }]}
+                >
+                  <MarkdownEditor />
+                </ProForm.Item>
+              );
+            }
+            return null;
+          }}
+        </ProFormDependency>
         <ProFormDigit
           name="sort"
           label="排序"

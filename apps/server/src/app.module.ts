@@ -13,6 +13,7 @@ import { BannersModule } from './banners/banners.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { CommentModule } from './comment/comment.module';
 import { PodcastModule } from './podcast/podcast.module';
+import { CollectionsModule } from './collections/collections.module';
 import { AdminModule } from './admin/admin.module';
 import { appConfig } from './app.config';
 
@@ -40,6 +41,7 @@ import { appConfig } from './app.config';
     AnnouncementsModule,
     CommentModule,
     PodcastModule,
+    CollectionsModule,
     AdminModule,
     ServeStaticModule.forRoot({
       rootPath: resolve(appConfig().upload.dir),

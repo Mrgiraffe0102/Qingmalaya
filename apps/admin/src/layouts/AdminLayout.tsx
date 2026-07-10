@@ -27,6 +27,8 @@ import {
   LogoutOutlined,
   UserOutlined,
   ApartmentOutlined,
+  ProfileOutlined,
+  FileImageOutlined,
 } from '@ant-design/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearToken, getRole, getUser } from '@/store/auth';
@@ -42,6 +44,8 @@ const menuRouteMap: Record<string, string> = {
   '/comments': 'comments',
   '/tags': 'tags',
   '/banners': 'banners',
+  '/collections': 'collections',
+  '/uploads': 'uploads',
   '/announcements': 'announcements',
   '/admins': 'admins',
   '/settings': 'settings',
@@ -63,6 +67,8 @@ const menuData: MenuDataItem[] = [
   { path: '/comments', name: '评论管理', icon: <MessageOutlined /> },
   { path: '/tags', name: '标签管理', icon: <TagsOutlined /> },
   { path: '/banners', name: 'Banner管理', icon: <PictureOutlined /> },
+  { path: '/collections', name: '精选集管理', icon: <ProfileOutlined /> },
+  { path: '/uploads', name: '图片素材库', icon: <FileImageOutlined /> },
   { path: '/announcements', name: '公告管理', icon: <NotificationOutlined /> },
   { path: '/admins', name: '管理员', icon: <SafetyCertificateOutlined /> },
   {

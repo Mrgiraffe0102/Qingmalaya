@@ -64,10 +64,12 @@ export const likeTargetTypeSchema = z.enum(['PODCAST', 'COMMENT']);
 export const BannerLinkType = {
   PODCAST: 'PODCAST',
   PODCAST_LIST: 'PODCAST_LIST',
+  COLLECTION: 'COLLECTION',
+  MARKDOWN: 'MARKDOWN',
   NONE: 'NONE',
 } as const;
 export type BannerLinkType = (typeof BannerLinkType)[keyof typeof BannerLinkType];
-export const bannerLinkTypeSchema = z.enum(['PODCAST', 'PODCAST_LIST', 'NONE']);
+export const bannerLinkTypeSchema = z.enum(['PODCAST', 'PODCAST_LIST', 'COLLECTION', 'MARKDOWN', 'NONE']);
 
 // --- BannerStatus ---
 export const BannerStatus = {

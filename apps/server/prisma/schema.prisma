@@ -51,6 +51,8 @@ enum LikeTargetType {
 enum BannerLinkType {
   PODCAST
   PODCAST_LIST
+  COLLECTION
+  MARKDOWN
   NONE
 }
 
@@ -128,6 +130,7 @@ model Podcast {
   likes       Like[]
   favorites   Favorite[]
   PlayHistory PlayHistory[]
+  collections CollectionPodcast[]
 
   @@index([authorId])
   @@index([classId])
@@ -221,16 +224,17 @@ model PlayHistory {
 }
 
 model Banner {
-  id         Int            @id @default(autoincrement())
-  title      String
-  coverPath  String
-  linkType   BannerLinkType @default(NONE)
-  linkTarget String?
-  sort       Int            @default(0)
-  status     BannerStatus   @default(ONLINE)
-  startAt    DateTime?
-  endAt      DateTime?
-  createdAt  DateTime       @default(now())
+  id              Int            @id @default(autoincrement())
+  title           String
+  coverPath       String
+  linkType        BannerLinkType @default(NONE)
+  linkTarget      String?
+  markdownContent String?        @db.Text
+  sort            Int            @default(0)
+  status          BannerStatus   @default(ONLINE)
+  startAt         DateTime?
+  endAt           DateTime?
+  createdAt       DateTime       @default(now())
 
   @@index([status, sort])
 }
@@ -266,4 +270,44 @@ model SystemSetting {
   key       String   @id
   value     String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+model Collection {
+  id          Int          @id @default(autoincrement())
+  title       String
+  description String?      @db.Text
+  coverPath   String?
+  sort        Int          @default(0)
+  status      BannerStatus @default(ONLINE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  podcasts CollectionPodcast[]
+
+  @@index([status, sort])
+}
+
+model CollectionPodcast {
+  collectionId Int
+  podcastId    Int
+  sort         Int @default(0)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  podcast    Podcast    @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, podcastId])
+  @@index([podcastId])
+}
+
+model UploadedFile {
+  id           Int      @id @default(autoincrement())
+  filename     String
+  originalName String
+  path         String
+  mimetype     String
+  size         Int
+  createdAt    DateTime @default(now())
+
+  @@index([mimetype])
+  @@index([createdAt])
 }

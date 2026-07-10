@@ -50,6 +50,7 @@ function toBanner(row: Prisma.BannerGetPayload<{}>): Banner {
     coverPath: row.coverPath,
     linkType: row.linkType,
     linkTarget: row.linkTarget,
+    markdownContent: row.markdownContent,
     sort: row.sort,
     status: row.status,
     startAt: row.startAt ? row.startAt.toISOString() : null,
@@ -206,6 +207,7 @@ export class AdminBannersService {
         coverPath: dto.coverPath,
         linkType: dto.linkType ?? 'NONE',
         linkTarget: dto.linkTarget ?? null,
+        markdownContent: dto.markdownContent ?? null,
         sort: dto.sort ?? 0,
         status: dto.status ?? 'ONLINE',
         startAt: dto.startAt ? new Date(dto.startAt) : null,
@@ -239,6 +241,9 @@ export class AdminBannersService {
     if (dto.linkType !== undefined) data.linkType = dto.linkType;
     if (dto.linkTarget !== undefined) {
       data.linkTarget = dto.linkTarget === '' ? null : dto.linkTarget;
+    }
+    if (dto.markdownContent !== undefined) {
+      data.markdownContent = dto.markdownContent === '' ? null : dto.markdownContent;
     }
     if (dto.sort !== undefined) data.sort = dto.sort;
     if (dto.status !== undefined) data.status = dto.status;

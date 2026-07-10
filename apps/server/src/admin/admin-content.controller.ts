@@ -92,6 +92,16 @@ export class AdminPodcastsController {
     return this.podcasts.batchPublish(dto, adminId);
   }
 
+  /**
+   * GET /admin/podcasts/options — lightweight id+title list for selectors.
+   * Returns only PUBLISHED podcasts. Declared before @Get(':id') so the
+   * static path wins.
+   */
+  @Get('options')
+  options() {
+    return this.podcasts.options();
+  }
+
   /** GET /admin/podcasts/:id — detail with author + tags + commentCount. */
   @Get(':id')
   detail(@Param('id', ParseIntPipe) id: number) {

@@ -152,11 +152,17 @@ export interface Banner {
   coverPath: string;
   linkType: BannerLinkType;
   linkTarget: string | null;
+  markdownContent?: string | null;
   sort: number;
   status: BannerStatus;
   startAt: ISODateString | null;
   endAt: ISODateString | null;
   createdAt: ISODateString;
+}
+
+/** Banner detail with markdownContent populated (GET /banners/:id). */
+export interface BannerWithMarkdown extends Banner {
+  markdownContent: string | null;
 }
 
 // --- Announcement ---
@@ -185,6 +191,34 @@ export interface SystemSetting {
   key: string;
   value: string;
   updatedAt: ISODateString;
+}
+
+// --- Collection (精选集) ---
+export interface Collection {
+  id: number;
+  title: string;
+  description: string | null;
+  coverPath: string | null;
+  sort: number;
+  status: BannerStatus;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+/** Collection with podcasts populated (GET /collections/:id). */
+export interface CollectionWithPodcasts extends Collection {
+  podcasts: PodcastWithRelations[];
+}
+
+// --- UploadedFile (图片素材库) ---
+export interface UploadedFile {
+  id: number;
+  filename: string;
+  originalName: string;
+  path: string;
+  mimetype: string;
+  size: number;
+  createdAt: ISODateString;
 }
 
 // --- Discovery response (GET /podcasts/discovery) ---

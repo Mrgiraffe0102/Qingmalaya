@@ -42,6 +42,10 @@ function onBannerTap(banner: Banner): void {
     Taro.navigateTo({ url: `/pages/playback/index?id=${banner.linkTarget}` })
   } else if (banner.linkType === BannerLinkType.PODCAST_LIST) {
     Taro.switchTab({ url: '/pages/browse/index' })
+  } else if (banner.linkType === BannerLinkType.COLLECTION && banner.linkTarget) {
+    Taro.navigateTo({ url: `/pages/collection/index?id=${banner.linkTarget}` })
+  } else if (banner.linkType === BannerLinkType.MARKDOWN) {
+    Taro.navigateTo({ url: `/pages/markdown/index?id=${banner.id}` })
   }
   // NONE → no-op
 }

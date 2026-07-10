@@ -41,6 +41,10 @@ export class AdminBannerCreateDto {
   @IsOptional()
   linkTarget?: string;
 
+  @IsString()
+  @IsOptional()
+  markdownContent?: string;
+
   @IsInt()
   @Min(0)
   @IsOptional()

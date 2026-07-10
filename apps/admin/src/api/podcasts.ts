@@ -47,6 +47,11 @@ export function getAdminPodcast(
   return get<PodcastWithRelations>(`/admin/podcasts/${id}`);
 }
 
+/** GET /admin/podcasts/options — lightweight id+title list for selectors. */
+export function listPodcastOptions(): Promise<{ id: number; title: string }[]> {
+  return get<{ id: number; title: string }[]>('/admin/podcasts/options');
+}
+
 /** PUT /admin/podcasts/:id — edit metadata (title/description/coverPath/tagIds). */
 export function updateAdminPodcast(
   id: number,

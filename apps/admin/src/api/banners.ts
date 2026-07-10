@@ -12,6 +12,7 @@ export interface BannerCreatePayload {
   coverPath: string;
   linkType?: BannerLinkType;
   linkTarget?: string;
+  markdownContent?: string;
   sort?: number;
   status?: BannerStatus;
   startAt?: string;

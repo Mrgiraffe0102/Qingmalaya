@@ -8,7 +8,9 @@ export default {
     'pages/playback/index',
     'pages/upload/index',
     'pages/recording/index',
-    'pages/change-password/index'
+    'pages/change-password/index',
+    'pages/collection/index',
+    'pages/markdown/index'
   ],
   window: {
     backgroundTextStyle: 'light',

@@ -152,6 +152,20 @@ export class AdminPodcastsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Lightweight id+title list of PUBLISHED podcasts for selectors
+   * (GET /admin/podcasts/options). Capped at 500 to avoid huge payloads.
+   */
+  async options(): Promise<{ id: number; title: string }[]> {
+    const rows = await this.prisma.podcast.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { id: true, title: true },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+    return rows;
+  }
+
+  /**
    * Paginated, filtered podcast list (GET /admin/podcasts). Returns ALL
    * statuses (PENDING/PUBLISHED/TAKEN_DOWN) — the admin console needs to see
    * pending and taken-down podcasts too. Each item carries the author
