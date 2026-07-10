@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 /** Desktop breakpoint (px) — at/above this the top menu replaces the floating island. */
-const DESKTOP_BREAKPOINT = 800
+const DESKTOP_BREAKPOINT = 1280
 
 /**
  * Returns true on H5 when the viewport is >= 1024px wide.

@@ -50,8 +50,22 @@ export default function DesktopPlayerPanel() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [dragValue, setDragValue] = useState<number | null>(null)
   const [classes, setClasses] = useState<Class[]>([])
+  const [descModalMounted, setDescModalMounted] = useState(false)
+  const [descModalVisible, setDescModalVisible] = useState(false)
   const trackRef = useRef<HTMLElement | null>(null)
   const draggingRef = useRef(false)
+
+  const openDescModal = useCallback((): void => {
+    setDescModalMounted(true)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setDescModalVisible(true))
+    })
+  }, [])
+
+  const closeDescModal = useCallback((): void => {
+    setDescModalVisible(false)
+    setTimeout(() => setDescModalMounted(false), 200)
+  }, [])
 
   // Sync local state when the podcast changes
   useEffect(() => {
@@ -294,6 +308,13 @@ export default function DesktopPlayerPanel() {
               >
                 {pod.description}
               </Text>
+              {isLongDesc && (
+                <View onClick={openDescModal} className='mt-1'>
+                  <Text className='text-xs font-semibold text-primary'>
+                    更多
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -358,11 +379,16 @@ export default function DesktopPlayerPanel() {
         {/* Play/pause + speed + like + favorite + comment */}
         <View className='relative mt-2 flex items-center justify-center gap-4'>
           {/* Like */}
-          <View onClick={() => void handleLike()} className='flex flex-col items-center gap-0.5'>
-            <Text className='text-xl' style={{ color: liked ? '#ba1a1a' : '#727879' }}>
-              {liked ? '♥' : '♡'}
-            </Text>
-            <Text className='text-[10px] text-outline'>
+          <View onClick={() => void handleLike()} className='flex w-12 flex-col items-center gap-1'>
+            <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Text
+                className='material-symbols-outlined'
+                style={{ fontSize: '22px', lineHeight: '24px', color: liked ? '#ba1a1a' : '#727879' }}
+              >
+                {liked ? 'favorite' : 'favorite_border'}
+              </Text>
+            </View>
+            <Text className='text-xs text-outline'>
               {formatCount(likeCount)}
             </Text>
           </View>
@@ -370,12 +396,17 @@ export default function DesktopPlayerPanel() {
           {/* Comment */}
           <View
             onClick={() => setDrawerOpen(true)}
-            className='flex flex-col items-center gap-0.5'
+            className='flex w-12 flex-col items-center gap-1'
           >
-            <Text className='material-symbols-outlined' style={{ fontSize: '20px', color: '#727879' }}>
-              chat_bubble_outline
-            </Text>
-            <Text className='text-[10px] text-outline'>
+            <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Text
+                className='material-symbols-outlined'
+                style={{ fontSize: '22px', lineHeight: '24px', color: '#727879' }}
+              >
+                chat_bubble_outline
+              </Text>
+            </View>
+            <Text className='text-xs text-outline'>
               {formatCount(commentCount)}
             </Text>
           </View>
@@ -403,11 +434,16 @@ export default function DesktopPlayerPanel() {
           </View>
 
           {/* Favorite */}
-          <View onClick={() => void handleFavorite()} className='flex flex-col items-center gap-0.5'>
-            <Text className='text-xl' style={{ color: favorited ? '#4d6265' : '#727879' }}>
-              {favorited ? '★' : '☆'}
-            </Text>
-            <Text className='text-[10px] text-outline'>收藏</Text>
+          <View onClick={() => void handleFavorite()} className='flex w-12 flex-col items-center gap-1'>
+            <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Text
+                className='material-symbols-outlined'
+                style={{ fontSize: '22px', lineHeight: '24px', color: favorited ? '#4d6265' : '#727879' }}
+              >
+                {favorited ? 'star' : 'star_border'}
+              </Text>
+            </View>
+            <Text className='text-xs text-outline'>收藏</Text>
           </View>
 
           {/* Speed */}
@@ -430,6 +466,62 @@ export default function DesktopPlayerPanel() {
         onCommentAdded={() => setCommentCount((c) => c + 1)}
         onCommentDeleted={() => setCommentCount((c) => Math.max(0, c - 1))}
       />
+
+      {/* Description modal */}
+      {descModalMounted && (
+        <View
+          onClick={closeDescModal}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '24px',
+            opacity: descModalVisible ? 1 : 0,
+            transition: 'opacity 0.2s ease-out',
+          }}
+        >
+          <View
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '400px',
+              width: '100%',
+              maxHeight: '70vh',
+              borderRadius: '16px',
+              backgroundColor: '#fbf9f8',
+              padding: '24px',
+              overflowY: 'auto',
+              transform: descModalVisible ? 'scale(1)' : 'scale(0.9)',
+              opacity: descModalVisible ? 1 : 0,
+              transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
+            }}
+          >
+            <Text className='block text-base font-semibold text-on-surface'>
+              简介
+            </Text>
+            <Text
+              className='mt-3 block text-sm leading-relaxed text-on-surface-variant'
+              style={{ wordBreak: 'break-word' }}
+            >
+              {pod.description}
+            </Text>
+            <View
+              onClick={closeDescModal}
+              className='mt-4 flex justify-center'
+            >
+              <Text className='rounded-full bg-primary px-6 py-2 text-sm font-semibold text-on-primary'>
+                关闭
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

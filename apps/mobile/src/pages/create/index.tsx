@@ -305,7 +305,7 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
         <Icon name='mic' style={{ fontSize: '48px', color: '#727879' }} />
       </View>
       <Text
-        className='max-w-[240px] text-on-surface-variant'
+        className='max-w-[320px] text-on-surface-variant'
         style={{ fontSize: '16px', lineHeight: '24px' }}
       >
         还没有作品，点击加号上传你的第一条播客吧

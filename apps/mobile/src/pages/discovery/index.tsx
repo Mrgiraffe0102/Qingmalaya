@@ -379,8 +379,8 @@ function RecentCard({ podcast }: { podcast: PodcastWithRelations }) {
   return (
     <View
       onClick={() => goToPodcast(podcast.id)}
-      className='relative overflow-hidden rounded-xl bg-surface-container-lowest'
-      style={{ ...CARD_STYLE, height: '200px' }}
+      className='relative aspect-square overflow-hidden rounded-xl bg-surface-container-lowest'
+      style={CARD_STYLE}
     >
       <Cover
         path={podcast.coverPath}

@@ -211,13 +211,15 @@ export default function Profile() {
             style={{ gap: '8px', marginTop: '6px' }}
           >
             <View
-              className='rounded-full text-on-secondary-container'
+              className='inline-flex items-center rounded-full text-on-secondary-container'
               style={{
                 backgroundColor: 'rgba(187, 233, 255, 0.3)',
-                padding: '2px 10px'
+                padding: '2px 10px',
+                lineHeight: 1
               }}
             >
               <Text
+                className='leading-none'
                 style={{
                   fontSize: '11px',
                   fontWeight: '500',

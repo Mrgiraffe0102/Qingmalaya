@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Input, Image, ScrollView, Picker } from '@tarojs/components'
+import { View, Text, Input, ScrollView, Picker } from '@tarojs/components'
 import AppLayout from '../../components/AppLayout'
 import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
@@ -283,8 +283,8 @@ export default function Browse() {
               {activeFilterCount > 0 && (
                 <View
                   onClick={clearFilters}
-                  className='rounded-full px-3 py-1.5 text-xs text-on-surface-variant'
-                  style={{ backgroundColor: 'rgba(114,120,121,0.1)' }}
+                  className='inline-flex items-center self-start rounded-full px-3 py-1.5 text-xs text-on-surface-variant'
+                  style={{ backgroundColor: 'rgba(114,120,121,0.1)', lineHeight: 1 }}
                 >
                   清除
                 </View>
@@ -347,17 +347,18 @@ export default function Browse() {
                       <View
                         key={opt.key}
                         onClick={() => setSort(opt.key)}
-                        className='rounded-full px-3 py-1.5'
+                        className='inline-flex items-center self-start rounded-full px-3 py-1.5'
                         style={{
                           backgroundColor: active ? '#4d6265' : '#ffffff',
                           border: active
                             ? '1px solid #4d6265'
                             : '1px solid rgba(194,199,200,0.5)',
-                          color: active ? '#ffffff' : '#424849'
+                          color: active ? '#ffffff' : '#424849',
+                          lineHeight: 1
                         }}
                       >
                         <Text
-                          className='text-xs font-medium'
+                          className='text-xs font-medium leading-none'
                           style={{ color: active ? '#ffffff' : '#424849' }}
                         >
                           {opt.label}
@@ -384,16 +385,17 @@ export default function Browse() {
                         <View
                           key={tag.id}
                           onClick={() => toggleTag(tag.id)}
-                          className='rounded-full px-3 py-1.5'
+                          className='inline-flex items-center self-start rounded-full px-3 py-1.5'
                           style={{
                             backgroundColor: selected ? '#4d6265' : c.bg,
                             border: selected
                               ? '1px solid #4d6265'
-                              : '1px solid transparent'
+                              : '1px solid transparent',
+                            lineHeight: 1
                           }}
                         >
                           <Text
-                            className='text-xs font-medium'
+                            className='text-xs font-medium leading-none'
                             style={{ color: selected ? '#ffffff' : c.text }}
                           >
                             #{tag.name}
@@ -487,20 +489,37 @@ function PodcastCard({ pod }: { pod: PodcastWithRelations }) {
   return (
     <View
       onClick={openDetail}
-      className='flex gap-3 rounded-lg bg-surface-container-lowest p-3'
+      className='relative flex gap-3 overflow-hidden rounded-lg bg-surface-container-lowest p-3'
       style={{
         border: '1px solid rgba(194,199,200,0.4)',
         boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
       }}
     >
+      {/* Background decoration — cover image fading from top-right (50%) to center (0%) */}
+      {cover && (
+        <View
+          className='pointer-events-none absolute inset-0'
+          style={{
+            backgroundImage: `url("${cover}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(2px)',
+            WebkitMaskImage: 'linear-gradient(to bottom left, rgba(0,0,0,0.3), rgba(0,0,0,0) 50%)',
+            maskImage: 'linear-gradient(to bottom left, rgba(0,0,0,0.3), rgba(0,0,0,0) 50%)',
+          }}
+        />
+      )}
+
       {/* Cover */}
-      <View className='h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-surface-dim'>
+      <View className='relative z-10 h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-surface-dim'>
         {cover ? (
-          <Image
-            src={cover}
-            mode='aspectFill'
+          <View
             className='h-full w-full'
-            lazyLoad
+            style={{
+              backgroundImage: `url("${cover}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
           />
         ) : (
           <View
@@ -513,7 +532,7 @@ function PodcastCard({ pod }: { pod: PodcastWithRelations }) {
       </View>
 
       {/* Meta */}
-      <View className='flex min-w-0 flex-1 flex-col justify-between'>
+      <View className='relative z-10 flex min-w-0 flex-1 flex-col justify-between'>
         <View>
           {/* Tag chips (max 2) */}
           {pod.tags.length > 0 && (
@@ -523,10 +542,10 @@ function PodcastCard({ pod }: { pod: PodcastWithRelations }) {
                 return (
                   <View
                     key={tag.id}
-                    className='rounded-full px-2 py-0.5'
-                    style={{ color: c.text, backgroundColor: c.bg }}
+                    className='inline-flex items-center self-start rounded-full px-2 py-0.5'
+                    style={{ color: c.text, backgroundColor: c.bg, lineHeight: 1 }}
                   >
-                    <Text className='text-[11px] font-medium' style={{ fontSize: '11px' }}>
+                    <Text className='text-[11px] font-medium leading-none' style={{ fontSize: '11px' }}>
                       #{tag.name}
                     </Text>
                   </View>

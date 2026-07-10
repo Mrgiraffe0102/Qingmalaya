@@ -384,7 +384,7 @@ export default function Playback() {
           onClick={handleBack}
           className='flex h-10 w-10 items-center justify-center rounded-full text-primary'
         >
-          <Icon name='arrow_back' style={{ fontSize: '22px' }} />
+          <Icon name='expand_more' style={{ fontSize: '22px' }} />
         </View>
         <Text className='text-sm font-semibold tracking-wide text-primary'>
           清马拉雅
