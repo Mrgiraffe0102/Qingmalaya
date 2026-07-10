@@ -15,7 +15,9 @@ export default {
     'pages/favorites/index',
     'pages/history/index',
     'pages/ranking/index',
-    'pages/about/index'
+    'pages/about/index',
+    'pages/terms/index',
+    'pages/privacy/index'
   ],
   window: {
     backgroundTextStyle: 'light',

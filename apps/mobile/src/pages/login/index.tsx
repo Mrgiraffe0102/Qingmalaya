@@ -32,10 +32,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [idFocused, setIdFocused] = useState(false)
   const [pwdFocused, setPwdFocused] = useState(false)
+  const [agreed, setAgreed] = useState(false)
 
   const setAuth = useAuthStore((s) => s.setAuth)
 
-  const canSubmit = studentId.trim().length > 0 && password.length > 0 && !loading
+  const canSubmit = studentId.trim().length > 0 && password.length > 0 && !loading && agreed
 
   async function handleSubmit() {
     if (!canSubmit) return
@@ -211,8 +212,53 @@ export default function Login() {
             </Button>
           </View>
 
+          {/* Agreement checkbox */}
+          <View className="mt-6 flex items-center justify-center" style={{ gap: '6px' }}>
+            <View
+              onClick={() => setAgreed((v) => !v)}
+              className="flex items-center justify-center"
+              style={{
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                border: agreed ? 'none' : '2px solid #c2c7c8',
+                backgroundColor: agreed ? '#4d6265' : 'transparent',
+                flexShrink: 0,
+                transition: 'all 0.2s',
+              }}
+            >
+              {agreed && (
+                <Text className="text-white" style={{ fontSize: '12px', fontWeight: '700', lineHeight: '18px' }}>
+                  ✓
+                </Text>
+              )}
+            </View>
+            <Text className="text-on-surface-variant" style={{ fontSize: '12px', fontWeight: '500' }}>
+              我已阅读并同意
+            </Text>
+            <View onClick={() => Taro.navigateTo({ url: '/pages/terms/index' })}>
+              <Text
+                className="text-primary"
+                style={{ fontSize: '12px', fontWeight: '600' }}
+              >
+                《用户须知》
+              </Text>
+            </View>
+            <Text className="text-on-surface-variant" style={{ fontSize: '12px', fontWeight: '500' }}>
+              和
+            </Text>
+            <View onClick={() => Taro.navigateTo({ url: '/pages/privacy/index' })}>
+              <Text
+                className="text-primary"
+                style={{ fontSize: '12px', fontWeight: '600' }}
+              >
+                《隐私政策》
+              </Text>
+            </View>
+          </View>
+
           {/* Footer disclaimer */}
-          <View className="mt-8 flex justify-center">
+          <View className="mt-6 flex justify-center">
             <Text className="text-on-surface-variant" style={{ fontSize: '11px', fontWeight: '500', opacity: 0.6, textAlign: 'center' }}>
               仅限本校师生使用，使用学号快捷登录
             </Text>

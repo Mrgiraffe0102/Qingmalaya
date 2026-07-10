@@ -62,3 +62,76 @@ page {
   from { transform: scaleY(0.3); }
   to { transform: scaleY(1); }
 }
+
+/* Tab page switch — subtle fade + slide up on mount */
+@keyframes tab-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tab-page-enter {
+  animation: tab-page-enter 0.25s ease-out;
+}
+
+/* Disable Taro H5's built-in slide-in-from-right page transition for pages
+ * that have their own custom animation (e.g. playback page slide-up/down).
+ * Without this, Taro's translateX(100%→0) on the .taro_page container
+ * overlaps with the child's translateY animation, causing a diagonal clash. */
+.taro_router > .taro_page:has(.playback-slide-up),
+.taro_router > .taro_page:has(.playback-slide-down) {
+  transform: none !important;
+  transition: none !important;
+}
+
+/* Normalize Taro H5's inner <input class="weui-input">.
+ *
+ * Taro 4 H5 wraps the native <input> in a <taro-input-core> element. The
+ * wrapper is sized by page-level utilities (e.g. `h-12` + inline
+ * `line-height: 48px`), but the inner <input> still ships with the
+ * browser's user-agent default `padding: 1px 0` and `line-height:
+ * normal`. That extra padding inflates the input's box beyond the
+ * wrapper's 48px, and the mismatched line-height means the text is
+ * offset from the wrapper's optical center. Resetting them lets the
+ * input sit flush with `taro-input-core` and inherit its line-height
+ * so text is vertically centered. */
+.weui-input {
+  padding: 0;
+  line-height: inherit;
+  box-sizing: border-box;
+  background: transparent;
+  height: 100%;
+}
+@keyframes playback-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.playback-slide-up {
+  animation: playback-slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  animation-fill-mode: both;
+}
+
+/* Playback page collapse — slide down to bottom */
+@keyframes playback-slide-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.playback-slide-down {
+  animation: playback-slide-down 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  animation-fill-mode: forwards;
+}

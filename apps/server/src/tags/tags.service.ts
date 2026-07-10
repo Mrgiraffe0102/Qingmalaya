@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { TagColor } from '@qingmalaya/shared';
 import type { Tag } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -41,13 +42,31 @@ export class TagsService {
   }
 
   /**
-   * Top 8 tags by weight for the upload page's "热门标签快捷选择" quick picker.
+   * Top 6 tags by weight for the upload page's "热门标签快捷选择" quick picker.
    */
   async findHot(): Promise<Tag[]> {
     const tags = await this.prisma.tag.findMany({
       orderBy: [{ weight: 'desc' }, { id: 'asc' }],
-      take: 8,
+      take: 6,
     });
     return tags.map(toTag);
+  }
+
+  /**
+   * Find a tag by name, or create it if it doesn't exist.
+   * Used by the upload page when a user types a new tag name.
+   */
+  async findOrCreate(name: string): Promise<Tag> {
+    const existing = await this.prisma.tag.findUnique({ where: { name } });
+    if (existing) return toTag(existing);
+    const colors = Object.values(TagColor);
+    const tag = await this.prisma.tag.create({
+      data: {
+        name,
+        weight: 0,
+        color: colors[Math.floor(Math.random() * colors.length)],
+      },
+    });
+    return toTag(tag);
   }
 }

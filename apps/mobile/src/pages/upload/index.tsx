@@ -163,21 +163,29 @@ export default function Upload() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok])
 
-  function addTag(rawName: string) {
-    const name = rawName.trim()
+  async function addTag(rawName: string) {
+    const name = rawName.trim().replace(/^#+\s*/, '')
     if (!name) return
     const found = allTags.find((t) => t.name === name)
-    if (!found) {
-      setTagError('该标签不存在')
+    if (found) {
+      if (selectedTagIds.includes(found.id)) {
+        setTagError('已添加该标签')
+        return
+      }
+      setSelectedTagIds([...selectedTagIds, found.id])
+      setTagInput('')
+      setTagError('')
       return
     }
-    if (selectedTagIds.includes(found.id)) {
-      setTagError('已添加该标签')
-      return
+    try {
+      const tag = await post<Tag>('/tags', { name })
+      setAllTags([...allTags, tag])
+      setSelectedTagIds([...selectedTagIds, tag.id])
+      setTagInput('')
+      setTagError('')
+    } catch {
+      setTagError('创建标签失败')
     }
-    setSelectedTagIds([...selectedTagIds, found.id])
-    setTagInput('')
-    setTagError('')
   }
 
   function removeTag(id: number) {
@@ -438,7 +446,7 @@ export default function Upload() {
             placeholderClass='text-outline-variant'
             onInput={(e) => setTitle(e.detail.value)}
             className='h-12 w-full rounded-xl bg-surface-container-low px-4 text-base text-on-surface'
-            style={{ border: 'none' }}
+            style={{ border: 'none', lineHeight: '48px' }}
           />
         </View>
 
@@ -474,7 +482,7 @@ export default function Upload() {
               }}
               onConfirm={(e) => addTag(e.detail.value)}
               className='h-12 w-full rounded-xl bg-surface-container-low pl-4 pr-14 text-sm text-on-surface'
-              style={{ border: 'none' }}
+              style={{ border: 'none', lineHeight: '48px' }}
             />
             <View
               onClick={() => addTag(tagInput)}
@@ -514,7 +522,7 @@ export default function Upload() {
           {/* Hot tags */}
           {hotTags.length > 0 && (
             <View className='mt-4'>
-              <Text className='mb-2 block px-1 text-[11px] text-outline-variant'>
+              <Text className='mb-2 block px-1 text-xs font-semibold text-on-surface-variant'>
                 热门标签
               </Text>
               <View className='flex flex-wrap gap-2'>

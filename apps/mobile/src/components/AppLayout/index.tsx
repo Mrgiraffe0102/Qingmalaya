@@ -58,7 +58,7 @@ export default function AppLayout({ children, currentTab, hideChrome }: AppLayou
         {/* Split content — 50/50 columns, each scrolls independently */}
         <View className='flex flex-1 pt-14' style={{ height: '100vh' }}>
           <View
-            className='flex-1 overflow-y-auto border-r border-outline-variant/20'
+            className='flex-1 overflow-y-auto border-r border-outline-variant/20 tab-page-enter'
             style={{ height: 'calc(100vh - 56px)' }}
           >
             {children}
@@ -87,10 +87,12 @@ export default function AppLayout({ children, currentTab, hideChrome }: AppLayou
 
   return (
     <View className={`min-h-screen bg-surface ${padClass}`}>
-      {children}
+      <View className='tab-page-enter'>
+        {children}
+      </View>
       {!hideChrome && <PlaybackBar />}
       {!hideChrome && <TabBar currentTab={currentTab} />}
-      {!hideChrome && <MessageBell />}
+      {!hideChrome && currentTab === 'discovery' && <MessageBell />}
     </View>
   )
 }

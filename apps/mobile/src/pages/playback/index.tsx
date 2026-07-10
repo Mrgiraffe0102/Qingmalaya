@@ -69,6 +69,7 @@ export default function Playback() {
   const [likeBounce, setLikeBounce] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [commentCount, setCommentCount] = useState(0)
+  const [exiting, setExiting] = useState(false)
 
   // --- Description modal (picture-in-picture for long descriptions) ---
   const [descModalMounted, setDescModalMounted] = useState(false)
@@ -299,9 +300,12 @@ export default function Playback() {
   }, [podcast])
 
   const handleBack = useCallback((): void => {
-    Taro.navigateBack({
-      fail: () => Taro.switchTab({ url: '/pages/discovery/index' }),
-    })
+    setExiting(true)
+    setTimeout(() => {
+      Taro.navigateBack({
+        fail: () => Taro.switchTab({ url: '/pages/discovery/index' }),
+      })
+    }, 300)
   }, [])
 
   const openDescModal = useCallback((): void => {
@@ -316,12 +320,14 @@ export default function Playback() {
     setTimeout(() => setDescModalMounted(false), 200)
   }, [])
 
+  const animClass = exiting ? 'playback-slide-down' : 'playback-slide-up'
+
   // --- Render guards ---
   if (!ok) return null
 
   if (loading) {
     return (
-      <View className='flex min-h-screen items-center justify-center bg-surface'>
+      <View className={`flex min-h-screen items-center justify-center bg-surface ${animClass}`}>
         <Text className='text-sm text-on-surface-variant'>加载中...</Text>
       </View>
     )
@@ -329,7 +335,7 @@ export default function Playback() {
 
   if (!podcast) {
     return (
-      <View className='flex min-h-screen flex-col items-center justify-center gap-4 bg-surface px-6'>
+      <View className={`flex min-h-screen flex-col items-center justify-center gap-4 bg-surface px-6 ${animClass}`}>
         <Text className='text-sm text-on-surface-variant'>播客不存在或已下架</Text>
         <View
           onClick={handleBack}
@@ -365,7 +371,10 @@ export default function Playback() {
   }
 
   return (
-    <View className='flex h-screen flex-col overflow-hidden bg-surface'>
+    <View
+      className={`flex h-screen flex-col overflow-hidden bg-surface ${animClass}`}
+      style={{ willChange: 'transform' }}
+    >
       {/* ---- Top bar ---- */}
       <View
         style={GLASS_STYLE}
