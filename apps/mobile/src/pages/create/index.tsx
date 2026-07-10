@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, useRef, type CSSProperties } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import AppLayout from '../../components/AppLayout'
@@ -59,11 +59,22 @@ export default function Create() {
       ? 'calc(100vh - 160px)'
       : 'calc(100vh - 96px)'
 
+  const firstShowRef = useRef(true)
+
   useEffect(() => {
     if (!ok) return
     void fetchList(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok])
+
+  Taro.useDidShow(() => {
+    if (firstShowRef.current) {
+      firstShowRef.current = false
+      return
+    }
+    if (!ok) return
+    void fetchList(false)
+  })
 
   async function fetchList(isRefresh: boolean): Promise<void> {
     if (isRefresh) setRefreshing(true)
@@ -290,8 +301,8 @@ function CreationCard({ podcast, onMore, onTap }: CreationCardProps) {
 function EmptyState({ onUpload }: { onUpload: () => void }) {
   return (
     <View className='flex flex-col items-center justify-center px-6 pt-24 text-center'>
-      <View className='mb-6 flex h-40 w-40 items-center justify-center rounded-full bg-surface-container'>
-        <Text style={{ fontSize: '64px', lineHeight: '64px' }}>🎙️</Text>
+      <View className='mb-6 flex h-32 w-32 items-center justify-center'>
+        <Icon name='mic' style={{ fontSize: '48px', color: '#727879' }} />
       </View>
       <Text
         className='max-w-[240px] text-on-surface-variant'

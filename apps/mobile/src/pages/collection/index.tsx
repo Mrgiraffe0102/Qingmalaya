@@ -74,7 +74,7 @@ export default function CollectionPage() {
 
   if (loading && !collection) {
     return (
-      <AppLayout currentTab='discovery'>
+      <AppLayout currentTab='discovery' hideChrome>
         <View className='flex min-h-[60vh] items-center justify-center'>
           <Text className='text-sm text-on-surface-variant'>加载中...</Text>
         </View>
@@ -84,7 +84,7 @@ export default function CollectionPage() {
 
   if (!collection) {
     return (
-      <AppLayout currentTab='discovery'>
+      <AppLayout currentTab='discovery' hideChrome>
         <View className='flex min-h-[60vh] items-center justify-center px-6'>
           <Text className='text-center text-sm text-on-surface-variant'>
             精选集不存在或已下线
@@ -98,7 +98,7 @@ export default function CollectionPage() {
   const cover = coverUrl(collection.coverPath)
 
   return (
-    <AppLayout currentTab='discovery'>
+    <AppLayout currentTab='discovery' hideChrome>
       <PageContainer>
         {/* Back button */}
         <View className='flex items-center px-4 pt-2'>

@@ -556,6 +556,39 @@ export class PodcastService {
   }
 
   /**
+   * Favorite a podcast (POST /podcasts/:id/favorite). Idempotent — if already
+   * favorited, returns the current state. Uses upsert on the compound unique
+   * key (userId, podcastId).
+   */
+  async favorite(
+    id: number,
+    userId: number,
+  ): Promise<{ favorited: boolean }> {
+    await this.assertPublished(id);
+    await this.prisma.favorite.upsert({
+      where: { userId_podcastId: { userId, podcastId: id } },
+      create: { userId, podcastId: id },
+      update: {},
+    });
+    return { favorited: true };
+  }
+
+  /**
+   * Unfavorite a podcast (DELETE /podcasts/:id/favorite). Idempotent — if not
+   * favorited, returns the current state.
+   */
+  async unfavorite(
+    id: number,
+    userId: number,
+  ): Promise<{ favorited: boolean }> {
+    await this.assertPublished(id);
+    await this.prisma.favorite.deleteMany({
+      where: { userId, podcastId: id },
+    });
+    return { favorited: false };
+  }
+
+  /**
    * Play tracking (POST /podcasts/:id/play). On the user's FIRST play of a
    * podcast (no existing PlayHistory), increments podcast.playCount and the
    * author's totalListens, then creates the PlayHistory row. On subsequent

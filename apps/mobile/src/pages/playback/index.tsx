@@ -259,16 +259,29 @@ export default function Playback() {
     }
   }, [podcast, liked])
 
-  // --- Favorite toggle (no API yet — local state + toast) ---
-  const handleFavorite = useCallback((): void => {
-    setFavorited((v) => {
+  // --- Favorite toggle ---
+  const handleFavorite = useCallback(async (): Promise<void> => {
+    if (!podcast) return
+    const wasFavorited = favorited
+    setFavorited(!wasFavorited)
+    Taro.showToast({
+      title: wasFavorited ? '已取消收藏' : '已收藏',
+      icon: 'none',
+    })
+    try {
+      if (wasFavorited) {
+        await del(`/podcasts/${podcast.id}/favorite`, { silent: true })
+      } else {
+        await post(`/podcasts/${podcast.id}/favorite`, undefined, { silent: true })
+      }
+    } catch (err) {
+      setFavorited(wasFavorited)
       Taro.showToast({
-        title: v ? '已取消收藏' : '已收藏',
+        title: err instanceof Error ? err.message : '操作失败',
         icon: 'none',
       })
-      return !v
-    })
-  }, [])
+    }
+  }, [podcast, favorited])
 
   // --- Share ---
   const handleShare = useCallback((): void => {

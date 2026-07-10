@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, useRef, type CSSProperties } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import AppLayout from '../../components/AppLayout'
@@ -118,11 +118,22 @@ export default function Discovery() {
   const [loading, setLoading] = useState(true)
   const [cols, setCols] = useState(2)
 
+  const firstShowRef = useRef(true)
+
   useEffect(() => {
     if (!ok) return
     fetchDiscovery()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok])
+
+  Taro.useDidShow(() => {
+    if (firstShowRef.current) {
+      firstShowRef.current = false
+      return
+    }
+    if (!ok) return
+    fetchDiscovery()
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined') return

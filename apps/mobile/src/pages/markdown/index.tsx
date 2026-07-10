@@ -62,7 +62,7 @@ export default function MarkdownPage() {
 
   if (loading && !banner) {
     return (
-      <AppLayout currentTab='discovery'>
+      <AppLayout currentTab='discovery' hideChrome>
         <View className='flex min-h-[60vh] items-center justify-center'>
           <Text className='text-sm text-on-surface-variant'>加载中...</Text>
         </View>
@@ -72,7 +72,7 @@ export default function MarkdownPage() {
 
   if (!banner) {
     return (
-      <AppLayout currentTab='discovery'>
+      <AppLayout currentTab='discovery' hideChrome>
         <View className='flex min-h-[60vh] items-center justify-center px-6'>
           <Text className='text-center text-sm text-on-surface-variant'>
             内容不存在
@@ -85,7 +85,7 @@ export default function MarkdownPage() {
   const content = banner.markdownContent ?? ''
 
   return (
-    <AppLayout currentTab='discovery'>
+    <AppLayout currentTab='discovery' hideChrome>
       <PageContainer>
         {/* Back button */}
         <View className='flex items-center px-4 pt-2'>

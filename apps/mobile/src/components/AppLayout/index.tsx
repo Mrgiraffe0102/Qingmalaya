@@ -10,6 +10,9 @@ interface AppLayoutProps {
   children: ReactNode
   /** Which tab page is currently active. The "+" create button is never selected. */
   currentTab: TabKey
+  /** Hide the floating TabBar and MessageBell (used on detail pages that have
+   *  their own back button, e.g. collection, markdown, messages). */
+  hideChrome?: boolean
 }
 
 /**
@@ -18,27 +21,34 @@ interface AppLayoutProps {
  * isn't hidden behind the fixed chrome. Each tab page wraps its content with
  * `<AppLayout currentTab="...">`.
  */
-export default function AppLayout({ children, currentTab }: AppLayoutProps) {
+export default function AppLayout({ children, currentTab, hideChrome }: AppLayoutProps) {
   const isDesktop = useIsDesktop()
   const hasPodcast = usePlayerStore((s) => s.currentPodcast !== null)
 
   // Pad content clear of the fixed nav. Desktop chrome sits at the top
   // (menu + optional playback bar); mobile chrome sits at the bottom
   // (island + optional playback bar stacked above it).
-  const padClass = isDesktop
+  // When hideChrome is set, only pad for the PlaybackBar (if a podcast is playing).
+  const padClass = hideChrome
     ? hasPodcast
-      ? 'pt-36'
-      : 'pt-20'
-    : hasPodcast
-      ? 'pb-40'
-      : 'pb-24'
+      ? isDesktop
+        ? 'pt-32'
+        : 'pb-36'
+      : ''
+    : isDesktop
+      ? hasPodcast
+        ? 'pt-36'
+        : 'pt-20'
+      : hasPodcast
+        ? 'pb-40'
+        : 'pb-24'
 
   return (
     <View className={`min-h-screen bg-surface ${padClass}`}>
       {children}
       <PlaybackBar />
-      <TabBar currentTab={currentTab} />
-      <MessageBell />
+      {!hideChrome && <TabBar currentTab={currentTab} />}
+      {!hideChrome && <MessageBell />}
     </View>
   )
 }

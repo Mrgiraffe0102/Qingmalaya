@@ -11,7 +11,10 @@ export default {
     'pages/change-password/index',
     'pages/collection/index',
     'pages/markdown/index',
-    'pages/messages/index'
+    'pages/messages/index',
+    'pages/account-settings/index',
+    'pages/favorites/index',
+    'pages/history/index'
   ],
   window: {
     backgroundTextStyle: 'light',

@@ -30,6 +30,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
  * - DELETE /podcasts/:id           — auth + ownership/role; delete.
  * - POST   /podcasts/:id/like      — auth required; idempotent like.
  * - DELETE /podcasts/:id/like      — auth required; idempotent unlike.
+ * - POST   /podcasts/:id/favorite  — auth required; idempotent favorite.
+ * - DELETE /podcasts/:id/favorite  — auth required; idempotent unfavorite.
  * - POST   /podcasts/:id/play      — auth required; track play + resume position.
  *
  * The `discovery` route is declared before `:id` so it isn't shadowed by the
@@ -109,6 +111,24 @@ export class PodcastController {
     @CurrentUser('id') userId: number,
   ) {
     return this.podcast.unlike(id, userId);
+  }
+
+  @Post(':id/favorite')
+  @UseGuards(JwtAuthGuard)
+  favorite(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.podcast.favorite(id, userId);
+  }
+
+  @Delete(':id/favorite')
+  @UseGuards(JwtAuthGuard)
+  unfavorite(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.podcast.unfavorite(id, userId);
   }
 
   @Post(':id/play')

@@ -8,8 +8,9 @@ import { useAuthStore } from '../../store/auth'
  * Change password page.
  *
  * Reached either as a forced step after first login (mustChangePassword=true)
- * or voluntarily from the profile page. On success the `mustChangePassword`
- * flag is cleared and the user is sent to the discovery tab.
+ * or voluntarily from the account-settings page (?from=settings). On success
+ * the `mustChangePassword` flag is cleared. When from=settings, navigates back
+ * to the account-settings page; otherwise switches to the discovery tab.
  */
 
 const MIN_PASSWORD_LENGTH = 6
@@ -26,6 +27,8 @@ export default function ChangePassword() {
   const [focused, setFocused] = useState<string | null>(null)
 
   const setMustChangePassword = useAuthStore((s) => s.setMustChangePassword)
+  const router = Taro.useRouter<{ from?: string }>()
+  const fromSettings = router.params.from === 'settings'
 
   const newPasswordError =
     newPassword.length > 0 && newPassword.length < MIN_PASSWORD_LENGTH
@@ -56,7 +59,13 @@ export default function ChangePassword() {
       Taro.showToast({ title: '密码修改成功', icon: 'success', duration: 1500 })
       // Give the toast a beat before navigating so it's visible.
       setTimeout(() => {
-        Taro.switchTab({ url: '/pages/discovery/index' })
+        if (fromSettings) {
+          Taro.navigateBack({
+            fail: () => Taro.switchTab({ url: '/pages/profile/index' }),
+          })
+        } else {
+          Taro.switchTab({ url: '/pages/discovery/index' })
+        }
       }, 800)
     } catch (err) {
       // Surface the backend's message (e.g. "旧密码错误") — request.ts already
@@ -108,6 +117,18 @@ export default function ChangePassword() {
   return (
     <View className="relative min-h-screen bg-surface px-5 py-8">
       <View className="mx-auto w-full max-w-md">
+        {/* Back button (only when navigated from account settings) */}
+        {fromSettings && (
+          <View
+            onClick={() => Taro.navigateBack()}
+            className="mb-2 flex h-10 w-10 items-center justify-center rounded-full text-primary"
+          >
+            <Text className="material-symbols-outlined" style={{ fontSize: '22px' }}>
+              arrow_back
+            </Text>
+          </View>
+        )}
+
         {/* Header */}
         <View className="mb-8">
           <Text className="block text-on-surface" style={{ fontSize: '24px', fontWeight: '600', lineHeight: '32px' }}>

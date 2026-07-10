@@ -120,7 +120,7 @@ export default function MessagesPage() {
   if (!ok) return null
 
   return (
-    <AppLayout currentTab='discovery'>
+    <AppLayout currentTab='discovery' hideChrome>
       <PageContainer>
         {/* Header */}
         <View className='flex items-center justify-between px-4 pt-2'>

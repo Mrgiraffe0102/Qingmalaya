@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image } from '@tarojs/components'
 import AppLayout from '../../components/AppLayout'
@@ -53,6 +53,8 @@ export default function Profile() {
   const { user, clearAuth, updateUser } = useAuthStore()
   const [classes, setClasses] = useState<Class[]>([])
 
+  const firstShowRef = useRef(true)
+
   useEffect(() => {
     if (!ok) return
     // Fetch the class catalog and refresh the user profile in the background.
@@ -69,6 +71,19 @@ export default function Profile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok])
 
+  Taro.useDidShow(() => {
+    if (firstShowRef.current) {
+      firstShowRef.current = false
+      return
+    }
+    if (!ok) return
+    get<Class[]>('/classes').then(setClasses).catch(() => {})
+    if (user) {
+      get<User>('/users/me').then(updateUser).catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  })
+
   const handleLogout = () => {
     Taro.showModal({
       title: '确认退出',
@@ -82,10 +97,6 @@ export default function Profile() {
         }
       }
     })
-  }
-
-  const showComingSoon = (label: string) => {
-    Taro.showToast({ title: `${label}功能开发中`, icon: 'none' })
   }
 
   const showAbout = () => {
@@ -112,21 +123,21 @@ export default function Profile() {
       label: '账号设置',
       icon: '⚙',
       tint: 'text-primary',
-      onTap: () => showComingSoon('账号设置')
+      onTap: () => Taro.navigateTo({ url: '/pages/account-settings/index' })
     },
     {
       key: 'favorites',
       label: '我的收藏',
       icon: '★',
       tint: 'text-secondary',
-      onTap: () => showComingSoon('我的收藏')
+      onTap: () => Taro.navigateTo({ url: '/pages/favorites/index' })
     },
     {
       key: 'history',
       label: '播放历史',
       icon: '⏱',
       tint: 'text-tertiary',
-      onTap: () => showComingSoon('播放历史')
+      onTap: () => Taro.navigateTo({ url: '/pages/history/index' })
     }
   ]
 

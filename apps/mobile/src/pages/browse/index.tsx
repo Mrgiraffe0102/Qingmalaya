@@ -93,6 +93,19 @@ export default function Browse() {
   // handled by the sort/tags/classId effect so we don't fire twice on mount.
   const firstKeywordRef = useRef(true)
 
+  // Skip the first useDidShow — the sort/tags/classId effect handles the
+  // initial fetch. On subsequent tab switches, refetch page 1 with current filters.
+  const firstShowRef = useRef(true)
+
+  Taro.useDidShow(() => {
+    if (firstShowRef.current) {
+      firstShowRef.current = false
+      return
+    }
+    if (!ok) return
+    void fetchList(true)
+  })
+
   // Desktop: top chrome (menu + optional playback bar) sits above the page,
   // so the root height excludes that.
   // Mobile: the root fills the full viewport so the ScrollView content
