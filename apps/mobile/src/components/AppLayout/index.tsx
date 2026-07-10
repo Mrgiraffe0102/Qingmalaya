@@ -2,6 +2,7 @@ import { View } from '@tarojs/components'
 import type { ReactNode } from 'react'
 import TabBar, { type TabKey } from './TabBar'
 import PlaybackBar from './PlaybackBar'
+import MessageBell from '../MessageBell'
 import { useIsDesktop } from './useIsDesktop'
 import { usePlayerStore } from '../../store/player'
 
@@ -37,6 +38,7 @@ export default function AppLayout({ children, currentTab }: AppLayoutProps) {
       {children}
       <PlaybackBar />
       <TabBar currentTab={currentTab} />
+      <MessageBell />
     </View>
   )
 }

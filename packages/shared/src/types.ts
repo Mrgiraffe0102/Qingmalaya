@@ -13,6 +13,7 @@ import type {
   BannerLinkType,
   BannerStatus,
   AnnouncementStatus,
+  NotificationType,
 } from './enums';
 
 /** ISO date string, e.g. "2025-01-31T08:00:00.000Z". */
@@ -231,6 +232,19 @@ export interface DiscoveryResponse {
   };
   recent: PodcastWithRelations[];
   classmates: PodcastWithRelations[];
+}
+
+// --- Notification ---
+export interface NotificationItem {
+  id: number;
+  type: NotificationType;
+  title: string;
+  content: string;
+  podcastId: number | null;
+  podcastTitle: string | null;
+  actor: UserSummary | null;
+  read: boolean;
+  createdAt: ISODateString;
 }
 
 // --- Auth responses ---

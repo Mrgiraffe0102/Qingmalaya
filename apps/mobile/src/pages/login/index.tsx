@@ -1,9 +1,9 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Input, Button } from '@tarojs/components'
-import { post, get } from '../../utils/request'
+import { post } from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
-import type { LoginResponse, Announcement } from '@qingmalaya/shared'
+import type { LoginResponse } from '@qingmalaya/shared'
 
 /**
  * Login page.
@@ -32,30 +32,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [idFocused, setIdFocused] = useState(false)
   const [pwdFocused, setPwdFocused] = useState(false)
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null)
 
   const setAuth = useAuthStore((s) => s.setAuth)
-
-  // Fetch the latest published announcement on mount; show as a modal if any.
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const data = await get<Announcement | null>('/announcements/latest', {
-          silent: true,
-          skipAuth: true
-        })
-        if (!cancelled && data && data.title) {
-          setAnnouncement(data)
-        }
-      } catch {
-        // Announcement is decorative — swallow errors silently.
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const canSubmit = studentId.trim().length > 0 && password.length > 0 && !loading
 
@@ -241,47 +219,6 @@ export default function Login() {
           </View>
         </View>
       </View>
-
-      {/* Announcement modal */}
-      {announcement && (
-        <View
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'rgba(0, 0, 0, 0.5)', padding: '32px' }}
-          onClick={() => setAnnouncement(null)}
-        >
-          <View
-            className="w-full max-w-sm rounded-xl bg-surface"
-            style={{ padding: '24px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Text className="block text-on-surface" style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
-              {announcement.title}
-            </Text>
-            <Text className="block text-on-surface-variant" style={{ fontSize: '14px', lineHeight: '22px', whiteSpace: 'pre-wrap' }}>
-              {announcement.content}
-            </Text>
-            <View className="mt-6 flex justify-end">
-              <Button
-                onClick={() => setAnnouncement(null)}
-                className="text-on-primary"
-                style={{
-                  height: '40px',
-                  padding: '0 24px',
-                  borderRadius: '9999px',
-                  backgroundColor: '#4d6265',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  border: 'none',
-                  lineHeight: '40px'
-                }}
-                hoverClass="none"
-              >
-                我知道了
-              </Button>
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   )
 }

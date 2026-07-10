@@ -10,11 +10,11 @@ import { UsersModule } from './users/users.module';
 import { ClassesModule } from './classes/classes.module';
 import { TagsModule } from './tags/tags.module';
 import { BannersModule } from './banners/banners.module';
-import { AnnouncementsModule } from './announcements/announcements.module';
 import { CommentModule } from './comment/comment.module';
 import { PodcastModule } from './podcast/podcast.module';
 import { CollectionsModule } from './collections/collections.module';
 import { AdminModule } from './admin/admin.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { appConfig } from './app.config';
 
 /**
@@ -38,11 +38,11 @@ import { appConfig } from './app.config';
     ClassesModule,
     TagsModule,
     BannersModule,
-    AnnouncementsModule,
     CommentModule,
     PodcastModule,
     CollectionsModule,
     AdminModule,
+    NotificationsModule,
     ServeStaticModule.forRoot({
       rootPath: resolve(appConfig().upload.dir),
       serveRoot: '/static',

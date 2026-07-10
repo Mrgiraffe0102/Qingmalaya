@@ -11,6 +11,7 @@ import type {
 } from '@qingmalaya/shared';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreatePodcastDto } from './dto/create-podcast.dto';
 import { UpdatePodcastDto } from './dto/update-podcast.dto';
 import { ListPodcastDto } from './dto/list-podcast.dto';
@@ -113,7 +114,10 @@ function orderByForSort(
  */
 @Injectable()
 export class PodcastService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /**
    * Discovery aggregate (GET /podcasts/discovery). Returns online banners in
@@ -451,7 +455,8 @@ export class PodcastService {
    * returns the current state without changes. Otherwise, within a transaction,
    * creates the Like row (polymorphic targetType=PODCAST plus the optional
    * podcastId FK), increments the podcast.likeCount, and increments the
-   * author's totalLikes (likes received across their podcasts).
+   * author's totalLikes (likes received across their podcasts). Notifies the
+   * podcast author (unless the liker is the author).
    */
   async like(
     id: number,
@@ -459,7 +464,7 @@ export class PodcastService {
   ): Promise<{ liked: boolean; likeCount: number }> {
     const podcast = await this.assertPublished(id);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.like.findUnique({
         where: {
           userId_targetType_targetId: {
@@ -474,7 +479,7 @@ export class PodcastService {
           where: { id },
           select: { likeCount: true },
         });
-        return { liked: true, likeCount: current?.likeCount ?? 0 };
+        return { liked: true, likeCount: current?.likeCount ?? 0, isNew: false };
       }
 
       await tx.like.create({
@@ -489,8 +494,21 @@ export class PodcastService {
         where: { id: podcast.authorId },
         data: { totalLikes: { increment: 1 } },
       });
-      return { liked: true, likeCount: updated.likeCount };
+      return { liked: true, likeCount: updated.likeCount, isNew: true };
     });
+
+    if (result.isNew && userId !== podcast.authorId) {
+      await this.notifications.createForUser(
+        podcast.authorId,
+        'PODCAST_LIKED',
+        '播客收到新的点赞',
+        `有人赞了您的播客《${podcast.title}》`,
+        id,
+        userId,
+      );
+    }
+
+    return { liked: result.liked, likeCount: result.likeCount };
   }
 
   /**
@@ -588,14 +606,14 @@ export class PodcastService {
    */
   private async assertPublished(
     id: number,
-  ): Promise<{ id: number; authorId: number }> {
+  ): Promise<{ id: number; authorId: number; title: string }> {
     const podcast = await this.prisma.podcast.findUnique({
       where: { id },
-      select: { id: true, authorId: true, status: true },
+      select: { id: true, authorId: true, status: true, title: true },
     });
     if (!podcast || podcast.status !== 'PUBLISHED') {
       throw new NotFoundException('播客不存在或已下架');
     }
-    return { id: podcast.id, authorId: podcast.authorId };
+    return { id: podcast.id, authorId: podcast.authorId, title: podcast.title };
   }
 }

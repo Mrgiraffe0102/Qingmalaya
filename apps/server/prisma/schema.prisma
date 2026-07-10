@@ -66,6 +66,14 @@ enum AnnouncementStatus {
   PUBLISHED
 }
 
+enum NotificationType {
+  BROADCAST
+  PODCAST_APPROVED
+  PODCAST_REJECTED
+  PODCAST_LIKED
+  PODCAST_COMMENTED
+}
+
 model User {
   id                 Int        @id @default(autoincrement())
   studentId          String     @unique
@@ -90,6 +98,8 @@ model User {
   favorites     Favorite[]
   playHistories PlayHistory[]
   adminLogs     AdminLog[]
+  notifications         Notification[] @relation("NotificationRecipient")
+  triggeredNotifications Notification[] @relation("NotificationActor")
 
   @@index([classId])
   @@index([role])
@@ -131,6 +141,7 @@ model Podcast {
   favorites   Favorite[]
   PlayHistory PlayHistory[]
   collections CollectionPodcast[]
+  notifications Notification[]
 
   @@index([authorId])
   @@index([classId])
@@ -310,4 +321,23 @@ model UploadedFile {
 
   @@index([mimetype])
   @@index([createdAt])
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String
+  content   String           @db.Text
+  podcastId Int?
+  actorId   Int?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user    User     @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor   User?    @relation("NotificationActor", fields: [actorId], references: [id])
+  podcast Podcast? @relation(fields: [podcastId], references: [id])
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

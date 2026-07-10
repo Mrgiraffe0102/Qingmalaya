@@ -10,7 +10,8 @@ export default {
     'pages/recording/index',
     'pages/change-password/index',
     'pages/collection/index',
-    'pages/markdown/index'
+    'pages/markdown/index',
+    'pages/messages/index'
   ],
   window: {
     backgroundTextStyle: 'light',

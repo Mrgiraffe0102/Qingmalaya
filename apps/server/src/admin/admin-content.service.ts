@@ -6,6 +6,7 @@ import type {
   UserSummary,
 } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AdminPodcastListDto } from './dto/admin-podcast-list.dto';
 import { AdminPodcastUpdateDto } from './dto/admin-podcast-update.dto';
 import { AdminPodcastBatchTakedownDto } from './dto/admin-podcast-batch-takedown.dto';
@@ -149,7 +150,10 @@ function toAdminCommentListItem(c: AdminCommentRow): AdminCommentListItem {
  */
 @Injectable()
 export class AdminPodcastsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /**
    * Lightweight id+title list of PUBLISHED podcasts for selectors
@@ -278,12 +282,12 @@ export class AdminPodcastsService {
    * Take a podcast down (PUT /admin/podcasts/:id/takedown). Sets status to
    * TAKEN_DOWN so the podcast is hidden from students but retained for audit.
    * Idempotent — taking down an already-taken-down podcast is a no-op on
-   * status (the AdminLog is still written).
+   * status (the AdminLog is still written). Notifies the author.
    */
   async takedown(id: number, adminId: number): Promise<{ success: true }> {
     const existing = await this.prisma.podcast.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, title: true, authorId: true, status: true },
     });
     if (!existing) {
       throw new NotFoundException('播客不存在');
@@ -304,6 +308,18 @@ export class AdminPodcastsService {
       },
     });
 
+    // Notify the author — differentiate rejection (was PENDING) vs takedown (was PUBLISHED).
+    const wasPublished = existing.status === 'PUBLISHED';
+    await this.notifications.createForUser(
+      existing.authorId,
+      'PODCAST_REJECTED',
+      wasPublished ? '播客已下架' : '播客审核未通过',
+      wasPublished
+        ? `您的播客《${existing.title}》已被下架`
+        : `您的播客《${existing.title}》审核未通过`,
+      id,
+    );
+
     return { success: true };
   }
 
@@ -311,12 +327,12 @@ export class AdminPodcastsService {
    * Publish a podcast (PUT /admin/podcasts/:id/publish). Sets status to
    * PUBLISHED and stamps publishedAt = now (only on first publish —
    * re-publishing after takedown preserves the original publishedAt). Writes
-   * an AdminLog entry.
+   * an AdminLog entry. Notifies the author.
    */
   async publish(id: number, adminId: number): Promise<{ success: true }> {
     const existing = await this.prisma.podcast.findUnique({
       where: { id },
-      select: { id: true, publishedAt: true },
+      select: { id: true, publishedAt: true, title: true, authorId: true },
     });
     if (!existing) {
       throw new NotFoundException('播客不存在');
@@ -340,6 +356,14 @@ export class AdminPodcastsService {
       },
     });
 
+    await this.notifications.createForUser(
+      existing.authorId,
+      'PODCAST_APPROVED',
+      '播客审核通过',
+      `您的播客《${existing.title}》已审核通过，现已发布`,
+      id,
+    );
+
     return { success: true };
   }
 
@@ -347,12 +371,17 @@ export class AdminPodcastsService {
    * Batch takedown (POST /admin/podcasts/batch-takedown). Sets status to
    * TAKEN_DOWN for every podcast in `ids`. Missing IDs are silently skipped
    * (updateMany matches only existing rows). A single AdminLog entry is
-   * written with the full ID list.
+   * written with the full ID list. Each author is notified.
    */
   async batchTakedown(
     dto: AdminPodcastBatchTakedownDto,
     adminId: number,
   ): Promise<{ success: true; count: number }> {
+    const podcasts = await this.prisma.podcast.findMany({
+      where: { id: { in: dto.ids } },
+      select: { id: true, title: true, authorId: true, status: true },
+    });
+
     const result = await this.prisma.podcast.updateMany({
       where: { id: { in: dto.ids } },
       data: { status: 'TAKEN_DOWN' },
@@ -368,6 +397,19 @@ export class AdminPodcastsService {
       },
     });
 
+    for (const p of podcasts) {
+      const wasPublished = p.status === 'PUBLISHED';
+      await this.notifications.createForUser(
+        p.authorId,
+        'PODCAST_REJECTED',
+        wasPublished ? '播客已下架' : '播客审核未通过',
+        wasPublished
+          ? `您的播客《${p.title}》已被下架`
+          : `您的播客《${p.title}》审核未通过`,
+        p.id,
+      );
+    }
+
     return { success: true, count: result.count };
   }
 
@@ -379,12 +421,18 @@ export class AdminPodcastsService {
    * because Prisma can't conditionally set a field per-row: the first sets
    * status for all matched rows; the second stamps publishedAt=now for the
    * subset that had no publishedAt. Missing IDs are silently skipped. A
-   * single AdminLog entry is written with the full ID list.
+   * single AdminLog entry is written with the full ID list. Each author is
+   * notified.
    */
   async batchPublish(
     dto: AdminPodcastBatchPublishDto,
     adminId: number,
   ): Promise<{ success: true; count: number }> {
+    const podcasts = await this.prisma.podcast.findMany({
+      where: { id: { in: dto.ids } },
+      select: { id: true, title: true, authorId: true },
+    });
+
     const result = await this.prisma.podcast.updateMany({
       where: { id: { in: dto.ids } },
       data: { status: 'PUBLISHED' },
@@ -406,6 +454,16 @@ export class AdminPodcastsService {
         detail: { ids: dto.ids, count: result.count },
       },
     });
+
+    for (const p of podcasts) {
+      await this.notifications.createForUser(
+        p.authorId,
+        'PODCAST_APPROVED',
+        '播客审核通过',
+        `您的播客《${p.title}》已审核通过，现已发布`,
+        p.id,
+      );
+    }
 
     return { success: true, count: result.count };
   }

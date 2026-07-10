@@ -88,6 +88,24 @@ export type AnnouncementStatus =
   (typeof AnnouncementStatus)[keyof typeof AnnouncementStatus];
 export const announcementStatusSchema = z.enum(['DRAFT', 'PUBLISHED']);
 
+// --- NotificationType ---
+export const NotificationType = {
+  BROADCAST: 'BROADCAST',
+  PODCAST_APPROVED: 'PODCAST_APPROVED',
+  PODCAST_REJECTED: 'PODCAST_REJECTED',
+  PODCAST_LIKED: 'PODCAST_LIKED',
+  PODCAST_COMMENTED: 'PODCAST_COMMENTED',
+} as const;
+export type NotificationType =
+  (typeof NotificationType)[keyof typeof NotificationType];
+export const notificationTypeSchema = z.enum([
+  'BROADCAST',
+  'PODCAST_APPROVED',
+  'PODCAST_REJECTED',
+  'PODCAST_LIKED',
+  'PODCAST_COMMENTED',
+]);
+
 // --- Convenience: podcast list sort options ---
 export const PodcastSort = {
   NEWEST: 'newest',

@@ -6,6 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import type { Announcement, Banner, Tag } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AdminTagCreateDto } from './dto/admin-tag-create.dto';
 import { AdminTagUpdateDto } from './dto/admin-tag-update.dto';
 import { AdminBannerCreateDto } from './dto/admin-banner-create.dto';
@@ -320,7 +321,10 @@ export class AdminBannersService {
  */
 @Injectable()
 export class AdminAnnouncementsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async list(): Promise<Announcement[]> {
     const rows = await this.prisma.announcement.findMany({
@@ -351,6 +355,11 @@ export class AdminAnnouncementsService {
         detail: { title: announcement.title, status: announcement.status },
       },
     });
+
+    if (status === 'PUBLISHED') {
+      await this.fanOutBroadcast(announcement.title, announcement.content);
+    }
+
     return toAnnouncement(announcement);
   }
 
@@ -388,7 +397,34 @@ export class AdminAnnouncementsService {
         detail: { fields: Object.keys(dto) },
       },
     });
+
+    // Fan-out only on first publish transition.
+    if (
+      dto.status === 'PUBLISHED' &&
+      existing.publishedAt === null &&
+      announcement.publishedAt !== null
+    ) {
+      await this.fanOutBroadcast(announcement.title, announcement.content);
+    }
+
     return toAnnouncement(announcement);
+  }
+
+  /**
+   * Fan-out a BROADCAST notification to every active user. Called when an
+   * announcement is first published.
+   */
+  private async fanOutBroadcast(title: string, content: string): Promise<void> {
+    const users = await this.prisma.user.findMany({
+      where: { status: 'ACTIVE' },
+      select: { id: true },
+    });
+    await this.notifications.createForUsers(
+      users.map((u) => u.id),
+      'BROADCAST',
+      title,
+      content,
+    );
   }
 
   async remove(id: number, adminId: number): Promise<{ id: number }> {

@@ -11,6 +11,7 @@ import type {
   UserSummary,
 } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 
 /**
@@ -138,7 +139,10 @@ function clampPagination(page: number, pageSize: number): {
  */
 @Injectable()
 export class CommentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /**
    * List visible top-level comments for a podcast, paginated, with one level
@@ -206,7 +210,7 @@ export class CommentService {
   ): Promise<CommentWithUser> {
     const podcast = await this.prisma.podcast.findUnique({
       where: { id: podcastId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, authorId: true, title: true },
     });
     if (!podcast || podcast.status !== 'PUBLISHED') {
       throw new NotFoundException('播客不存在或未发布');
@@ -246,6 +250,18 @@ export class CommentService {
       });
       return comment;
     });
+
+    // Notify the podcast author (unless they're the commenter).
+    if (userId !== podcast.authorId) {
+      await this.notifications.createForUser(
+        podcast.authorId,
+        'PODCAST_COMMENTED',
+        '播客收到新评论',
+        `有人评论了您的播客《${podcast.title}》`,
+        podcastId,
+        userId,
+      );
+    }
 
     return toCreatedComment(created);
   }
