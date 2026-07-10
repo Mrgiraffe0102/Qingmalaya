@@ -25,10 +25,10 @@ import type {
  * The filter/sort panel and the vertical card list both live inside the
  * ScrollView so they scroll together, matching the reference design.
  *
- * The root height is `calc(100vh - <chrome>)` where <chrome> mirrors the
- * padding AppLayout applies (mobile: bottom island + optional playback bar;
- * desktop: top menu + optional playback bar) so the page fits the viewport
- * without a double-scroll.
+ * On mobile the root fills the full viewport (100vh) with a negative bottom
+ * margin that cancels AppLayout's bottom padding, so ScrollView content
+ * scrolls *under* the floating TabBar — same behavior as the discovery page.
+ * On desktop the root height excludes the top menu + optional playback bar.
  */
 
 type SortKey = 'newest' | 'oldest' | 'name' | 'likes' | 'views'
@@ -93,14 +93,29 @@ export default function Browse() {
   // handled by the sort/tags/classId effect so we don't fire twice on mount.
   const firstKeywordRef = useRef(true)
 
-  // Mirror AppLayout's padClass so the root fits the viewport exactly.
+  // Desktop: top chrome (menu + optional playback bar) sits above the page,
+  // so the root height excludes that.
+  // Mobile: the root fills the full viewport so the ScrollView content
+  // scrolls *under* the floating TabBar (matching the discovery page). A
+  // negative bottom margin cancels AppLayout's pb-24/pb-40 so the page
+  // doesn't grow taller than the viewport.
   const rootHeight = isDesktop
     ? hasPodcast
       ? 'calc(100vh - 144px)'
       : 'calc(100vh - 80px)'
-    : hasPodcast
-      ? 'calc(100vh - 160px)'
-      : 'calc(100vh - 96px)'
+    : '100vh'
+
+  const rootStyle: CSSProperties = {
+    height: rootHeight,
+    overflow: 'hidden',
+  }
+  if (!isDesktop) {
+    rootStyle.marginBottom = hasPodcast ? '-160px' : '-96px'
+  }
+
+  // Bottom padding inside the ScrollView so the last items can scroll
+  // above the floating TabBar (+ optional PlaybackBar).
+  const scrollBottomPad = isDesktop ? 'pb-6' : hasPodcast ? 'pb-40' : 'pb-24'
 
   const buildUrl = (p: number): string => {
     const params = new URLSearchParams()
@@ -205,7 +220,7 @@ export default function Browse() {
       <PageContainer>
       <View
         className='flex flex-col bg-surface'
-        style={{ height: rootHeight, overflow: 'hidden' }}
+        style={rootStyle}
       >
         {/* ---- Pinned search header ---- */}
         <View
@@ -243,7 +258,47 @@ export default function Browse() {
           </View>
         </View>
 
-        {/* ---- Scrollable content (filter bar + card list) ---- */}
+        {/* ---- Pinned filter bar (stays visible above the scroll area) ---- */}
+        <View className='flex-shrink-0 bg-surface px-4 pb-2 pt-2'>
+          <View className='flex items-center justify-between'>
+            <Text className='text-lg font-semibold text-on-surface'>探索发现</Text>
+            <View className='flex items-center gap-2'>
+              {activeFilterCount > 0 && (
+                <View
+                  onClick={clearFilters}
+                  className='rounded-full px-3 py-1.5 text-xs text-on-surface-variant'
+                  style={{ backgroundColor: 'rgba(114,120,121,0.1)' }}
+                >
+                  清除
+                </View>
+              )}
+              <View
+                onClick={() => setShowFilter((v) => !v)}
+                className='flex items-center gap-1.5 rounded-full px-3 py-1.5'
+                style={{
+                  backgroundColor: showFilter ? '#4d6265' : 'rgba(77,98,101,0.1)',
+                  color: showFilter ? '#ffffff' : '#4d6265'
+                }}
+              >
+                <Icon
+                  name='tune'
+                  style={{
+                    fontSize: '16px',
+                    color: showFilter ? '#ffffff' : '#4d6265'
+                  }}
+                />
+                <Text
+                  className='text-xs font-semibold'
+                  style={{ color: showFilter ? '#ffffff' : '#4d6265' }}
+                >
+                  筛选{activeFilterCount > 0 ? ` ${activeFilterCount}` : ''}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* ---- Scrollable content (filter panel + card list) ---- */}
         <ScrollView
           scrollY
           refresherEnabled
@@ -254,155 +309,116 @@ export default function Browse() {
           className='flex-1'
           style={{ minHeight: 0, height: 0 }}
         >
-          {/* Filter / sort bar */}
-          <View className='px-4 pb-2 pt-4'>
-            <View className='flex items-center justify-between'>
-              <Text className='text-lg font-semibold text-on-surface'>探索发现</Text>
-              <View className='flex items-center gap-2'>
-                {activeFilterCount > 0 && (
-                  <View
-                    onClick={clearFilters}
-                    className='rounded-full px-3 py-1.5 text-xs text-on-surface-variant'
-                    style={{ backgroundColor: 'rgba(114,120,121,0.1)' }}
-                  >
-                    清除
-                  </View>
-                )}
-                <View
-                  onClick={() => setShowFilter((v) => !v)}
-                  className='flex items-center gap-1.5 rounded-full px-3 py-1.5'
-                  style={{
-                    backgroundColor: showFilter ? '#4d6265' : 'rgba(77,98,101,0.1)',
-                    color: showFilter ? '#ffffff' : '#4d6265'
-                  }}
-                >
-                  <Icon
-                    name='tune'
-                    style={{
-                      fontSize: '16px',
-                      color: showFilter ? '#ffffff' : '#4d6265'
-                    }}
-                  />
-                  <Text
-                    className='text-xs font-semibold'
-                    style={{ color: showFilter ? '#ffffff' : '#4d6265' }}
-                  >
-                    筛选{activeFilterCount > 0 ? ` ${activeFilterCount}` : ''}
-                  </Text>
+          {/* Expanded filter / sort panel */}
+          {showFilter && (
+            <View
+              className='mx-4 mb-2 mt-2 space-y-4 rounded-lg p-4'
+              style={{
+                backgroundColor: '#f5f3f3',
+                border: '1px solid rgba(194,199,200,0.4)'
+              }}
+            >
+              {/* Sort options */}
+              <View>
+                <Text className='mb-2 block text-xs font-medium text-outline'>
+                  排序依据
+                </Text>
+                <View className='flex flex-wrap gap-2'>
+                  {SORT_OPTIONS.map((opt) => {
+                    const active = sort === opt.key
+                    return (
+                      <View
+                        key={opt.key}
+                        onClick={() => setSort(opt.key)}
+                        className='rounded-full px-3 py-1.5'
+                        style={{
+                          backgroundColor: active ? '#4d6265' : '#ffffff',
+                          border: active
+                            ? '1px solid #4d6265'
+                            : '1px solid rgba(194,199,200,0.5)',
+                          color: active ? '#ffffff' : '#424849'
+                        }}
+                      >
+                        <Text
+                          className='text-xs font-medium'
+                          style={{ color: active ? '#ffffff' : '#424849' }}
+                        >
+                          {opt.label}
+                        </Text>
+                      </View>
+                    )
+                  })}
                 </View>
               </View>
-            </View>
 
-            {showFilter && (
-              <View
-                className='mt-3 space-y-4 rounded-lg p-4'
-                style={{
-                  backgroundColor: '#f5f3f3',
-                  border: '1px solid rgba(194,199,200,0.4)'
-                }}
-              >
-                {/* Sort options */}
-                <View>
-                  <Text className='mb-2 block text-xs font-medium text-outline'>
-                    排序依据
-                  </Text>
+              {/* Tag chips (multi-select) */}
+              <View>
+                <Text className='mb-2 block text-xs font-medium text-outline'>
+                  标签
+                </Text>
+                {tags.length === 0 ? (
+                  <Text className='text-xs text-outline'>暂无标签</Text>
+                ) : (
                   <View className='flex flex-wrap gap-2'>
-                    {SORT_OPTIONS.map((opt) => {
-                      const active = sort === opt.key
+                    {tags.map((tag) => {
+                      const selected = selectedTags.includes(tag.id)
+                      const c = tagColors(tag.color)
                       return (
                         <View
-                          key={opt.key}
-                          onClick={() => setSort(opt.key)}
+                          key={tag.id}
+                          onClick={() => toggleTag(tag.id)}
                           className='rounded-full px-3 py-1.5'
                           style={{
-                            backgroundColor: active ? '#4d6265' : '#ffffff',
-                            border: active
+                            backgroundColor: selected ? '#4d6265' : c.bg,
+                            border: selected
                               ? '1px solid #4d6265'
-                              : '1px solid rgba(194,199,200,0.5)',
-                            color: active ? '#ffffff' : '#424849'
+                              : '1px solid transparent'
                           }}
                         >
                           <Text
                             className='text-xs font-medium'
-                            style={{ color: active ? '#ffffff' : '#424849' }}
+                            style={{ color: selected ? '#ffffff' : c.text }}
                           >
-                            {opt.label}
+                            #{tag.name}
                           </Text>
                         </View>
                       )
                     })}
                   </View>
-                </View>
+                )}
+              </View>
 
-                {/* Tag chips (multi-select) */}
-                <View>
-                  <Text className='mb-2 block text-xs font-medium text-outline'>
-                    标签
-                  </Text>
-                  {tags.length === 0 ? (
-                    <Text className='text-xs text-outline'>暂无标签</Text>
-                  ) : (
-                    <View className='flex flex-wrap gap-2'>
-                      {tags.map((tag) => {
-                        const selected = selectedTags.includes(tag.id)
-                        const c = tagColors(tag.color)
-                        return (
-                          <View
-                            key={tag.id}
-                            onClick={() => toggleTag(tag.id)}
-                            className='rounded-full px-3 py-1.5'
-                            style={{
-                              backgroundColor: selected ? '#4d6265' : c.bg,
-                              border: selected
-                                ? '1px solid #4d6265'
-                                : '1px solid transparent'
-                            }}
-                          >
-                            <Text
-                              className='text-xs font-medium'
-                              style={{ color: selected ? '#ffffff' : c.text }}
-                            >
-                              #{tag.name}
-                            </Text>
-                          </View>
-                        )
-                      })}
-                    </View>
-                  )}
-                </View>
-
-                {/* Class dropdown */}
-                <View>
-                  <Text className='mb-2 block text-xs font-medium text-outline'>
-                    班级
-                  </Text>
-                  <Picker
-                    mode='selector'
-                    range={classOptions}
-                    value={classPickerIndex}
-                    onChange={(e) => {
-                      const idx = Number(e.detail.value)
-                      setClassId(idx === 0 ? null : classes[idx - 1]?.id ?? null)
+              {/* Class dropdown */}
+              <View>
+                <Text className='mb-2 block text-xs font-medium text-outline'>
+                  班级
+                </Text>
+                <Picker
+                  mode='selector'
+                  range={classOptions}
+                  value={classPickerIndex}
+                  onChange={(e) => {
+                    const idx = Number(e.detail.value)
+                    setClassId(idx === 0 ? null : classes[idx - 1]?.id ?? null)
+                  }}
+                >
+                  <View
+                    className='flex items-center justify-between rounded-md px-3 py-2.5'
+                    style={{
+                      backgroundColor: '#ffffff',
+                      border: '1px solid rgba(194,199,200,0.5)'
                     }}
                   >
-                    <View
-                      className='flex items-center justify-between rounded-md px-3 py-2.5'
-                      style={{
-                        backgroundColor: '#ffffff',
-                        border: '1px solid rgba(194,199,200,0.5)'
-                      }}
-                    >
-                      <Text className='text-sm text-on-surface'>{selectedClassName}</Text>
-                      <Icon name='expand_more' style={{ fontSize: '18px', color: '#727879' }} />
-                    </View>
-                  </Picker>
-                </View>
+                    <Text className='text-sm text-on-surface'>{selectedClassName}</Text>
+                    <Icon name='expand_more' style={{ fontSize: '18px', color: '#727879' }} />
+                  </View>
+                </Picker>
               </View>
-            )}
-          </View>
+            </View>
+          )}
 
           {/* Card list */}
-          <View className='px-4 pb-6 pt-2'>
+          <View className={`px-4 pt-2 ${scrollBottomPad}`}>
             {loading && items.length === 0 ? (
               <SkeletonList />
             ) : items.length === 0 ? (

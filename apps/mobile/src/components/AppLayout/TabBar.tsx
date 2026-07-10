@@ -109,7 +109,7 @@ export default function TabBar({ currentTab }: TabBarProps) {
             <View
               key={tab.key}
               onClick={() => navigate(tab)}
-              className='-mt-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-lg active:scale-90'
+              className='-mt-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg active:scale-90'
             >
               <Text className='material-symbols-outlined' style={{ fontSize: '32px' }}>
                 {tab.icon}
@@ -121,7 +121,7 @@ export default function TabBar({ currentTab }: TabBarProps) {
           <View
             key={tab.key}
             onClick={() => navigate(tab)}
-            className={`flex h-12 w-12 items-center justify-center rounded-full active:scale-95 ${
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full active:scale-95 ${
               isSelected ? 'bg-primary/10 text-primary' : 'text-on-surface-variant'
             }`}
           >

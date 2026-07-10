@@ -112,7 +112,7 @@ export default function Discovery() {
   const ok = useAuthRedirect()
   const [data, setData] = useState<DiscoveryResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const [cols, setCols] = useState(2)
 
   useEffect(() => {
     if (!ok) return
@@ -120,10 +120,19 @@ export default function Discovery() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const update = () => {
+      const w = window.innerWidth
+      setCols(w >= 1024 ? 4 : w >= 768 ? 3 : 2)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
   async function fetchDiscovery() {
-    const initial = !data
-    if (initial) setLoading(true)
-    else setRefreshing(true)
+    setLoading(true)
     try {
       const res = await get<DiscoveryResponse>('/podcasts/discovery')
       setData(res)
@@ -131,7 +140,6 @@ export default function Discovery() {
       console.warn('[discovery] fetch failed', err)
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }
 
@@ -151,8 +159,14 @@ export default function Discovery() {
   const byPlay = (data?.hot.byPlay ?? []).slice(0, HOT_TOP_N)
   const byLike = (data?.hot.byLike ?? []).slice(0, HOT_TOP_N)
   const byComment = (data?.hot.byComment ?? []).slice(0, HOT_TOP_N)
-  const recent = data?.recent ?? []
+  const recentAll = data?.recent ?? []
   const classmates = data?.classmates ?? []
+
+  // Trim recent uploads so the count is always a whole number of grid rows,
+  // avoiding orphan cards. Target rows: 5 for 2-col, 4 for 3-col, 3 for 4-col.
+  const recentRows = cols === 4 ? 3 : cols === 3 ? 4 : 5
+  const recentTarget = Math.min(recentAll.length, cols * recentRows)
+  const recent = recentAll.slice(0, Math.floor(recentTarget / cols) * cols)
 
   return (
     <AppLayout currentTab='discovery'>
@@ -235,29 +249,10 @@ export default function Discovery() {
         </View>
       )}
 
-      {/* 16.3 Recent uploads — responsive grid + refresh */}
+      {/* 16.3 Recent uploads — responsive grid */}
       {recent.length > 0 && (
         <View className='mb-8'>
-          <SectionHeader
-            label='最近上传'
-            right={
-              <View
-                onClick={fetchDiscovery}
-                className={`flex h-7 w-7 items-center justify-center rounded-full bg-surface-container text-primary ${refreshing ? 'opacity-50' : ''}`}
-              >
-                <Text
-                  className='text-base leading-none'
-                  style={{
-                    transform: refreshing ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 0.4s',
-                    display: 'inline-block',
-                  }}
-                >
-                  ↻
-                </Text>
-              </View>
-            }
-          />
+          <SectionHeader label='最近上传' />
           <View className='grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4'>
             {recent.map((p) => (
               <RecentCard key={p.id} podcast={p} />
@@ -377,14 +372,9 @@ function RecentCard({ podcast }: { podcast: PodcastWithRelations }) {
       />
       <View className='absolute bottom-0 left-0 right-0 p-2.5'>
         <Text
-          className='block text-base font-medium text-white'
+          className='block truncate text-base font-medium text-white'
           style={{
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
             lineHeight: '22px',
-            minHeight: '44px',
           }}
         >
           {podcast.title}

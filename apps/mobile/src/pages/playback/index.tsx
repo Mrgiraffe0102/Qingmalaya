@@ -66,7 +66,8 @@ export default function Playback() {
   const [commentCount, setCommentCount] = useState(0)
 
   // --- Description modal (picture-in-picture for long descriptions) ---
-  const [showDescModal, setShowDescModal] = useState(false)
+  const [descModalMounted, setDescModalMounted] = useState(false)
+  const [descModalVisible, setDescModalVisible] = useState(false)
 
   // --- Local slider drag value (decouples drag from store position updates) ---
   const [dragValue, setDragValue] = useState<number | null>(null)
@@ -285,6 +286,18 @@ export default function Playback() {
     })
   }, [])
 
+  const openDescModal = useCallback((): void => {
+    setDescModalMounted(true)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setDescModalVisible(true))
+    })
+  }, [])
+
+  const closeDescModal = useCallback((): void => {
+    setDescModalVisible(false)
+    setTimeout(() => setDescModalMounted(false), 200)
+  }, [])
+
   // --- Render guards ---
   if (!ok) return null
 
@@ -330,6 +343,7 @@ export default function Playback() {
     WebkitLineClamp: 3,
     WebkitBoxOrient: 'vertical',
     overflow: 'hidden',
+    wordBreak: 'break-word',
   }
 
   return (
@@ -443,7 +457,7 @@ export default function Playback() {
                 {podcast.description}
               </Text>
               {isLongDesc && (
-                <View onClick={() => setShowDescModal(true)} className='mt-1'>
+                <View onClick={openDescModal} className='mt-1'>
                   <Text className='text-xs font-semibold text-primary'>
                     更多
                   </Text>
@@ -636,9 +650,9 @@ export default function Playback() {
       />
 
       {/* ---- Description picture-in-picture modal ---- */}
-      {showDescModal && (
+      {descModalMounted && (
         <View
-          onClick={() => setShowDescModal(false)}
+          onClick={closeDescModal}
           style={{
             position: 'fixed',
             top: 0,
@@ -651,6 +665,8 @@ export default function Playback() {
             justifyContent: 'center',
             zIndex: 1000,
             padding: '24px',
+            opacity: descModalVisible ? 1 : 0,
+            transition: 'opacity 0.2s ease-out',
           }}
         >
           <View
@@ -663,16 +679,22 @@ export default function Playback() {
               borderRadius: '16px',
               padding: '24px',
               overflowY: 'auto',
+              transform: descModalVisible ? 'scale(1)' : 'scale(0.9)',
+              opacity: descModalVisible ? 1 : 0,
+              transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
             }}
           >
             <Text className='block text-base font-semibold text-on-surface'>
               简介
             </Text>
-            <Text className='mt-3 block text-sm leading-relaxed text-on-surface-variant'>
+            <Text
+              className='mt-3 block text-sm leading-relaxed text-on-surface-variant'
+              style={{ wordBreak: 'break-word' }}
+            >
               {podcast.description}
             </Text>
             <View
-              onClick={() => setShowDescModal(false)}
+              onClick={closeDescModal}
               className='mt-4 flex justify-center'
             >
               <Text className='rounded-full bg-primary px-6 py-2 text-sm font-semibold text-on-primary'>

@@ -1,7 +1,11 @@
 /* Global styles — Inter font + base surface background.
- * The Inter font is also linked in src/index.html for H5; for WeApp we rely
- * on the @font-face below (or system fallback). Tailwind utilities layer in
- * via the `@tailwind` directives in this file. */
+ * Inter is loaded in two places, each targeting a different runtime:
+ *   1. src/index.html <link> — H5, where the browser fetches it in parallel
+ *      with the page CSS (best for performance).
+ *   2. The @import below — Taro's RN bundler does not read index.html, so
+ *      it needs the font declared in CSS. WeApp cannot reach Google Fonts
+ *      at runtime, so it falls back to the system font on `body`.
+ * Tailwind utilities layer in via the @tailwind directives below. */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
