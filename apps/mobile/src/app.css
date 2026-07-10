@@ -36,6 +36,27 @@ page {
   display: none !important;
 }
 
+/* Override Taro H5 Image aspectFill mode.
+ * Taro's default uses min-width/min-height with absolute positioning and
+ * depends on onLoad to switch between --width and --height variants. Before
+ * onLoad fires (or if it doesn't), tall images get stretched horizontally
+ * by min-width: 100% while height stays fixed — visible as horizontal
+ * compression on narrow cards. object-fit: cover is the standard CSS
+ * approach and doesn't depend on image load timing. */
+.taro-img__mode-aspectfill,
+.taro-img__mode-aspectfill--width,
+.taro-img__mode-aspectfill--height {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  object-fit: cover !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  transform: none !important;
+}
+
 /* Recording page animated waveform bars (weapp fallback for canvas) */
 @keyframes recobar {
   from { transform: scaleY(0.3); }
