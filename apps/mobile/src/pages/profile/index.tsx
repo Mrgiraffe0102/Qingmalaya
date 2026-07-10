@@ -99,16 +99,6 @@ export default function Profile() {
     })
   }
 
-  const showAbout = () => {
-    Taro.showModal({
-      title: '关于清马拉雅',
-      content:
-        '清马拉雅 v1.0\nG25 校园播客平台\n让校园声音被听见，让青春故事被记录。',
-      showCancel: false,
-      confirmText: '知道了'
-    })
-  }
-
   if (!ok || !user) return null
 
   const className =
@@ -147,7 +137,7 @@ export default function Profile() {
       label: '关于我们',
       icon: 'ⓘ',
       tint: 'text-on-surface-variant',
-      onTap: showAbout
+      onTap: () => Taro.navigateTo({ url: '/pages/about/index' })
     },
     {
       key: 'logout',
