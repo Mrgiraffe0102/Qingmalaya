@@ -9,14 +9,12 @@ function toClass(cls: {
   id: number;
   name: string;
   grade: string | null;
-  department: string | null;
   createdAt: Date;
 }): Class {
   return {
     id: cls.id,
     name: cls.name,
     grade: cls.grade ?? '',
-    department: cls.department ?? '',
     createdAt: cls.createdAt.toISOString(),
   };
 }

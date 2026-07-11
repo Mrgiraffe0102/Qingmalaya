@@ -33,6 +33,14 @@ export interface AdminUsersListParams {
   pageSize?: number;
 }
 
+export interface CreateUserPayload {
+  studentId: string;
+  name: string;
+  password: string;
+  role: 'STUDENT' | 'TEACHER';
+  classId?: number;
+}
+
 export interface ResetPasswordResult {
   newPassword: string;
 }
@@ -42,6 +50,11 @@ export function listAdminUsers(
   params: AdminUsersListParams,
 ): Promise<Paginated<AdminUserListItem>> {
   return get<Paginated<AdminUserListItem>>('/admin/users', { params });
+}
+
+/** POST /admin/users — create a new STUDENT or TEACHER account. */
+export function createUser(payload: CreateUserPayload): Promise<AdminUserListItem> {
+  return post<AdminUserListItem>('/admin/users', payload);
 }
 
 /** PUT /admin/users/:id/ban — set status BANNED. */

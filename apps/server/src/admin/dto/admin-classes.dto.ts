@@ -7,8 +7,8 @@ import {
 } from 'class-validator';
 
 /**
- * Create-class request body. `name` is required; `grade` and `department`
- * are optional free-text descriptors.
+ * Create-class request body. `name` is required; `grade` is an optional
+ * free-text descriptor.
  *
  * The `!` definite-assignment assertions follow the NestJS DTO convention
  * (properties are populated by ValidationPipe's transform step, not via a
@@ -24,11 +24,6 @@ export class AdminCreateClassDto {
   @MaxLength(32)
   @IsOptional()
   grade?: string;
-
-  @IsString()
-  @MaxLength(64)
-  @IsOptional()
-  department?: string;
 }
 
 /**

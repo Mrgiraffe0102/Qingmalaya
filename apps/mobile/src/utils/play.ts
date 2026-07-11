@@ -28,7 +28,7 @@ export async function playPodcast(id: number): Promise<void> {
         try {
           const res = await post<{ position: number }>(
             `/podcasts/${podcast.id}/play`,
-            { position: 0 },
+            { position: 0, start: true },
           )
           if (res.position > 0) store.seek(res.position)
         } catch {

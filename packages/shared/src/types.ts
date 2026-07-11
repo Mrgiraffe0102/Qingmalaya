@@ -33,7 +33,6 @@ export interface Class {
   id: number;
   name: string;
   grade: string;
-  department: string;
   createdAt: ISODateString;
 }
 

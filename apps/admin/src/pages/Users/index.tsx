@@ -1,5 +1,6 @@
 /**
- * 用户管理 — admin user list with search, ban/unban, and password reset.
+ * 用户管理 — admin user list with search, ban/unban, password reset, and
+ * user creation (STUDENT/TEACHER).
  *
  * ProTable drives the paginated query (keyword + classId filter). Mutations
  * (ban / unban / reset-password) open a confirm modal, call the API, then
@@ -7,16 +8,27 @@
  * plaintext password in an info modal so the operator can relay it.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
+import {
+  ModalForm,
+  ProFormDependency,
+  ProFormSelect,
+  ProFormText,
+  ProTable,
+  type ActionType,
+  type ProColumns,
+} from '@ant-design/pro-components';
 import { Button, Modal, Space, Tag, App as AntdApp } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Role, UserStatus } from '@qingmalaya/shared';
 import {
   banUser,
+  createUser,
   listAdminUsers,
   resetUserPassword,
   unbanUser,
   type AdminUserListItem,
+  type CreateUserPayload,
 } from '@/api/users';
 import { listAdminClasses, type AdminClassListItem } from '@/api/classes';
 
@@ -38,6 +50,7 @@ const UsersPage: React.FC = () => {
   const actionRef = useRef<ActionType>();
   const { message } = AntdApp.useApp();
   const [classes, setClasses] = useState<AdminClassListItem[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
 
   // Load class options once for the classId search filter.
   useEffect(() => {
@@ -246,40 +259,115 @@ const UsersPage: React.FC = () => {
   ];
 
   return (
-    <ProTable<AdminUserListItem>
-      actionRef={actionRef}
-      rowKey="id"
-      columns={columns}
-      scroll={{ x: 1200 }}
-      search={{ labelWidth: 'auto', defaultCollapsed: false }}
-      options={{ density: false, fullScreen: false, reload: true, setting: false }}
-      pagination={{
-        pageSize: 20,
-        showSizeChanger: true,
-        showTotal: (total) => `共 ${total} 条`,
-      }}
-      request={async (params) => {
-        try {
-          const { current, pageSize, keyword, classId } = params;
-          const res = await listAdminUsers({
-            page: current,
-            pageSize,
-            keyword: keyword as string | undefined,
-            classId: classId !== undefined && classId !== null
-              ? Number(classId)
-              : undefined,
-          });
-          return {
-            data: res.items,
-            success: true,
-            total: res.total,
-          };
-        } catch (e) {
-          message.error((e as Error).message || '加载用户列表失败');
-          return { data: [], success: false, total: 0 };
-        }
-      }}
-    />
+    <>
+      <ProTable<AdminUserListItem>
+        actionRef={actionRef}
+        rowKey="id"
+        columns={columns}
+        scroll={{ x: 1200 }}
+        search={{ labelWidth: 'auto', defaultCollapsed: false }}
+        options={{ density: false, fullScreen: false, reload: true, setting: false }}
+        pagination={{
+          pageSize: 20,
+          showSizeChanger: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
+        toolBarRender={() => [
+          <Button
+            key="create"
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setCreateOpen(true)}
+          >
+            新建用户
+          </Button>,
+        ]}
+        request={async (params) => {
+          try {
+            const { current, pageSize, keyword, classId } = params;
+            const res = await listAdminUsers({
+              page: current,
+              pageSize,
+              keyword: keyword as string | undefined,
+              classId: classId !== undefined && classId !== null
+                ? Number(classId)
+                : undefined,
+            });
+            return {
+              data: res.items,
+              success: true,
+              total: res.total,
+            };
+          } catch (e) {
+            message.error((e as Error).message || '加载用户列表失败');
+            return { data: [], success: false, total: 0 };
+          }
+        }}
+      />
+
+      <ModalForm<CreateUserPayload>
+        title="新建用户"
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        modalProps={{ destroyOnClose: true }}
+        initialValues={{ role: 'STUDENT' }}
+        onFinish={async (values) => {
+          try {
+            await createUser(values);
+            message.success('已创建用户');
+            setCreateOpen(false);
+            actionRef.current?.reload();
+            return true;
+          } catch (e) {
+            message.error((e as Error).message || '创建失败');
+            return false;
+          }
+        }}
+      >
+        <ProFormText
+          name="studentId"
+          label="学号"
+          placeholder="登录用户名"
+          rules={[{ required: true, message: '请输入学号' }]}
+        />
+        <ProFormText
+          name="name"
+          label="姓名"
+          rules={[{ required: true, message: '请输入姓名' }]}
+        />
+        <ProFormText.Password
+          name="password"
+          label="初始密码"
+          placeholder="至少 6 位"
+          rules={[
+            { required: true, message: '请输入初始密码' },
+            { min: 6, message: '至少 6 位' },
+          ]}
+        />
+        <ProFormSelect
+          name="role"
+          label="角色"
+          options={[
+            { value: 'STUDENT', label: '学生' },
+            { value: 'TEACHER', label: '教师' },
+          ]}
+          rules={[{ required: true, message: '请选择角色' }]}
+        />
+        <ProFormDependency name={['role']}>
+          {({ role }) =>
+            role === 'STUDENT' ? (
+              <ProFormSelect
+                name="classId"
+                label="班级"
+                placeholder="选择班级（可选）"
+                allowClear
+                options={classes.map((c) => ({ label: c.name, value: c.id }))}
+              />
+            ) : null
+          }
+        </ProFormDependency>
+      </ModalForm>
+    </>
   );
 };
 

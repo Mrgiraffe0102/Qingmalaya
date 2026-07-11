@@ -32,7 +32,6 @@ const { TextArea } = Input;
 interface ClassFormValues {
   name: string;
   grade?: string;
-  department?: string;
 }
 
 const ClassesPage: React.FC = () => {
@@ -125,13 +124,6 @@ const ClassesPage: React.FC = () => {
       title: '年级',
       dataIndex: 'grade',
       width: 100,
-      hideInSearch: true,
-      renderText: (val: string) => val || '—',
-    },
-    {
-      title: '院系',
-      dataIndex: 'department',
-      width: 160,
       hideInSearch: true,
       renderText: (val: string) => val || '—',
     },
@@ -245,7 +237,6 @@ const ClassesPage: React.FC = () => {
           rules={[{ required: true, message: '请输入班级名称' }]}
         />
         <ProFormText name="grade" label="年级" placeholder="如 2024" />
-        <ProFormText name="department" label="院系" placeholder="如 计算机学院" />
       </ModalForm>
 
       {/* Edit class — `key` forces remount so initialValues reapply per row */}
@@ -262,7 +253,6 @@ const ClassesPage: React.FC = () => {
             ? {
                 name: editing.name,
                 grade: editing.grade || undefined,
-                department: editing.department || undefined,
               }
             : undefined
         }
@@ -286,7 +276,6 @@ const ClassesPage: React.FC = () => {
           rules={[{ required: true, message: '请输入班级名称' }]}
         />
         <ProFormText name="grade" label="年级" placeholder="如 2024" />
-        <ProFormText name="department" label="院系" placeholder="如 计算机学院" />
       </ModalForm>
 
       {/* Import students */}

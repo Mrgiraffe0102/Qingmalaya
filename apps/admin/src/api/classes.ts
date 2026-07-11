@@ -9,7 +9,6 @@ export interface AdminClassListItem {
   id: number;
   name: string;
   grade: string;
-  department: string;
   createdAt: string;
   userCount: number;
   podcastCount: number;
@@ -18,13 +17,11 @@ export interface AdminClassListItem {
 export interface AdminCreateClassPayload {
   name: string;
   grade?: string;
-  department?: string;
 }
 
 export interface AdminUpdateClassPayload {
   name?: string;
   grade?: string;
-  department?: string;
 }
 
 export interface ImportStudentsResult {
@@ -45,7 +42,7 @@ export function createAdminClass(
   return post<AdminClassListItem>('/admin/classes', payload);
 }
 
-/** PUT /admin/classes/:id — update class name/grade/department. */
+/** PUT /admin/classes/:id — update class name/grade. */
 export function updateAdminClass(
   id: number,
   payload: AdminUpdateClassPayload,

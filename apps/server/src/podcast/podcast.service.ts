@@ -589,17 +589,17 @@ export class PodcastService {
   }
 
   /**
-   * Play tracking (POST /podcasts/:id/play). On the user's FIRST play of a
-   * podcast (no existing PlayHistory), increments podcast.playCount and the
-   * author's totalListens, then creates the PlayHistory row. On subsequent
-   * reports (e.g. every 5 seconds), only the position + playedAt are updated.
-   * Returns the LAST SAVED position (before this update) so the client can
-   * resume playback.
+   * Play tracking (POST /podcasts/:id/play). When `start` is true (user just
+   * clicked into the podcast to begin a new play session), increments
+   * podcast.playCount and the author's totalListens. Creates or updates the
+   * PlayHistory row accordingly. Returns the LAST SAVED position (before this
+   * update) so the client can resume playback.
    */
   async play(
     id: number,
     userId: number,
     position: number,
+    start: boolean,
   ): Promise<PlayProgressResponse> {
     const podcast = await this.assertPublished(id);
 
@@ -609,8 +609,8 @@ export class PodcastService {
       });
       const previousPosition = existing?.position ?? 0;
 
-      if (!existing) {
-        // First play by this user — bump play counts and seed the history row.
+      if (start) {
+        // New play session — bump play counts every time the user clicks in.
         await tx.podcast.update({
           where: { id },
           data: { playCount: { increment: 1 } },
@@ -619,6 +619,9 @@ export class PodcastService {
           where: { id: podcast.authorId },
           data: { totalListens: { increment: 1 } },
         });
+      }
+
+      if (!existing) {
         await tx.playHistory.create({
           data: { userId, podcastId: id, position },
         });

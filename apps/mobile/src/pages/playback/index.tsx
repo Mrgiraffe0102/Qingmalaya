@@ -135,7 +135,7 @@ export default function Playback() {
         // already has the correct position — do nothing.
         const wasNew = load(p)
         if (wasNew) {
-          post<{ position: number }>(`/podcasts/${p.id}/play`, { position: 0 })
+          post<{ position: number }>(`/podcasts/${p.id}/play`, { position: 0, start: true })
             .then((res) => {
               if (res.position > 0) seek(res.position)
             })

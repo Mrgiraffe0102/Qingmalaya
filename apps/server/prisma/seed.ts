@@ -51,13 +51,12 @@ function daysFromNow(days: number): Date {
 async function upsertClass(def: {
   name: string;
   grade: string;
-  department: string;
 }): Promise<{ id: number; name: string }> {
   const existing = await prisma.class.findFirst({ where: { name: def.name } });
   if (existing) {
     return prisma.class.update({
       where: { id: existing.id },
-      data: { grade: def.grade, department: def.department },
+      data: { grade: def.grade },
     });
   }
   return prisma.class.create({ data: def });
@@ -71,17 +70,14 @@ async function main(): Promise<void> {
   const cs1 = await upsertClass({
     name: '计算机2024-1班',
     grade: '2024',
-    department: '计算机科学',
   });
   const cs2 = await upsertClass({
     name: '计算机2024-2班',
     grade: '2024',
-    department: '计算机科学',
   });
   const ph = await upsertClass({
     name: '哲学2024班',
     grade: '2024',
-    department: '哲学',
   });
 
   // ---------------------------------------------------------------- Students

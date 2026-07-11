@@ -138,6 +138,6 @@ export class PodcastController {
     @Body() dto: PlayPodcastDto,
     @CurrentUser('id') userId: number,
   ) {
-    return this.podcast.play(id, userId, dto.position ?? 0);
+    return this.podcast.play(id, userId, dto.position ?? 0, dto.start ?? false);
   }
 }

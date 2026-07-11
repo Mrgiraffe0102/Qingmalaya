@@ -23,12 +23,14 @@ import {
   AdminImportStudentsDto,
   AdminUpdateClassDto,
 } from './dto/admin-classes.dto';
+import { AdminUserCreateDto } from './dto/admin-user-create.dto';
 
 /**
  * Admin user management endpoints (Task 26). All routes require
  * OPERATOR or SUPER_ADMIN role (enforced at the class level by RolesGuard).
  *
  * - GET    /admin/users                   — paginated list (search, classId filter)
+ * - POST   /admin/users                   — create a STUDENT or TEACHER account
  * - PUT    /admin/users/:id/ban           — set status BANNED
  * - PUT    /admin/users/:id/unban         — set status ACTIVE
  * - POST   /admin/users/:id/reset-password — reset to studentId-derived password
@@ -49,6 +51,14 @@ export class AdminUsersController {
       page: query.page ?? 1,
       pageSize: query.pageSize ?? 20,
     });
+  }
+
+  @Post()
+  create(
+    @Body() dto: AdminUserCreateDto,
+    @CurrentUser('id') adminId: number,
+  ) {
+    return this.users.create(dto, adminId);
   }
 
   @Put(':id/ban')

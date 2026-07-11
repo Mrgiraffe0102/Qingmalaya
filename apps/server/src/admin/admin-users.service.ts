@@ -12,6 +12,7 @@ import {
   AdminImportStudentsDto,
   AdminUpdateClassDto,
 } from './dto/admin-classes.dto';
+import { AdminUserCreateDto } from './dto/admin-user-create.dto';
 
 /**
  * User row projected for the admin list view. Extends the shared `User`
@@ -73,8 +74,7 @@ type AdminUserRow = Prisma.UserGetPayload<{ select: typeof ADMIN_USER_SELECT }>;
 /**
  * Map a Prisma user row (with class + podcast count) to the AdminUserListItem
  * contract. Date fields are converted to ISO strings to satisfy the shared
- * `User` type; nullable grade/department are not part of User so they're
- * omitted here.
+ * `User` type; nullable grade is not part of User so it's omitted here.
  */
 function toAdminUserListItem(row: AdminUserRow): AdminUserListItem {
   return {
@@ -99,8 +99,8 @@ function toAdminUserListItem(row: AdminUserRow): AdminUserListItem {
 
 /**
  * Map a Prisma class row (with user/podcast counts) to the AdminClassListItem
- * contract. Nullable grade/department are coerced to empty strings to satisfy
- * the shared `Class` type.
+ * contract. Nullable grade is coerced to empty string to satisfy the shared
+ * `Class` type.
  */
 function toAdminClassListItem(
   row: Prisma.ClassGetPayload<{
@@ -108,7 +108,6 @@ function toAdminClassListItem(
       id: true;
       name: true;
       grade: true;
-      department: true;
       createdAt: true;
       _count: { select: { users: true; podcasts: true } };
     };
@@ -118,7 +117,6 @@ function toAdminClassListItem(
     id: row.id,
     name: row.name,
     grade: row.grade ?? '',
-    department: row.department ?? '',
     createdAt: row.createdAt.toISOString(),
     userCount: row._count.users,
     podcastCount: row._count.podcasts,
@@ -127,12 +125,15 @@ function toAdminClassListItem(
 
 /**
  * Admin user management service. Handles the user list (search + class filter
- * + pagination), ban/unban, and password reset. Each mutation writes an
- * AdminLog entry for auditability.
+ * + pagination), user creation (STUDENT/TEACHER), ban/unban, and password
+ * reset. Each mutation writes an AdminLog entry for auditability.
  */
 @Injectable()
 export class AdminUsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** bcrypt cost factor — matches the seed script and admin-auth.service. */
+  private static readonly BCRYPT_COST = 10;
 
   /**
    * Paginated user list. `keyword` matches studentId OR name (contains);
@@ -177,6 +178,58 @@ export class AdminUsersService {
       page,
       pageSize,
     };
+  }
+
+  /**
+   * Create a new STUDENT or TEACHER account. Checks for a duplicate studentId,
+   * validates the classId (when provided), hashes the password with bcrypt, and
+   * forces mustChangePassword=true. Writes an AdminLog entry tagged create_user.
+   */
+  async create(dto: AdminUserCreateDto, adminId: number): Promise<AdminUserListItem> {
+    const existing = await this.prisma.user.findUnique({
+      where: { studentId: dto.studentId },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new BadRequestException('该学号已存在');
+    }
+
+    if (dto.classId !== undefined) {
+      const cls = await this.prisma.class.findUnique({
+        where: { id: dto.classId },
+        select: { id: true },
+      });
+      if (!cls) {
+        throw new BadRequestException(`班级 ${dto.classId} 不存在`);
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, AdminUsersService.BCRYPT_COST);
+    const created = await this.prisma.user.create({
+      data: {
+        studentId: dto.studentId,
+        name: dto.name,
+        passwordHash,
+        role: dto.role,
+        classId: dto.classId ?? null,
+        status: 'ACTIVE',
+        mustChangePassword: true,
+        firstLogin: true,
+      },
+      select: ADMIN_USER_SELECT,
+    });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'create_user',
+        targetType: 'User',
+        targetId: created.id,
+        detail: { studentId: dto.studentId, name: dto.name, role: dto.role, classId: dto.classId ?? null },
+      },
+    });
+
+    return toAdminUserListItem(created);
   }
 
   /**
@@ -299,7 +352,6 @@ export class AdminClassesService {
         id: true,
         name: true,
         grade: true,
-        department: true,
         createdAt: true,
         _count: { select: { users: true, podcasts: true } },
       },
@@ -314,12 +366,11 @@ export class AdminClassesService {
     adminId: number,
   ): Promise<AdminClassListItem> {
     const created = await this.prisma.class.create({
-      data: { name: dto.name, grade: dto.grade, department: dto.department },
+      data: { name: dto.name, grade: dto.grade },
       select: {
         id: true,
         name: true,
         grade: true,
-        department: true,
         createdAt: true,
         _count: { select: { users: true, podcasts: true } },
       },
@@ -331,7 +382,7 @@ export class AdminClassesService {
         action: 'create_class',
         targetType: 'Class',
         targetId: created.id,
-        detail: { name: created.name, grade: created.grade, department: created.department },
+        detail: { name: created.name, grade: created.grade },
       },
     });
 
@@ -339,9 +390,9 @@ export class AdminClassesService {
   }
 
   /**
-   * Update a class's name/grade/department. Throws NotFoundException if the
-   * class doesn't exist. Writes an AdminLog entry tagged update_class with
-   * before/after snapshots.
+   * Update a class's name/grade. Throws NotFoundException if the class doesn't
+   * exist. Writes an AdminLog entry tagged update_class with before/after
+   * snapshots.
    */
   async update(
     id: number,
@@ -358,13 +409,11 @@ export class AdminClassesService {
       data: {
         name: dto.name,
         grade: dto.grade,
-        department: dto.department,
       },
       select: {
         id: true,
         name: true,
         grade: true,
-        department: true,
         createdAt: true,
         _count: { select: { users: true, podcasts: true } },
       },
@@ -380,12 +429,10 @@ export class AdminClassesService {
           before: {
             name: existing.name,
             grade: existing.grade,
-            department: existing.department,
           },
           after: {
             name: updated.name,
             grade: updated.grade,
-            department: updated.department,
           },
         },
       },
