@@ -7,6 +7,7 @@ import { usePlayerStore, setSeeking } from '../../store/player'
 import { get, post, del } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
 import CommentDrawer from '../../components/CommentDrawer'
+import FluidBackground from '../../components/FluidBackground'
 import type { PodcastWithRelations, Class, TagColor } from '@qingmalaya/shared'
 
 /**
@@ -42,6 +43,14 @@ const GLASS_STYLE: CSSProperties = {
   backdropFilter: 'blur(20px)',
   WebkitBackdropFilter: 'blur(20px)',
   backgroundColor: 'rgba(251, 249, 248, 0.8)',
+}
+
+/** Subtle frosted glass card for the text block over the fluid background. */
+const TEXT_GLASS: CSSProperties = {
+  backdropFilter: 'blur(12px) saturate(1.1)',
+  WebkitBackdropFilter: 'blur(12px) saturate(1.1)',
+  backgroundColor: 'rgba(255, 255, 255, 0.38)',
+  borderRadius: '16px',
 }
 
 /** Inline Material Symbols icon (font linked in src/index.html on H5). */
@@ -372,33 +381,34 @@ export default function Playback() {
 
   return (
     <View
-      className={`flex h-screen flex-col overflow-hidden bg-surface ${animClass}`}
-      style={{ willChange: 'transform' }}
+      className={`flex h-screen flex-col overflow-hidden ${animClass}`}
+      style={{ willChange: 'transform', position: 'relative' }}
     >
+      <FluidBackground src={cover} />
+
       {/* ---- Top bar ---- */}
       <View
-        style={GLASS_STYLE}
-        className='flex flex-shrink-0 items-center justify-between px-4 pb-2 pt-3'
+        className='relative z-10 flex flex-shrink-0 items-center justify-between px-4 pb-2 pt-3'
       >
         <View
           onClick={handleBack}
-          className='flex h-10 w-10 items-center justify-center rounded-full text-primary'
+          className='flex h-10 w-10 items-center justify-center rounded-full text-on-surface'
         >
           <Icon name='expand_more' style={{ fontSize: '22px' }} />
         </View>
-        <Text className='text-sm font-semibold tracking-wide text-primary'>
+        <Text className='text-sm font-semibold tracking-wide text-on-surface'>
           清马拉雅
         </Text>
         <View
           onClick={handleShare}
-          className='flex h-10 w-10 items-center justify-center rounded-full text-primary'
+          className='flex h-10 w-10 items-center justify-center rounded-full text-on-surface'
         >
           <Icon name='share' style={{ fontSize: '20px' }} />
         </View>
       </View>
 
       {/* ---- Scrollable content: cover + meta ---- */}
-      <ScrollView scrollY className='flex-1' style={{ minHeight: 0 }}>
+      <ScrollView scrollY className='relative z-10 flex-1' style={{ minHeight: 0 }}>
         <View
           className='mx-auto flex max-w-md flex-col px-5'
           style={{
@@ -451,53 +461,57 @@ export default function Playback() {
             </View>
           )}
 
-          {/* Title */}
-          <Text className='block text-2xl font-bold leading-tight text-on-surface'>
-            {podcast.title}
-          </Text>
-
-          {/* Author + class pill */}
-          <View className='mt-2 flex flex-wrap items-center gap-2'>
-            <Text className='text-sm text-on-surface-variant'>
-              {podcast.author.name}
+          {/* Title + author + description — wrapped in a glass card
+              for text readability over the fluid background. */}
+          <View style={TEXT_GLASS} className='p-4'>
+            {/* Title */}
+            <Text className='block text-2xl font-bold leading-tight text-on-surface'>
+              {podcast.title}
             </Text>
-            {authorClass && (
-              <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-sm font-medium text-on-tertiary-container'>
-                {authorClass}
-              </Text>
-            )}
-            {podcast.author.role === 'TEACHER' && (
-              <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-sm font-medium text-on-secondary-container'>
-                教师
-              </Text>
-            )}
-          </View>
 
-          {/* Description — short ones show fully; long ones clamp
-              with a "更多" button that opens a picture-in-picture modal */}
-          {podcast.description && (
-            <View className='mt-3'>
-              <Text
-                className='block text-sm leading-relaxed text-on-surface-variant'
-                style={isLongDesc ? clampedDescStyle : undefined}
-              >
-                {podcast.description}
+            {/* Author + class pill */}
+            <View className='mt-2 flex flex-wrap items-center gap-2'>
+              <Text className='text-sm text-on-surface-variant'>
+                {podcast.author.name}
               </Text>
-              {isLongDesc && (
-                <View onClick={openDescModal} className='mt-1'>
-                  <Text className='text-xs font-semibold text-primary'>
-                    更多
+              {authorClass && (
+                <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-sm font-medium text-on-tertiary-container'>
+                  {authorClass}
+                </Text>
+              )}
+              {podcast.author.role === 'TEACHER' && (
+                <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-sm font-medium text-on-secondary-container'>
+                  教师
+                </Text>
+              )}
+            </View>
+
+            {/* Description — short ones show fully; long ones clamp
+                with a "更多" button that opens a picture-in-picture modal */}
+            {podcast.description && (
+              <View className='mt-3'>
+                <Text
+                  className='block text-sm leading-relaxed text-on-surface-variant'
+                  style={isLongDesc ? clampedDescStyle : undefined}
+                >
+                  {podcast.description}
+                </Text>
+                {isLongDesc && (
+                  <View onClick={openDescModal} className='mt-1'>
+                    <Text className='text-xs font-semibold text-primary'>
+                      更多
                   </Text>
                 </View>
               )}
             </View>
           )}
+          </View>
         </View>
       </ScrollView>
 
       {/* ---- Controls: progress + play/pause + speed ---- */}
       <View
-        className='mx-auto w-full max-w-md flex-shrink-0 px-5 pb-2 pt-4'
+        className='relative z-10 mx-auto w-full max-w-md flex-shrink-0 px-5 pb-2 pt-4'
         style={isDesktop ? { maxWidth: '672px' } : undefined}
       >
         {/* Progress bar — custom pointer-events track (Taro Slider only
@@ -614,7 +628,7 @@ export default function Playback() {
 
       {/* ---- Bottom action bar: like / comment / favorite ---- */}
       <View
-        className='mx-auto flex w-full max-w-md flex-shrink-0 items-center justify-around border-t border-outline-variant/20 px-5 py-3'
+        className='relative z-10 mx-auto flex w-full max-w-md flex-shrink-0 items-center justify-around border-t border-outline-variant/20 px-5 py-3'
         style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))', maxWidth: isDesktop ? '672px' : undefined }}
       >
         {/* Like */}

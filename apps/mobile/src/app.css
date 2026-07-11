@@ -145,3 +145,53 @@ page {
   animation: playback-slide-down 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   animation-fill-mode: forwards;
 }
+
+/* ---- Apple Music-style fluid dynamic background ----
+ * 5 organic blob animations with long, non-synchronized durations.
+ * Each uses irregular keyframe stops to avoid mechanical repetition.
+ * Paired with filter: blur(50px) on the blob elements to create
+ * seamless color blending reminiscent of Apple Music's now-playing screen.
+ */
+@keyframes fluid-blob-1 {
+  0%   { transform: translate(0%, 0%) scale(1); }
+  20%  { transform: translate(28%, -18%) scale(1.15); }
+  40%  { transform: translate(12%, 30%) scale(0.92); }
+  60%  { transform: translate(-18%, 12%) scale(1.2); }
+  80%  { transform: translate(-12%, -22%) scale(1.05); }
+  100% { transform: translate(0%, 0%) scale(1); }
+}
+
+@keyframes fluid-blob-2 {
+  0%   { transform: translate(0%, 0%) scale(1.1); }
+  25%  { transform: translate(-22%, 24%) scale(0.88); }
+  50%  { transform: translate(18%, 12%) scale(1.22); }
+  75%  { transform: translate(24%, -18%) scale(1); }
+  100% { transform: translate(0%, 0%) scale(1.1); }
+}
+
+@keyframes fluid-blob-3 {
+  0%   { transform: translate(0%, 0%) scale(0.95); }
+  15%  { transform: translate(22%, 18%) scale(1.12); }
+  30%  { transform: translate(-12%, 28%) scale(1.25); }
+  50%  { transform: translate(-28%, -12%) scale(1); }
+  70%  { transform: translate(12%, -24%) scale(1.18); }
+  85%  { transform: translate(22%, 6%) scale(0.92); }
+  100% { transform: translate(0%, 0%) scale(0.95); }
+}
+
+@keyframes fluid-blob-4 {
+  0%   { transform: translate(0%, 0%) scale(1.05); }
+  20%  { transform: translate(-26%, -12%) scale(0.9); }
+  45%  { transform: translate(12%, -28%) scale(1.18); }
+  65%  { transform: translate(28%, 12%) scale(1); }
+  85%  { transform: translate(6%, 22%) scale(1.12); }
+  100% { transform: translate(0%, 0%) scale(1.05); }
+}
+
+@keyframes fluid-blob-5 {
+  0%   { transform: translate(0%, 0%) scale(1); }
+  30%  { transform: translate(18%, -22%) scale(1.22); }
+  55%  { transform: translate(-22%, 18%) scale(0.88); }
+  80%  { transform: translate(-12%, -18%) scale(1.12); }
+  100% { transform: translate(0%, 0%) scale(1); }
+}
