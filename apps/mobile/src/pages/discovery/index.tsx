@@ -326,50 +326,66 @@ function HotColumn({ title, icon, accent, tab, items, metricLabel }: HotColumnPr
       : accent === 'secondary'
         ? 'text-secondary'
         : 'text-tertiary'
+  const topCover = coverUrl(items[0]?.coverPath)
   return (
     <View
-      className='w-[62%] shrink-0 rounded-xl bg-surface-container-lowest p-3'
+      className='relative w-[62%] shrink-0 overflow-hidden rounded-xl bg-surface-container-lowest p-3'
       style={CARD_STYLE}
     >
-      <View className='mb-3 flex items-center justify-between'>
-        <View className='flex items-center gap-1'>
-          <Icon name={icon} className={accentText} style={{ fontSize: '16px' }} />
-          <Text className={`text-sm font-semibold tracking-wider ${accentText}`}>
-            {title}
-          </Text>
-        </View>
+      {topCover && (
         <View
-          onClick={() => Taro.navigateTo({ url: `/pages/ranking/index?tab=${tab}` })}
-          className='flex items-center'
-        >
-          <Text className='text-xs text-on-surface-variant'>查看更多</Text>
-          <Icon name='chevron_right' className='text-on-surface-variant' style={{ fontSize: '14px' }} />
-        </View>
-      </View>
-      <View className='flex flex-col gap-3'>
-        {items.map((p, idx) => (
-          <View
-            key={p.id}
-            onClick={() => goToPodcast(p.id)}
-            className='flex items-center gap-2.5 py-1'
-          >
-            <RankBadge rank={idx + 1} />
-            <Cover
-              path={p.coverPath}
-              title={p.title}
-              className='h-12 w-12 shrink-0 overflow-hidden rounded-md'
-              letterClass='text-sm text-on-primary-container font-semibold'
-            />
-            <View className='min-w-0 flex-1'>
-              <Text className='block truncate text-sm font-medium text-on-surface'>
-                {p.title}
-              </Text>
-              <Text className='block truncate text-xs text-on-surface-variant'>
-                {metricLabel(p)}
-              </Text>
-            </View>
+          className='pointer-events-none absolute inset-0'
+          style={{
+            backgroundImage: `url("${topCover}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(3px)',
+            WebkitMaskImage: 'linear-gradient(to bottom left, rgba(0,0,0,0.28), rgba(0,0,0,0) 55%)',
+            maskImage: 'linear-gradient(to bottom left, rgba(0,0,0,0.28), rgba(0,0,0,0) 55%)',
+          }}
+        />
+      )}
+      <View className='relative z-10'>
+        <View className='mb-3 flex items-center justify-between'>
+          <View className='flex items-center gap-1'>
+            <Icon name={icon} className={accentText} style={{ fontSize: '16px' }} />
+            <Text className={`text-sm font-semibold tracking-wider ${accentText}`}>
+              {title}
+            </Text>
           </View>
-        ))}
+          <View
+            onClick={() => Taro.navigateTo({ url: `/pages/ranking/index?tab=${tab}` })}
+            className='flex items-center'
+          >
+            <Text className='text-xs text-on-surface-variant'>查看更多</Text>
+            <Icon name='chevron_right' className='text-on-surface-variant' style={{ fontSize: '14px' }} />
+          </View>
+        </View>
+        <View className='flex flex-col gap-3'>
+          {items.map((p, idx) => (
+            <View
+              key={p.id}
+              onClick={() => goToPodcast(p.id)}
+              className='flex items-center gap-2.5 py-1'
+            >
+              <RankBadge rank={idx + 1} />
+              <Cover
+                path={p.coverPath}
+                title={p.title}
+                className='h-12 w-12 shrink-0 overflow-hidden rounded-md'
+                letterClass='text-sm text-on-primary-container font-semibold'
+              />
+              <View className='min-w-0 flex-1'>
+                <Text className='block truncate text-sm font-medium text-on-surface'>
+                  {p.title}
+                </Text>
+                <Text className='block truncate text-xs text-on-surface-variant'>
+                  {metricLabel(p)}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   )

@@ -117,6 +117,9 @@ export default function RankingPage() {
         ? (data?.hot.byLike ?? [])
         : (data?.hot.byComment ?? [])
 
+  const topPodcast = items[0]
+  const topCover = coverUrl(topPodcast?.coverPath)
+
   return (
     <AppLayout currentTab='discovery' hideChrome>
       <PageContainer>
@@ -132,15 +135,50 @@ export default function RankingPage() {
           </View>
         </View>
 
-        {/* Page title */}
-        <View className='px-4 pb-2 pt-2'>
-          <Text className='text-xl font-bold tracking-tight text-primary'>
-            播客榜单
-          </Text>
+        {/* Page title — hero with #1 cover as blurred backdrop */}
+        <View className='relative mx-4 mt-2 overflow-hidden rounded-2xl bg-surface-container-lowest' style={CARD_STYLE}>
+          {topCover && (
+            <View
+              className='pointer-events-none absolute inset-0'
+              style={{
+                backgroundImage: `url("${topCover}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(4px)',
+                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.1) 70%)',
+                maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.1) 70%)',
+              }}
+            />
+          )}
+          <View className='relative z-10 flex items-center gap-3 p-4'>
+            {topPodcast && (
+              <Cover
+                path={topPodcast.coverPath}
+                title={topPodcast.title}
+                className='h-16 w-16 shrink-0 overflow-hidden rounded-lg'
+                letterClass='text-xl text-on-primary-container font-semibold'
+              />
+            )}
+            <View className='min-w-0 flex-1'>
+              <Text className='block text-xs font-medium tracking-widest text-primary'>
+                {TABS.find((t) => t.key === tab)?.label} · TOP 1
+              </Text>
+              {topPodcast && (
+                <Text className='mt-0.5 block truncate text-lg font-bold text-on-surface'>
+                  {topPodcast.title}
+                </Text>
+              )}
+              {topPodcast && (
+                <Text className='block truncate text-xs text-on-surface-variant'>
+                  {topPodcast.author.name} · {metricFor(tab, topPodcast)}
+                </Text>
+              )}
+            </View>
+          </View>
         </View>
 
         {/* Tab bar */}
-        <View className='flex gap-2 px-4 pb-4 pt-2'>
+        <View className='flex gap-2 px-4 pb-4 pt-4'>
           {TABS.map((t) => {
             const active = t.key === tab
             return (

@@ -120,7 +120,8 @@ export class UploadController {
    * POST /upload/image — accept a generic image (jpeg/png/webp) for Banner
    * backgrounds, Markdown inline images, Collection covers, etc. Creates an
    * UploadedFile record so the image appears in the admin image library.
-   * Size limit comes from SystemSetting `max_cover_size` (default 5 MiB).
+   * No dynamic size limit — only the multer abuse ceiling applies, so large
+   * banner backgrounds can be uploaded freely.
    */
   @Post('image')
   @UseInterceptors(
@@ -133,27 +134,26 @@ export class UploadController {
   async uploadImage(
     @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<ImageUploadResult> {
-    const result = await this.handleUpload(
-      file,
-      'max_cover_size',
-      5 * 1024 * 1024,
-    );
+    if (!file) {
+      throw new BadRequestException('请上传文件');
+    }
+    const path = toRelativePath(file.path);
     const record = await this.prisma.uploadedFile.create({
       data: {
-        filename: file!.filename,
-        originalName: file!.originalname,
-        path: result.path,
-        mimetype: result.mimetype,
-        size: result.size,
+        filename: file.filename,
+        originalName: file.originalname,
+        path,
+        mimetype: file.mimetype,
+        size: file.size,
       },
     });
     return {
       id: record.id,
       filename: record.filename,
       originalName: record.originalName,
-      path: result.path,
-      size: result.size,
-      mimetype: result.mimetype,
+      path,
+      size: file.size,
+      mimetype: file.mimetype,
     };
   }
 
