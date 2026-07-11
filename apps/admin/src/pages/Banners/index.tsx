@@ -229,6 +229,7 @@ const BannersPage: React.FC = () => {
       valueType: 'option',
       key: 'option',
       width: 220,
+      fixed: 'right',
       render: (_, row) => [
         <a key="up" onClick={() => handleSort(row, 'up')}>
           上移
@@ -279,6 +280,7 @@ const BannersPage: React.FC = () => {
         }}
         columns={columns}
         pagination={false}
+        scroll={{ x: 1140 }}
         options={{ reload: true, density: false, setting: false }}
         tableAlertRender={false}
       />

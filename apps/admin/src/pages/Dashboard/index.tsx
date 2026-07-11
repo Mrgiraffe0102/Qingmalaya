@@ -81,6 +81,7 @@ const DashboardPage: React.FC = () => {
     data,
     xField: 'date',
     yField: 'count',
+    autoFit: true,
     height: 280,
     padding: 'auto',
     axis: {
@@ -107,6 +108,7 @@ const DashboardPage: React.FC = () => {
     data: classActivity,
     xField: 'podcastCount',
     yField: 'className',
+    autoFit: true,
     height: Math.max(280, classActivity.length * 36),
     padding: 'auto',
     color: PRIMARY,
@@ -258,6 +260,7 @@ const DashboardPage: React.FC = () => {
           headerBordered
           bordered
           colSpan={{ xs: 24, lg: 12 }}
+          bodyStyle={{ minWidth: 0 }}
         >
           <Line {...buildLineConfig(uploadTrend)} />
         </ProCard>
@@ -266,13 +269,14 @@ const DashboardPage: React.FC = () => {
           headerBordered
           bordered
           colSpan={{ xs: 24, lg: 12 }}
+          bodyStyle={{ minWidth: 0 }}
         >
           <Line {...buildLineConfig(playTrend)} />
         </ProCard>
       </ProCard>
 
       {/* Class activity bar chart */}
-      <ProCard title="班级播客活跃度" headerBordered bordered>
+      <ProCard title="班级播客活跃度" headerBordered bordered bodyStyle={{ minWidth: 0 }}>
         {classActivity.length === 0 ? (
           <div style={{ textAlign: 'center', color: '#727879', padding: 32 }}>
             暂无班级数据

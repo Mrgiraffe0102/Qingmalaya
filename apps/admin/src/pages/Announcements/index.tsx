@@ -124,6 +124,7 @@ const AnnouncementsPage: React.FC = () => {
       valueType: 'option',
       key: 'option',
       width: 140,
+      fixed: 'right',
       render: (_, row) => [
         <a key="edit" onClick={() => openEdit(row)}>
           编辑
@@ -167,6 +168,7 @@ const AnnouncementsPage: React.FC = () => {
         }}
         columns={columns}
         pagination={false}
+        scroll={{ x: 890 }}
         options={{ reload: true, density: false, setting: false }}
       />
       <ModalForm<AnnouncementFormValues>
