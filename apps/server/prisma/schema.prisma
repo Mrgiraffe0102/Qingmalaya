@@ -79,6 +79,22 @@ enum NotificationType {
   PODCAST_COMMENTED
 }
 
+enum UserAction {
+  PLAY
+  LIKE_PODCAST
+  UNLIKE_PODCAST
+  FAVORITE
+  UNFAVORITE
+  LIKE_COMMENT
+  UNLIKE_COMMENT
+  CREATE_COMMENT
+  DELETE_COMMENT
+  CREATE_PODCAST
+  UPDATE_PODCAST
+  DELETE_PODCAST
+  UPDATE_PROFILE
+}
+
 model User {
   id                 Int        @id @default(autoincrement())
   studentId          String     @unique
@@ -103,6 +119,7 @@ model User {
   favorites     Favorite[]
   playHistories PlayHistory[]
   adminLogs     AdminLog[]
+  activityLogs  UserActivityLog[]
   notifications         Notification[] @relation("NotificationRecipient")
   triggeredNotifications Notification[] @relation("NotificationActor")
 
@@ -279,6 +296,23 @@ model AdminLog {
   @@index([adminId])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+model UserActivityLog {
+  id         Int        @id @default(autoincrement())
+  userId     Int
+  action     UserAction
+  targetType String?
+  targetId   Int?
+  detail     Json?
+  createdAt  DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([targetType, targetId])
 }
 
 model SystemSetting {

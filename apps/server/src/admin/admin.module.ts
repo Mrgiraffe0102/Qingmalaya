@@ -38,6 +38,8 @@ import { AdminCollectionsController } from './admin-collections.controller';
 import { AdminCollectionsService } from './admin-collections.service';
 import { AdminBannedKeywordsController } from './admin-banned-keywords.controller';
 import { AdminBannedKeywordsService } from './admin-banned-keywords.service';
+import { AdminSuperLogsController } from './admin-super-logs.controller';
+import { AdminSuperLogsService } from './admin-super-logs.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 /**
@@ -76,6 +78,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
     AdminUploadsController,
     AdminCollectionsController,
     AdminBannedKeywordsController,
+    AdminSuperLogsController,
   ],
   providers: [
     AdminAuthService,
@@ -93,6 +96,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
     AdminUploadsService,
     AdminCollectionsService,
     AdminBannedKeywordsService,
+    AdminSuperLogsService,
     // RolesGuard depends only on Reflector (globally available from @nestjs/core).
     // Registered here so @UseGuards(JwtAuthGuard, RolesGuard) can resolve it
     // without importing AuthModule. JwtStrategy registers globally with passport

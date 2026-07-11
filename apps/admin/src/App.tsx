@@ -20,6 +20,7 @@ import AnnouncementsPage from '@/pages/Announcements';
 import AdminsPage from '@/pages/Admins';
 import SettingsPage from '@/pages/Settings';
 import LogsPage from '@/pages/Logs';
+import SuperLogsPage from '@/pages/SuperLogs';
 import { isAuthenticated } from '@/store/auth';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -57,6 +58,7 @@ const App: React.FC = () => {
           <Route path="admins" element={<AdminsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="logs" element={<LogsPage />} />
+          <Route path="super-logs" element={<SuperLogsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

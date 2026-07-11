@@ -8,6 +8,7 @@ import type {
   Paginated,
 } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 /**
@@ -115,7 +116,10 @@ function toPodcastWithRelations(
  */
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLog: ActivityLogService,
+  ) {}
 
   /**
    * Return the current user's profile (including totalListens/totalLikes),
@@ -144,6 +148,13 @@ export class UsersService {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data,
+    });
+    void this.activityLog.log({
+      userId,
+      action: 'UPDATE_PROFILE',
+      targetType: 'User',
+      targetId: userId,
+      detail: { fields: Object.keys(data) },
     });
     return toSafeUser(user);
   }

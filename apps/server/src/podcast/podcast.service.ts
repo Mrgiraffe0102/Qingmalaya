@@ -12,6 +12,7 @@ import type {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import { CreatePodcastDto } from './dto/create-podcast.dto';
 import { UpdatePodcastDto } from './dto/update-podcast.dto';
 import { ListPodcastDto } from './dto/list-podcast.dto';
@@ -117,6 +118,7 @@ export class PodcastService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   /**
@@ -376,6 +378,13 @@ export class PodcastService {
       },
       include: PODCAST_INCLUDE,
     });
+    void this.activityLog.log({
+      userId,
+      action: 'CREATE_PODCAST',
+      targetType: 'Podcast',
+      targetId: row.id,
+      detail: { title: row.title },
+    });
     return toPodcastWithRelations(row);
   }
 
@@ -425,6 +434,13 @@ export class PodcastService {
       data,
       include: PODCAST_INCLUDE,
     });
+    void this.activityLog.log({
+      userId,
+      action: 'UPDATE_PODCAST',
+      targetType: 'Podcast',
+      targetId: id,
+      detail: { title: row.title },
+    });
     return toPodcastWithRelations(row);
   }
 
@@ -454,6 +470,12 @@ export class PodcastService {
       throw new ForbiddenException('只能删除自己的播客');
     }
     await this.prisma.podcast.delete({ where: { id } });
+    void this.activityLog.log({
+      userId,
+      action: 'DELETE_PODCAST',
+      targetType: 'Podcast',
+      targetId: id,
+    });
     return { success: true };
   }
 
@@ -515,6 +537,16 @@ export class PodcastService {
       );
     }
 
+    if (result.isNew) {
+      void this.activityLog.log({
+        userId,
+        action: 'LIKE_PODCAST',
+        targetType: 'Podcast',
+        targetId: id,
+        detail: { title: podcast.title },
+      });
+    }
+
     return { liked: result.liked, likeCount: result.likeCount };
   }
 
@@ -530,7 +562,7 @@ export class PodcastService {
   ): Promise<{ liked: boolean; likeCount: number }> {
     const podcast = await this.assertPublished(id);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.like.findUnique({
         where: {
           userId_targetType_targetId: {
@@ -560,6 +592,16 @@ export class PodcastService {
       });
       return { liked: false, likeCount: updated.likeCount };
     });
+
+    void this.activityLog.log({
+      userId,
+      action: 'UNLIKE_PODCAST',
+      targetType: 'Podcast',
+      targetId: id,
+      detail: { title: podcast.title },
+    });
+
+    return result;
   }
 
   /**
@@ -577,6 +619,12 @@ export class PodcastService {
       create: { userId, podcastId: id },
       update: {},
     });
+    void this.activityLog.log({
+      userId,
+      action: 'FAVORITE',
+      targetType: 'Podcast',
+      targetId: id,
+    });
     return { favorited: true };
   }
 
@@ -591,6 +639,12 @@ export class PodcastService {
     await this.assertPublished(id);
     await this.prisma.favorite.deleteMany({
       where: { userId, podcastId: id },
+    });
+    void this.activityLog.log({
+      userId,
+      action: 'UNFAVORITE',
+      targetType: 'Podcast',
+      targetId: id,
     });
     return { favorited: false };
   }
@@ -627,7 +681,7 @@ export class PodcastService {
       throw new NotFoundException('播客不存在或已下架');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.playHistory.findFirst({
         where: { userId, podcastId: id },
       });
@@ -659,6 +713,18 @@ export class PodcastService {
 
       return { position: previousPosition };
     });
+
+    if (start) {
+      void this.activityLog.log({
+        userId,
+        action: 'PLAY',
+        targetType: 'Podcast',
+        targetId: id,
+        detail: { title: podcast.title },
+      });
+    }
+
+    return result;
   }
 
   /**

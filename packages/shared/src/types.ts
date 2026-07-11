@@ -14,6 +14,7 @@ import type {
   BannerStatus,
   AnnouncementStatus,
   NotificationType,
+  UserAction,
 } from './enums';
 
 /** ISO date string, e.g. "2025-01-31T08:00:00.000Z". */
@@ -184,6 +185,24 @@ export interface AdminLog {
   targetId: number;
   detail: unknown;
   createdAt: ISODateString;
+}
+
+// --- UserActivityLog ---
+export interface UserActivityLog {
+  id: number;
+  userId: number;
+  action: UserAction;
+  targetType: string | null;
+  targetId: number | null;
+  detail: unknown;
+  createdAt: ISODateString;
+}
+
+/** UserActivityLog joined with the acting user's summary (admin super-log response). */
+export interface UserActivityLogWithUser extends UserActivityLog {
+  userName: string;
+  studentId: string;
+  role: Role;
 }
 
 // --- SystemSetting ---

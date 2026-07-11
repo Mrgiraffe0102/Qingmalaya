@@ -27,6 +27,7 @@ import {
   FileTextOutlined,
   LogoutOutlined,
   UserOutlined,
+  EyeOutlined,
   ApartmentOutlined,
   ProfileOutlined,
   FileImageOutlined,
@@ -52,6 +53,7 @@ const menuRouteMap: Record<string, string> = {
   '/admins': 'admins',
   '/settings': 'settings',
   '/logs': 'logs',
+  '/super-logs': 'super-logs',
 };
 
 const menuData: MenuDataItem[] = [
@@ -81,6 +83,7 @@ const menuData: MenuDataItem[] = [
     children: [
       { path: '/settings', name: '基础设置', icon: <SettingOutlined /> },
       { path: '/logs', name: '操作日志', icon: <FileTextOutlined /> },
+      { path: '/super-logs', name: '超级日志', icon: <EyeOutlined /> },
     ],
   },
 ];
@@ -95,6 +98,7 @@ const SUPER_ADMIN_ONLY_PATHS = new Set<string>([
   '/settings-group',
   '/settings',
   '/logs',
+  '/super-logs',
 ]);
 
 /**

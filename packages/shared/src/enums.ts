@@ -130,3 +130,36 @@ export const PodcastSort = {
 } as const;
 export type PodcastSort = (typeof PodcastSort)[keyof typeof PodcastSort];
 export const podcastSortSchema = z.enum(['newest', 'oldest', 'name', 'likes', 'views']);
+
+// --- UserAction (user activity log actions) ---
+export const UserAction = {
+  PLAY: 'PLAY',
+  LIKE_PODCAST: 'LIKE_PODCAST',
+  UNLIKE_PODCAST: 'UNLIKE_PODCAST',
+  FAVORITE: 'FAVORITE',
+  UNFAVORITE: 'UNFAVORITE',
+  LIKE_COMMENT: 'LIKE_COMMENT',
+  UNLIKE_COMMENT: 'UNLIKE_COMMENT',
+  CREATE_COMMENT: 'CREATE_COMMENT',
+  DELETE_COMMENT: 'DELETE_COMMENT',
+  CREATE_PODCAST: 'CREATE_PODCAST',
+  UPDATE_PODCAST: 'UPDATE_PODCAST',
+  DELETE_PODCAST: 'DELETE_PODCAST',
+  UPDATE_PROFILE: 'UPDATE_PROFILE',
+} as const;
+export type UserAction = (typeof UserAction)[keyof typeof UserAction];
+export const userActionSchema = z.enum([
+  'PLAY',
+  'LIKE_PODCAST',
+  'UNLIKE_PODCAST',
+  'FAVORITE',
+  'UNFAVORITE',
+  'LIKE_COMMENT',
+  'UNLIKE_COMMENT',
+  'CREATE_COMMENT',
+  'DELETE_COMMENT',
+  'CREATE_PODCAST',
+  'UPDATE_PODCAST',
+  'DELETE_PODCAST',
+  'UPDATE_PROFILE',
+]);

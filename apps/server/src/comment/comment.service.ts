@@ -12,6 +12,7 @@ import type {
 } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 
 /**
@@ -142,6 +143,7 @@ export class CommentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   /**
@@ -275,6 +277,17 @@ export class CommentService {
       );
     }
 
+    void this.activityLog.log({
+      userId,
+      action: 'CREATE_COMMENT',
+      targetType: 'Comment',
+      targetId: created.id,
+      detail: {
+        podcastId,
+        contentSnippet: dto.content.slice(0, 100),
+      },
+    });
+
     return toCreatedComment(created);
   }
 
@@ -324,6 +337,14 @@ export class CommentService {
         where: { id: comment.podcastId },
         data: { commentCount: { decrement: 1 } },
       });
+    });
+
+    void this.activityLog.log({
+      userId,
+      action: 'DELETE_COMMENT',
+      targetType: 'Comment',
+      targetId: commentId,
+      detail: { podcastId: comment.podcastId },
     });
 
     return { success: true };
@@ -376,6 +397,12 @@ export class CommentService {
           data: { likeCount: { increment: 1 } },
           select: { likeCount: true },
         });
+      });
+      void this.activityLog.log({
+        userId,
+        action: 'LIKE_COMMENT',
+        targetType: 'Comment',
+        targetId: commentId,
       });
       return { liked: true, likeCount: updated.likeCount };
     } catch (e) {
@@ -439,6 +466,12 @@ export class CommentService {
         data: { likeCount: { decrement: 1 } },
         select: { likeCount: true },
       });
+    });
+    void this.activityLog.log({
+      userId,
+      action: 'UNLIKE_COMMENT',
+      targetType: 'Comment',
+      targetId: commentId,
     });
     return { liked: false, likeCount: updated.likeCount };
   }
