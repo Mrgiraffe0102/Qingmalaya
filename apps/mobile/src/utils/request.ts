@@ -57,7 +57,10 @@ function handleUnauthorized(): void {
 
 function extractErrorMessage(statusCode: number, body: unknown): string {
   if (body && typeof body === 'object') {
-    const envelope = body as ApiErrorEnvelope
+    const envelope = body as ApiErrorEnvelope & { message?: string | string[] }
+    if (Array.isArray(envelope.message) && envelope.message.length > 0) {
+      return envelope.message[0]
+    }
     if (typeof envelope.message === 'string' && envelope.message) {
       return envelope.message
     }

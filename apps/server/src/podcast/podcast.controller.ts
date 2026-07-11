@@ -61,8 +61,9 @@ export class PodcastController {
   detail(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('id') userId: number,
+    @CurrentUser('role') userRole: string,
   ) {
-    return this.podcast.detail(id, userId);
+    return this.podcast.detail(id, userId, userRole);
   }
 
   @Post()
@@ -137,7 +138,8 @@ export class PodcastController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: PlayPodcastDto,
     @CurrentUser('id') userId: number,
+    @CurrentUser('role') userRole: string,
   ) {
-    return this.podcast.play(id, userId, dto.position ?? 0, dto.start ?? false);
+    return this.podcast.play(id, userId, dto.position ?? 0, dto.start ?? false, userRole);
   }
 }

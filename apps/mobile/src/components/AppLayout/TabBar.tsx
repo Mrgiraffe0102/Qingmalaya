@@ -2,6 +2,7 @@ import { Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useIsDesktop } from './useIsDesktop'
 import { usePlayerStore } from '../../store/player'
+import { useAuthStore } from '../../store/auth'
 
 /** Keys for the four real tab pages. The "+" create button is never "selected". */
 export type TabKey = 'discovery' | 'browse' | 'create' | 'profile'
@@ -15,6 +16,8 @@ interface TabDef {
   isCreate: boolean // the "+" button
 }
 
+/** Base tab definitions. The 'create' tab label/icon are overridden for teachers
+ *  at render time so they see "审核" (fact_check) instead of "创作" (mic). */
 const TABS: TabDef[] = [
   { key: 'discovery', label: '发现', icon: 'explore', path: '/pages/discovery/index', isTab: true, isCreate: false },
   { key: 'browse', label: '浏览', icon: 'search', path: '/pages/browse/index', isTab: true, isCreate: false },
@@ -22,6 +25,14 @@ const TABS: TabDef[] = [
   { key: 'create', label: '创作', icon: 'mic', path: '/pages/create/index', isTab: true, isCreate: false },
   { key: 'profile', label: '我的', icon: 'person', path: '/pages/profile/index', isTab: true, isCreate: false },
 ]
+
+/** Resolve the label/icon for a tab, applying teacher overrides. */
+function resolveTab(tab: TabDef, isTeacher: boolean): TabDef {
+  if (tab.key === 'create' && isTeacher) {
+    return { ...tab, label: '审核', icon: 'fact_check' }
+  }
+  return tab
+}
 
 /** Glassmorphism spec from DESIGN.md: 20px backdrop-blur + 80% white fill. */
 const GLASS_STYLE: React.CSSProperties = {
@@ -50,25 +61,27 @@ interface TabBarProps {
 export default function TabBar({ currentTab }: TabBarProps) {
   const isDesktop = useIsDesktop()
   const hasPodcast = usePlayerStore((s) => s.currentPodcast !== null)
+  const isTeacher = useAuthStore((s) => s.user?.role === 'TEACHER')
 
   if (isDesktop) {
     // Inline nav items rendered inside AppLayout's top bar (no outer container).
-    // Left side: 发现 / 浏览 / 创作 / 我的 + "上传作品" button.
+    // Left side: 发现 / 浏览 / 创作(审核) / 我的 + "上传作品" button.
     return (
       <View className='flex items-center gap-1'>
         {TABS.filter((t) => !t.isCreate).map((tab) => {
+          const resolved = resolveTab(tab, isTeacher)
           const isSelected = tab.key === currentTab
           return (
             <View
               key={tab.key}
-              onClick={() => navigate(tab)}
+              onClick={() => navigate(resolved)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 isSelected
                   ? 'bg-primary text-on-primary'
                   : 'text-primary/60 hover:text-primary'
               }`}
             >
-              {tab.label}
+              {resolved.label}
             </View>
           )
         })}
@@ -98,16 +111,17 @@ export default function TabBar({ currentTab }: TabBarProps) {
       style={GLASS_STYLE}
     >
       {TABS.map((tab) => {
+        const resolved = resolveTab(tab, isTeacher)
         const isSelected = tab.key === currentTab
         if (tab.isCreate) {
           return (
             <View
               key={tab.key}
-              onClick={() => navigate(tab)}
+              onClick={() => navigate(resolved)}
               className='-mt-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg active:scale-90'
             >
               <Text className='material-symbols-outlined' style={{ fontSize: '32px' }}>
-                {tab.icon}
+                {resolved.icon}
               </Text>
             </View>
           )
@@ -115,7 +129,7 @@ export default function TabBar({ currentTab }: TabBarProps) {
         return (
           <View
             key={tab.key}
-            onClick={() => navigate(tab)}
+            onClick={() => navigate(resolved)}
             className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full active:scale-95 ${
               isSelected ? 'bg-primary/10 text-primary' : 'text-on-surface-variant'
             }`}
@@ -127,7 +141,7 @@ export default function TabBar({ currentTab }: TabBarProps) {
                 fontVariationSettings: isSelected ? '"FILL" 1' : undefined,
               }}
             >
-              {tab.icon}
+              {resolved.icon}
             </Text>
           </View>
         )

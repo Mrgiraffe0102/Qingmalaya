@@ -53,10 +53,10 @@ const BCRYPT_COST = 10;
 export class AdminAdminsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** List every OPERATOR / SUPER_ADMIN account, newest first. */
+  /** List every SUPER_ADMIN account, newest first. */
   async list(): Promise<User[]> {
     const rows = await this.prisma.user.findMany({
-      where: { role: { in: ['OPERATOR', 'SUPER_ADMIN'] } },
+      where: { role: 'SUPER_ADMIN' },
       orderBy: { createdAt: 'desc' },
     });
     return rows.map(toSafeUser);
@@ -98,7 +98,7 @@ export class AdminAdminsService {
     return toSafeUser(created);
   }
 
-  /** Update an admin's name / role / password. */
+  /** Update an admin's name / password. */
   async update(
     id: number,
     dto: AdminAdminUpdateDto,
@@ -112,28 +112,12 @@ export class AdminAdminsService {
       throw new NotFoundException('管理员不存在');
     }
 
-    // Downgrading the last SUPER_ADMIN would orphan the platform — block it.
-    if (
-      dto.role &&
-      dto.role !== 'SUPER_ADMIN' &&
-      target.role === 'SUPER_ADMIN'
-    ) {
-      const superAdminCount = await this.prisma.user.count({
-        where: { role: 'SUPER_ADMIN' },
-      });
-      if (superAdminCount <= 1) {
-        throw new BadRequestException('至少需要保留一位超级管理员');
-      }
-    }
-
     const data: {
       name?: string;
-      role?: 'OPERATOR' | 'SUPER_ADMIN';
       passwordHash?: string;
       mustChangePassword?: boolean;
     } = {};
     if (dto.name !== undefined) data.name = dto.name;
-    if (dto.role !== undefined) data.role = dto.role;
     if (dto.password !== undefined) {
       data.passwordHash = await bcrypt.hash(dto.password, BCRYPT_COST);
       data.mustChangePassword = true;
@@ -149,7 +133,6 @@ export class AdminAdminsService {
         targetId: id,
         detail: {
           name: dto.name,
-          role: dto.role,
           passwordChanged: dto.password !== undefined,
         },
       },

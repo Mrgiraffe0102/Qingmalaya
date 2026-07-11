@@ -6,17 +6,21 @@ import { useAuthRedirect } from '../../utils/route-guard'
 import { useAuthStore } from '../../store/auth'
 import { usePlayerStore } from '../../store/player'
 import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
-import { get, del } from '../../utils/request'
+import { get, del, put } from '../../utils/request'
 import { coverUrl, formatCount, formatRelativeTime } from '../../utils/format'
 import { playPodcast } from '../../utils/play'
-import type { PodcastWithRelations, PodcastStatus } from '@qingmalaya/shared'
+import type { PodcastWithRelations, PodcastStatus, Paginated } from '@qingmalaya/shared'
 
 /**
- * Creation (创作) page — Task 21.
+ * Creation / Review page.
  *
- * Lists every podcast authored by the current user (any status), newest
- * first. Each row shows cover, title, status badge, play/like counts and a
- * "more" (⋯) affordance that opens a Taro action sheet for 编辑 / 删除.
+ * For students: lists every podcast authored by the current user (any
+ * status), newest first. Each row shows cover, title, status badge,
+ * play/like counts and a "more" (⋯) affordance for 编辑 / 删除.
+ *
+ * For teachers: shows pending podcasts awaiting review, with 通过 / 驳回
+ * buttons on each card. Data comes from the admin podcast endpoints
+ * (teachers have OPERATOR permissions via RolesGuard).
  *
  * Layout mirrors the Browse page: a viewport-height flex column with a
  * pinned header above a `ScrollView` that owns the page scroll and wires
@@ -46,6 +50,7 @@ export default function Create() {
   const isDesktop = useIsDesktop()
   const hasPodcast = usePlayerStore((s) => s.currentPodcast !== null)
   const { user } = useAuthStore()
+  const isTeacher = user?.role === 'TEACHER'
 
   const [items, setItems] = useState<PodcastWithRelations[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,8 +84,15 @@ export default function Create() {
   async function fetchList(isRefresh: boolean): Promise<void> {
     if (isRefresh) setRefreshing(true)
     try {
-      const data = await get<PodcastWithRelations[]>('/users/me/podcasts')
-      setItems(data)
+      if (isTeacher) {
+        const res = await get<Paginated<PodcastWithRelations>>(
+          '/admin/podcasts?status=PENDING&pageSize=50',
+        )
+        setItems(res.items)
+      } else {
+        const data = await get<PodcastWithRelations[]>('/users/me/podcasts')
+        setItems(data)
+      }
     } catch {
       // request.ts surfaces a toast; leave the existing list intact.
     } finally {
@@ -140,6 +152,39 @@ export default function Create() {
     }
   }
 
+  async function onApprove(podcast: PodcastWithRelations): Promise<void> {
+    try {
+      await put(`/admin/podcasts/${podcast.id}/publish`)
+      setItems((prev) => prev.filter((p) => p.id !== podcast.id))
+      Taro.showToast({ title: '已通过', icon: 'success' })
+    } catch {
+      // request.ts already surfaced the error toast.
+    }
+  }
+
+  async function onReject(podcast: PodcastWithRelations): Promise<void> {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      Taro.showModal({
+        title: '确认驳回',
+        content: `确定驳回《${podcast.title}》吗？`,
+        confirmText: '驳回',
+        confirmColor: '#ba1a1a',
+        cancelText: '取消',
+        success: (res) => resolve(res.confirm),
+        fail: () => resolve(false),
+      })
+    })
+    if (!confirmed) return
+
+    try {
+      await put(`/admin/podcasts/${podcast.id}/takedown`)
+      setItems((prev) => prev.filter((p) => p.id !== podcast.id))
+      Taro.showToast({ title: '已驳回', icon: 'success' })
+    } catch {
+      // request.ts already surfaced the error toast.
+    }
+  }
+
   if (!ok || !user) return null
 
   return (
@@ -155,10 +200,14 @@ export default function Create() {
         >
           <View className='flex items-center justify-between'>
             <Text className='text-xl font-bold tracking-tight text-primary'>
-              我的创作
+              {isTeacher ? '审核' : '我的创作'}
             </Text>
             <Text className='text-xs text-on-surface-variant'>
-              {items.length > 0 ? `${items.length} 期` : ''}
+              {items.length > 0
+                ? isTeacher
+                  ? `${items.length} 期待审核`
+                  : `${items.length} 期`
+                : ''}
             </Text>
           </View>
         </View>
@@ -175,17 +224,31 @@ export default function Create() {
           {loading ? (
             <LoadingState />
           ) : items.length === 0 ? (
-            <EmptyState onUpload={() => goToUpload()} />
+            isTeacher ? (
+              <ReviewEmptyState />
+            ) : (
+              <EmptyState onUpload={() => goToUpload()} />
+            )
           ) : (
             <View className='grid grid-cols-1 gap-3 px-4 pb-6 pt-4 md:grid-cols-2'>
-              {items.map((p) => (
-                <CreationCard
-                  key={p.id}
-                  podcast={p}
-                  onMore={() => onMore(p)}
-                  onTap={() => goToPlayback(p.id)}
-                />
-              ))}
+              {items.map((p) =>
+                isTeacher ? (
+                  <ReviewCard
+                    key={p.id}
+                    podcast={p}
+                    onApprove={() => void onApprove(p)}
+                    onReject={() => void onReject(p)}
+                    onTap={() => goToPlayback(p.id)}
+                  />
+                ) : (
+                  <CreationCard
+                    key={p.id}
+                    podcast={p}
+                    onMore={() => onMore(p)}
+                    onTap={() => goToPlayback(p.id)}
+                  />
+                ),
+              )}
             </View>
           )}
         </ScrollView>
@@ -305,7 +368,7 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
         <Icon name='mic' style={{ fontSize: '48px', color: '#727879' }} />
       </View>
       <Text
-        className='max-w-[320px] text-on-surface-variant'
+        className='w-full text-on-surface-variant'
         style={{ fontSize: '16px', lineHeight: '24px' }}
       >
         还没有作品，点击加号上传你的第一条播客吧
@@ -316,6 +379,119 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
         style={{ padding: '12px 32px', transition: 'transform 0.2s' }}
       >
         <Text style={{ fontSize: '15px', fontWeight: '600' }}>去上传</Text>
+      </View>
+    </View>
+  )
+}
+
+/** Teacher review empty state — no pending podcasts to review. */
+function ReviewEmptyState() {
+  return (
+    <View className='flex flex-col items-center justify-center px-6 pt-24 text-center'>
+      <View className='mb-6 flex h-32 w-32 items-center justify-center'>
+        <Icon name='fact_check' style={{ fontSize: '48px', color: '#727879' }} />
+      </View>
+      <Text
+        className='w-full text-on-surface-variant'
+        style={{ fontSize: '16px', lineHeight: '24px' }}
+      >
+        暂无待审核的播客
+      </Text>
+    </View>
+  )
+}
+
+interface ReviewCardProps {
+  podcast: PodcastWithRelations
+  onApprove: () => void
+  onReject: () => void
+  onTap: () => void
+}
+
+/** Teacher review card — shows author info + approve/reject buttons. */
+function ReviewCard({ podcast, onApprove, onReject, onTap }: ReviewCardProps) {
+  const cover = coverUrl(podcast.coverPath)
+  const authorLabel = `${podcast.author.name} · 学号 ${podcast.author.studentId}`
+
+  return (
+    <View
+      className='flex gap-3 rounded-xl bg-surface-container-lowest p-3'
+      style={CARD_STYLE}
+    >
+      {/* Cover + pending badge */}
+      <View
+        onClick={onTap}
+        className='relative h-20 w-20 flex-shrink-0'
+      >
+        {cover ? (
+          <Image
+            src={cover}
+            className='h-full w-full rounded-lg object-cover'
+            mode='aspectFill'
+          />
+        ) : (
+          <View className='flex h-full w-full items-center justify-center rounded-lg bg-primary/15'>
+            <Text className='text-lg font-semibold text-on-primary-container'>
+              {(podcast.title || '?').charAt(0)}
+            </Text>
+          </View>
+        )}
+        <View
+          className='absolute left-1 top-1 rounded-full'
+          style={{ backgroundColor: '#f59e0b', padding: '1px 6px' }}
+        >
+          <Text style={{ display: 'block', textAlign: 'center', fontSize: '10px', fontWeight: '700', color: '#ffffff', lineHeight: '14px' }}>
+            待审核
+          </Text>
+        </View>
+      </View>
+
+      {/* Content */}
+      <View className='flex min-w-0 flex-1 flex-col justify-between py-0.5'>
+        <View>
+          <Text
+            className='block truncate text-primary'
+            style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em' }}
+          >
+            {authorLabel}
+          </Text>
+          <Text
+            onClick={onTap}
+            className='mt-1 block truncate text-on-surface'
+            style={{ fontSize: '16px', fontWeight: '600', lineHeight: '22px' }}
+          >
+            {podcast.title}
+          </Text>
+        </View>
+        <View className='flex items-center justify-between'>
+          <Text className='text-on-surface-variant' style={{ fontSize: '11px', fontWeight: '500' }}>
+            {formatRelativeTime(podcast.createdAt)}
+          </Text>
+          <View className='flex gap-2'>
+            <View
+              onClick={(e) => {
+                e.stopPropagation?.()
+                onApprove()
+              }}
+              className='flex items-center gap-1 rounded-full active:scale-95'
+              style={{ backgroundColor: 'rgba(47, 143, 94, 0.12)', padding: '4px 12px', transition: 'transform 0.2s' }}
+            >
+              <Icon name='check' style={{ fontSize: '14px', color: '#2f8f5e' }} />
+              <Text style={{ fontSize: '12px', fontWeight: '600', color: '#2f8f5e' }}>通过</Text>
+            </View>
+            <View
+              onClick={(e) => {
+                e.stopPropagation?.()
+                onReject()
+              }}
+              className='flex items-center gap-1 rounded-full active:scale-95'
+              style={{ backgroundColor: 'rgba(186, 26, 26, 0.10)', padding: '4px 12px', transition: 'transform 0.2s' }}
+            >
+              <Icon name='close' style={{ fontSize: '14px', color: '#ba1a1a' }} />
+              <Text style={{ fontSize: '12px', fontWeight: '600', color: '#ba1a1a' }}>驳回</Text>
+            </View>
+          </View>
+        </View>
       </View>
     </View>
   )

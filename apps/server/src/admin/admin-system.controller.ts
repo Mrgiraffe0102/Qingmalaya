@@ -29,7 +29,7 @@ import { AdminLogsQueryDto } from './dto/admin-logs-query.dto';
  *
  * Three controllers live in this file, all guarded by JwtAuthGuard +
  * RolesGuard:
- *   - AdminAdminsController  — SUPER_ADMIN only. CRUD for admin accounts.
+ *   - AdminAdminsController  — SUPER_ADMIN only. CRUD for SUPER_ADMIN accounts.
  *   - AdminSettingsController — OPERATOR+. Read/upsert SystemSetting rows.
  *   - AdminLogsController     — OPERATOR+. Paginated audit log list.
  */

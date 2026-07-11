@@ -3,20 +3,19 @@
  * All routes are SUPER_ADMIN-only on the backend.
  */
 import { get, post, put, del } from '@/utils/request';
-import type { Role, User } from '@qingmalaya/shared';
+import type { User } from '@qingmalaya/shared';
 
-export type AdminRole = Extract<Role, 'OPERATOR' | 'SUPER_ADMIN'>;
+export type AdminRole = 'SUPER_ADMIN';
 
 export interface CreateAdminPayload {
   studentId: string;
   name: string;
   password: string;
-  role: AdminRole;
+  role: 'SUPER_ADMIN';
 }
 
 export interface UpdateAdminPayload {
   name?: string;
-  role?: AdminRole;
   password?: string;
 }
 

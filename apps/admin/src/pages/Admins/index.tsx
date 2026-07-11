@@ -1,14 +1,13 @@
 /**
  * 管理员账号管理 (Task 32). SUPER_ADMIN only.
  *
- * Lists every OPERATOR / SUPER_ADMIN account with create / edit / delete
- * actions. The page guards itself against OPERATOR access (the menu is also
- * hidden for OPERATOR, but we double-guard here).
+ * Lists every SUPER_ADMIN account with create / edit / delete
+ * actions. The page guards itself against non-SUPER_ADMIN access (the menu
+ * is also hidden for them, but we double-guard here).
  */
 import React, { useRef, useState } from 'react';
 import {
   ModalForm,
-  ProFormSelect,
   ProFormText,
   ProTable,
   type ActionType,
@@ -31,12 +30,10 @@ import {
 
 const roleTagColor: Record<AdminRole, string> = {
   SUPER_ADMIN: 'gold',
-  OPERATOR: 'blue',
 };
 
 const roleLabel: Record<AdminRole, string> = {
   SUPER_ADMIN: '超级管理员',
-  OPERATOR: '运营管理员',
 };
 
 const AdminsPage: React.FC = () => {
@@ -164,7 +161,7 @@ const AdminsPage: React.FC = () => {
         modalProps={{ destroyOnClose: true }}
         onFinish={async (values) => {
           try {
-            await createAdmin(values);
+            await createAdmin({ ...values, role: 'SUPER_ADMIN' });
             message.success('已创建管理员');
             setCreateOpen(false);
             reload();
@@ -174,7 +171,6 @@ const AdminsPage: React.FC = () => {
             return false;
           }
         }}
-        initialValues={{ role: 'OPERATOR' }}
       >
         <ProFormText
           name="studentId"
@@ -196,15 +192,6 @@ const AdminsPage: React.FC = () => {
             { min: 6, message: '至少 6 位' },
           ]}
         />
-        <ProFormSelect
-          name="role"
-          label="角色"
-          options={[
-            { value: 'OPERATOR', label: '运营管理员' },
-            { value: 'SUPER_ADMIN', label: '超级管理员' },
-          ]}
-          rules={[{ required: true, message: '请选择角色' }]}
-        />
       </ModalForm>
 
       <ModalForm<UpdateAdminPayload & { password?: string }>
@@ -216,14 +203,13 @@ const AdminsPage: React.FC = () => {
         modalProps={{ destroyOnClose: true }}
         initialValues={
           editing
-            ? { name: editing.name, role: editing.role }
+            ? { name: editing.name }
             : undefined
         }
         onFinish={async (values) => {
           if (!editing) return false;
           const payload: UpdateAdminPayload = {};
           if (values.name !== undefined) payload.name = values.name;
-          if (values.role !== undefined) payload.role = values.role as AdminRole;
           if (values.password && values.password.length > 0) {
             payload.password = values.password;
           }
@@ -243,14 +229,6 @@ const AdminsPage: React.FC = () => {
           name="name"
           label="姓名"
           rules={[{ required: true, message: '请输入姓名' }]}
-        />
-        <ProFormSelect
-          name="role"
-          label="角色"
-          options={[
-            { value: 'OPERATOR', label: '运营管理员' },
-            { value: 'SUPER_ADMIN', label: '超级管理员' },
-          ]}
         />
         <ProFormText.Password
           name="password"

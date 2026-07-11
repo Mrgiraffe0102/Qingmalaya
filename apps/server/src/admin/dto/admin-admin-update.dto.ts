@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 /**
  * Body for PUT /admin/admins/:id — partial update of an admin account.
@@ -12,10 +12,6 @@ export class AdminAdminUpdateDto {
   @IsString()
   @MinLength(1)
   name?: string;
-
-  @IsOptional()
-  @IsIn(['OPERATOR', 'SUPER_ADMIN'])
-  role?: 'OPERATOR' | 'SUPER_ADMIN';
 
   @IsOptional()
   @IsString()

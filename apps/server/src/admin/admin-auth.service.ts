@@ -46,7 +46,7 @@ export class AdminAuthService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
-    if (user.role !== 'OPERATOR' && user.role !== 'SUPER_ADMIN') {
+    if (user.role !== 'OPERATOR' && user.role !== 'TEACHER' && user.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('无管理员权限');
     }
 

@@ -30,6 +30,10 @@ export default function ChangePassword() {
   const router = Taro.useRouter<{ from?: string }>()
   const fromSettings = router.params.from === 'settings'
 
+  // oldPassword has no length constraint — the server DTO only requires it to
+  // be a non-empty string, since seeded accounts (e.g. T2024) may have a
+  // 5-character default password that must be replaceable on first login.
+  const oldPasswordError = ''
   const newPasswordError =
     newPassword.length > 0 && newPassword.length < MIN_PASSWORD_LENGTH
       ? `密码至少 ${MIN_PASSWORD_LENGTH} 位`
@@ -42,7 +46,7 @@ export default function ChangePassword() {
   const canSubmit =
     oldPassword.length > 0 &&
     newPassword.length >= MIN_PASSWORD_LENGTH &&
-    confirmPassword.length > 0 &&
+    confirmPassword.length >= MIN_PASSWORD_LENGTH &&
     newPassword === confirmPassword &&
     !loading
 
@@ -148,7 +152,8 @@ export default function ChangePassword() {
             oldPassword,
             setOldPassword,
             '旧密码',
-            'old'
+            'old',
+            oldPasswordError
           )}
           {renderInput(
             newPassword,

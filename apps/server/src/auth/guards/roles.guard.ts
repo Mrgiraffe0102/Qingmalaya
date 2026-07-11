@@ -30,8 +30,10 @@ export class RolesGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<{ user?: { role?: string } }>();
     const userRole = request.user?.role;
+    // TEACHER has the same permissions as OPERATOR
+    const effectiveRole = userRole === 'TEACHER' ? 'OPERATOR' : userRole;
 
-    if (!userRole || !requiredRoles.includes(userRole as Role)) {
+    if (!effectiveRole || !requiredRoles.includes(effectiveRole as Role)) {
       throw new ForbiddenException('权限不足');
     }
 

@@ -30,8 +30,10 @@ export class MatchPassword implements ValidatorConstraintInterface {
  * (properties are populated by ValidationPipe, not via a constructor).
  */
 export class ChangePasswordDto {
+  // oldPassword is intentionally NOT length-constrained: seeded accounts like
+  // the teacher (T2024) ship with a 5-char default password and must be able
+  // to change it on first login. Validation only applies to newPassword.
   @IsString()
-  @MinLength(6)
   oldPassword!: string;
 
   @IsString()

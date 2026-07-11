@@ -294,16 +294,23 @@ export class PodcastService {
    * Single-podcast detail (GET /podcasts/:id). Returns author + tags + liked
    * + favorited for the current user. Throws 404 when the podcast is missing
    * or not PUBLISHED so non-published states are never leaked to students.
+   * Teachers/operators/super_admins bypass the status check so they can
+   * preview pending podcasts for review.
    */
   async detail(
     id: number,
     userId: number,
+    userRole: string,
   ): Promise<PodcastWithRelations> {
     const row = await this.prisma.podcast.findUnique({
       where: { id },
       include: PODCAST_INCLUDE,
     });
-    if (!row || row.status !== 'PUBLISHED') {
+    const canPreview =
+      userRole === 'TEACHER' ||
+      userRole === 'OPERATOR' ||
+      userRole === 'SUPER_ADMIN';
+    if (!row || (row.status !== 'PUBLISHED' && !canPreview)) {
       throw new NotFoundException('播客不存在或已下架');
     }
 
@@ -594,14 +601,31 @@ export class PodcastService {
    * podcast.playCount and the author's totalListens. Creates or updates the
    * PlayHistory row accordingly. Returns the LAST SAVED position (before this
    * update) so the client can resume playback.
+   *
+   * Teachers/operators/super_admins can preview non-PUBLISHED podcasts for
+   * review — the play counts and totalListens are NOT bumped in that case
+   * so the author isn't credited for an admin's review listen.
    */
   async play(
     id: number,
     userId: number,
     position: number,
     start: boolean,
+    userRole?: string,
   ): Promise<PlayProgressResponse> {
-    const podcast = await this.assertPublished(id);
+    const canPreview =
+      userRole === 'TEACHER' ||
+      userRole === 'OPERATOR' ||
+      userRole === 'SUPER_ADMIN';
+    const podcast = canPreview
+      ? await this.prisma.podcast.findUnique({
+          where: { id },
+          select: { id: true, authorId: true, status: true, title: true },
+        })
+      : await this.assertPublished(id);
+    if (!podcast) {
+      throw new NotFoundException('播客不存在或已下架');
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.playHistory.findFirst({
@@ -609,8 +633,9 @@ export class PodcastService {
       });
       const previousPosition = existing?.position ?? 0;
 
-      if (start) {
+      if (start && !canPreview) {
         // New play session — bump play counts every time the user clicks in.
+        // Skipped for operator previews so review listens don't inflate stats.
         await tx.podcast.update({
           where: { id },
           data: { playCount: { increment: 1 } },

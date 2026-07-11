@@ -301,7 +301,7 @@ export class CommentService {
     }
 
     const isOwner = comment.userId === userId;
-    const isOperatorPlus = role === 'OPERATOR' || role === 'SUPER_ADMIN';
+    const isOperatorPlus = role === 'TEACHER' || role === 'OPERATOR' || role === 'SUPER_ADMIN';
     if (!isOwner && !isOperatorPlus) {
       throw new ForbiddenException('无权删除该评论');
     }
