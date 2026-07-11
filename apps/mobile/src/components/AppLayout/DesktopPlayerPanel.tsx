@@ -235,7 +235,7 @@ export default function DesktopPlayerPanel() {
   return (
     <View className='flex h-full flex-col bg-surface'>
       <ScrollView scrollY className='flex-1' style={{ minHeight: 0 }}>
-        <View className='mx-auto flex max-w-md flex-col px-6 py-8'>
+        <View className='mx-auto flex min-h-full max-w-md flex-col justify-center px-6 py-8'>
           {/* Cover */}
           <View className='flex items-center justify-center pb-6'>
             {cover ? (
@@ -465,6 +465,7 @@ export default function DesktopPlayerPanel() {
         commentCount={commentCount}
         onCommentAdded={() => setCommentCount((c) => c + 1)}
         onCommentDeleted={() => setCommentCount((c) => Math.max(0, c - 1))}
+        variant='desktop'
       />
 
       {/* Description modal */}

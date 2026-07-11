@@ -27,6 +27,7 @@ interface CommentDrawerProps {
   commentCount: number
   onCommentDeleted: () => void
   onCommentAdded: () => void
+  variant?: 'mobile' | 'desktop'
 }
 
 /** Glassmorphism spec from DESIGN.md: 20px backdrop-blur + 80% white fill. */
@@ -57,6 +58,7 @@ export default function CommentDrawer({
   commentCount,
   onCommentDeleted,
   onCommentAdded,
+  variant = 'mobile',
 }: CommentDrawerProps) {
   const { user } = useAuthStore()
 
@@ -102,10 +104,14 @@ export default function CommentDrawer({
   // --- Open/close animation + initial fetch ---
   useEffect(() => {
     if (visible) {
-      setHeight(viewportH * 0.5)
+      if (variant !== 'desktop') {
+        setHeight(viewportH * 0.5)
+      }
       fetchComments(true)
     } else {
-      setHeight(0)
+      if (variant !== 'desktop') {
+        setHeight(0)
+      }
       setReplyTarget(null)
       setInput('')
     }
@@ -308,6 +314,154 @@ export default function CommentDrawer({
     transition: dragging ? 'none' : 'height 0.3s ease',
   }
 
+  // Shared comment list (used by both mobile and desktop variants)
+  const commentList = (
+    <ScrollView
+      scrollY
+      onScrollToLower={loadMore}
+      lowerThreshold={80}
+      className='flex-1'
+      style={{ minHeight: 0 }}
+    >
+      <View className='px-5 py-4'>
+        {loading && comments.length === 0 ? (
+          <View className='flex items-center justify-center py-12'>
+            <Text className='text-sm text-on-surface-variant'>加载中...</Text>
+          </View>
+        ) : comments.length === 0 ? (
+          <View className='flex flex-col items-center justify-center py-12'>
+            <Icon name='chat_bubble_outline' style={{ fontSize: '40px', color: '#c2c7c8' }} />
+            <Text className='mt-3 text-sm text-on-surface-variant'>
+              暂无评论，快来抢沙发吧
+            </Text>
+          </View>
+        ) : (
+          <View className='space-y-5'>
+            {comments.map((c) => (
+              <CommentItem
+                key={c.id}
+                comment={c}
+                classMap={classMap}
+                canDelete={canDeleteBy}
+                onLike={(id) => toggleLike(id, false)}
+                onReply={setReplyTarget}
+                onDelete={(id) => handleDelete(id, false)}
+                onLikeReply={(id, pid) => toggleLike(id, true, pid)}
+                onDeleteReply={(id, pid) => handleDelete(id, true, pid)}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* Load-more / end states */}
+        {!loading && comments.length > 0 && (
+          <View className='mt-4 flex items-center justify-center py-3'>
+            {loadingMore ? (
+              <Text className='text-xs text-on-surface-variant'>加载中...</Text>
+            ) : !hasMore ? (
+              <Text className='text-xs text-outline'>没有更多评论了</Text>
+            ) : null}
+          </View>
+        )}
+      </View>
+    </ScrollView>
+  )
+
+  const replyBanner = replyTarget && (
+    <View className='flex-shrink-0 flex items-center justify-between bg-surface-container px-5 py-2'>
+      <Text className='text-xs text-on-surface-variant'>
+        回复 @{replyTarget.user.name}
+      </Text>
+      <View
+        onClick={() => setReplyTarget(null)}
+        className='flex h-6 w-6 items-center justify-center rounded-full text-outline'
+      >
+        <Icon name='close' style={{ fontSize: '16px' }} />
+      </View>
+    </View>
+  )
+
+  const inputBar = (
+    <View
+      className='flex-shrink-0 border-t border-outline-variant/20 bg-surface px-4 py-3'
+      style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+    >
+      <View className='flex items-center gap-3 rounded-full bg-surface-container px-4 py-2'>
+        <Input
+          type='text'
+          value={input}
+          placeholder={replyTarget ? `回复 @${replyTarget.user.name}` : '写下你的评论...'}
+          placeholderClass='text-outline'
+          onInput={(e) => setInput(e.detail.value)}
+          onConfirm={() => void handleSend()}
+          confirmType='send'
+          className='flex-1 bg-transparent text-sm text-on-surface'
+          style={{ fontSize: '14px', lineHeight: '20px' }}
+        />
+        <View
+          onClick={() => void handleSend()}
+          className={`flex h-8 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+            input.trim() && !sending
+              ? 'bg-primary text-on-primary'
+              : 'bg-surface-container-high text-outline'
+          }`}
+        >
+          <Text>{sending ? '...' : '发送'}</Text>
+        </View>
+      </View>
+    </View>
+  )
+
+  // --- Desktop variant: right-side panel at 50% width ---
+  if (variant === 'desktop') {
+    return (
+      <View
+        className={`fixed inset-0 z-[60] ${visible ? '' : 'pointer-events-none'}`}
+        catchMove
+      >
+        {/* Overlay */}
+        <View
+          onClick={onClose}
+          className='absolute inset-0 bg-black/50 transition-opacity duration-300'
+          style={{ opacity: visible ? 1 : 0 }}
+        />
+
+        {/* Panel body — slides in from the right, occupies 50% width */}
+        <View
+          className='absolute right-0 top-0 flex h-full flex-col overflow-hidden bg-surface shadow-2xl'
+          style={{
+            width: '50%',
+            transform: visible ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 0.3s ease',
+          }}
+        >
+          {/* Header */}
+          <View
+            style={GLASS_STYLE}
+            className='flex-shrink-0 border-b border-outline-variant/20 px-5 py-3'
+          >
+            <View className='flex items-center justify-between'>
+              <Text className='text-base font-semibold text-on-surface'>
+                评论 ({formatCount(commentCount)})
+              </Text>
+              <View
+                onClick={onClose}
+                className='flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant'
+              >
+                <Icon name='close' style={{ fontSize: '20px' }} />
+              </View>
+            </View>
+          </View>
+
+          {commentList}
+          {replyBanner}
+          {inputBar}
+        </View>
+      </View>
+    )
+  }
+
+  // --- Mobile variant: bottom sheet ---
   return (
     <View
       className={`fixed inset-0 z-[60] ${overlayVisible ? '' : 'pointer-events-none'}`}
@@ -347,101 +501,9 @@ export default function CommentDrawer({
           </View>
         </View>
 
-        {/* Comment list */}
-        <ScrollView
-          scrollY
-          onScrollToLower={loadMore}
-          lowerThreshold={80}
-          className='flex-1'
-          style={{ minHeight: 0 }}
-        >
-          <View className='px-5 py-4'>
-            {loading && comments.length === 0 ? (
-              <View className='flex items-center justify-center py-12'>
-                <Text className='text-sm text-on-surface-variant'>加载中...</Text>
-              </View>
-            ) : comments.length === 0 ? (
-              <View className='flex flex-col items-center justify-center py-12'>
-                <Icon name='chat_bubble_outline' style={{ fontSize: '40px', color: '#c2c7c8' }} />
-                <Text className='mt-3 text-sm text-on-surface-variant'>
-                  暂无评论，快来抢沙发吧
-                </Text>
-              </View>
-            ) : (
-              <View className='space-y-5'>
-                {comments.map((c) => (
-                  <CommentItem
-                    key={c.id}
-                    comment={c}
-                    classMap={classMap}
-                    canDelete={canDeleteBy}
-                    onLike={(id) => toggleLike(id, false)}
-                    onReply={setReplyTarget}
-                    onDelete={(id) => handleDelete(id, false)}
-                    onLikeReply={(id, pid) => toggleLike(id, true, pid)}
-                    onDeleteReply={(id, pid) => handleDelete(id, true, pid)}
-                  />
-                ))}
-              </View>
-            )}
-
-            {/* Load-more / end states */}
-            {!loading && comments.length > 0 && (
-              <View className='mt-4 flex items-center justify-center py-3'>
-                {loadingMore ? (
-                  <Text className='text-xs text-on-surface-variant'>加载中...</Text>
-                ) : !hasMore ? (
-                  <Text className='text-xs text-outline'>没有更多评论了</Text>
-                ) : null}
-              </View>
-            )}
-          </View>
-        </ScrollView>
-
-        {/* Reply banner */}
-        {replyTarget && (
-          <View className='flex-shrink-0 flex items-center justify-between bg-surface-container px-5 py-2'>
-            <Text className='text-xs text-on-surface-variant'>
-              回复 @{replyTarget.user.name}
-            </Text>
-            <View
-              onClick={() => setReplyTarget(null)}
-              className='flex h-6 w-6 items-center justify-center rounded-full text-outline'
-            >
-              <Icon name='close' style={{ fontSize: '16px' }} />
-            </View>
-          </View>
-        )}
-
-        {/* Input bar */}
-        <View
-          className='flex-shrink-0 border-t border-outline-variant/20 bg-surface px-4 py-3'
-          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
-        >
-          <View className='flex items-center gap-3 rounded-full bg-surface-container px-4 py-2'>
-            <Input
-              type='text'
-              value={input}
-              placeholder={replyTarget ? `回复 @${replyTarget.user.name}` : '写下你的评论...'}
-              placeholderClass='text-outline'
-              onInput={(e) => setInput(e.detail.value)}
-              onConfirm={() => void handleSend()}
-              confirmType='send'
-              className='flex-1 bg-transparent text-sm text-on-surface'
-              style={{ fontSize: '14px', lineHeight: '20px' }}
-            />
-            <View
-              onClick={() => void handleSend()}
-              className={`flex h-8 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                input.trim() && !sending
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-surface-container-high text-outline'
-              }`}
-            >
-              <Text>{sending ? '...' : '发送'}</Text>
-            </View>
-          </View>
-        </View>
+        {commentList}
+        {replyBanner}
+        {inputBar}
       </View>
     </View>
   )
