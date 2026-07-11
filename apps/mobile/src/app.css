@@ -89,6 +89,16 @@ page {
   transition: none !important;
 }
 
+/* On desktop (>=1280px, matching useIsDesktop), Taro H5's slide-in-from-right
+ * / slide-out-to-left page transitions feel out of place for a multi-column
+ * layout — disable them so navigation is instant. */
+@media (min-width: 1280px) {
+  .taro_router > .taro_page {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 /* Normalize Taro H5's inner <input class="weui-input">.
  *
  * Taro 4 H5 wraps the native <input> in a <taro-input-core> element. The

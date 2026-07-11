@@ -16,6 +16,21 @@ const FEATURES = [
   { icon: 'auto_awesome', title: '精选集', desc: '策展优质播客，让好内容被更多人听见' },
 ]
 
+const DEVELOPERS = [
+  {
+    avatar: pyzJpg,
+    name: '庞宇泽',
+    role: '全栈开发',
+    desc: '全栈开发与服务器维护。',
+  },
+  {
+    avatar: lycJpg,
+    name: '李远岑',
+    role: 'UI · 美术',
+    desc: 'UI 布局与界面设计。',
+  },
+]
+
 const FEEDBACK_CHANNELS = [
   {
     icon: 'bug_report',
@@ -29,7 +44,7 @@ const FEEDBACK_CHANNELS = [
   {
     icon: 'code',
     title: '参与开发',
-    desc: '有相关经验？想参与开发运维？请添加该的微信（添加时请注明来意）',
+    desc: '有相关开发经验？想参与服务器运维？请添加该微信号（添加时请注明来意）',
     tint: '#326578',
     bg: 'rgba(50, 101, 120, 0.08)',
     action: () => Taro.setClipboardData({ data: 'feedback@qingmalaya.app' }),
@@ -191,93 +206,52 @@ export default function AboutPage() {
 
         {/* Developer */}
         <Section title='开发团队' icon='code'>
-          <View
-            className='flex items-center'
-            style={{ gap: '14px', marginBottom: '14px' }}
-          >
-            <View
-              className='rounded-full overflow-hidden'
-              style={{
-                width: '52px',
-                height: '52px',
-                flexShrink: 0,
-              }}
-            >
-              <Image
-                src={pyzJpg}
-                style={{ width: '100%', height: '100%' }}
-                mode='aspectFill'
-              />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                className='block text-on-surface'
-                style={{ fontSize: '16px', fontWeight: '600' }}
+          <View className='grid grid-cols-2' style={{ gap: '12px' }}>
+            {DEVELOPERS.map((dev) => (
+              <View
+                key={dev.name}
+                className='rounded-2xl'
+                style={{
+                  background: '#f5f3f3',
+                  padding: '16px',
+                  border: '1px solid rgba(194, 199, 200, 0.15)',
+                }}
               >
-                庞宇泽
-              </Text>
-              <Text
-                className='block text-on-surface-variant'
-                style={{ fontSize: '12px', marginTop: '2px' }}
-              >
-               全栈开发 · 设计 · 后台运维
-              </Text>
-            </View>
+                <View
+                  className='rounded-full overflow-hidden'
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    margin: '0 auto 10px',
+                  }}
+                >
+                  <Image
+                    src={dev.avatar}
+                    style={{ width: '100%', height: '100%' }}
+                    mode='aspectFill'
+                  />
+                </View>
+                <Text
+                  className='block text-center text-on-surface'
+                  style={{ fontSize: '15px', fontWeight: '600', marginBottom: '2px' }}
+                >
+                  {dev.name}
+                </Text>
+                <Text
+                  className='block text-center text-primary'
+                  style={{ fontSize: '11px', fontWeight: '600', marginBottom: '2px' }}
+                >
+                  {dev.role}
+                </Text>
+                <Text
+                  className='block text-center text-on-surface-variant'
+                  style={{ fontSize: '12px', lineHeight: '1.7', marginTop: '10px' }}
+                >
+                  {dev.desc}
+                </Text>
+              </View>
+            ))}
           </View>
-          <Text
-            className='block'
-            style={{
-              fontSize: '14px',
-              lineHeight: '1.8',
-              color: '#424849',
-              marginBottom: '14px',
-            }}
-          >
-            G2515 班庞宇泽，全栈开发与服务器维护。
-          </Text>
-          <View
-            className='flex items-center'
-            style={{ gap: '14px', marginBottom: '14px' }}
-          >
-            <View
-              className='rounded-full overflow-hidden'
-              style={{
-                width: '52px',
-                height: '52px',
-                flexShrink: 0,
-              }}
-            >
-              <Image
-                src={lycJpg}
-                style={{ width: '100%', height: '100%' }}
-                mode='aspectFill'
-              />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                className='block text-on-surface'
-                style={{ fontSize: '16px', fontWeight: '600' }}
-              >
-                李远岑
-              </Text>
-              <Text
-                className='block text-on-surface-variant'
-                style={{ fontSize: '12px', marginTop: '2px' }}
-              >
-                UI · 美术设计
-              </Text>
-            </View>
-          </View>
-          <Text
-            className='block'
-            style={{
-              fontSize: '14px',
-              lineHeight: '1.8',
-              color: '#424849',
-            }}
-          >
-            G2514 班李远岑，UI布局与界面设计。
-          </Text>
         </Section>
 
         {/* Feedback channels */}
