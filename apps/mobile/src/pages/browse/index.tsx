@@ -610,10 +610,10 @@ function SkeletonList() {
 
 function EmptyState({ keyword }: { keyword: string }) {
   return (
-    <View className='flex flex-col items-center justify-center py-20'>
-      <Icon name='search_off' style={{ fontSize: '40px', color: '#c2c7c8' }} />
+    <View className='flex min-h-[50vh] flex-col items-center justify-center'>
+      <Icon name='search_off' style={{ fontSize: '48px', color: '#c2c7c8' }} />
       <Text className='mt-3 text-sm text-on-surface-variant'>
-        {keyword ? `没有找到与“${keyword}”相关的播客` : '暂无播客'}
+        {keyword ? `没有找到与“${keyword}”相关的播客` : '暂无播客，敬请期待'}
       </Text>
     </View>
   )

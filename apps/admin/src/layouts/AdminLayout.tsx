@@ -182,7 +182,7 @@ const AdminLayout: React.FC = () => {
 
   return (
     <ProLayout
-      title="清马拉雅后台"
+      title="万卷回响后台"
       logo={false}
       layout="mix"
       fixedHeader
@@ -215,7 +215,7 @@ const AdminLayout: React.FC = () => {
             padding: '12px 0',
           }}
         >
-          清马拉雅后台管理 · Qing Malaya Admin © {new Date().getFullYear()}
+          万卷回响后台管理 · Admin © {new Date().getFullYear()}
         </div>
       )}
     >

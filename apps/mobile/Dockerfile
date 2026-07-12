@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# Multi-stage Dockerfile for the Qing Malaya mobile H5 app (apps/mobile).
+# Multi-stage Dockerfile for the 万卷回响 mobile H5 app (apps/mobile).
 # Builds the Taro H5 static bundle, then serves it with nginx.
 #
 # Build context must be the repository root so pnpm can resolve the workspace.

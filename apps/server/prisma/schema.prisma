@@ -1,4 +1,4 @@
-// Qing Malaya campus podcast platform — Prisma schema (MySQL).
+// 万卷回响 campus podcast platform — Prisma schema (MySQL).
 //
 // This is the full domain schema. Task 6 will verify/refine it; later tasks
 // add the resource modules on top.

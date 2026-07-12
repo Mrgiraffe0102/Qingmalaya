@@ -2,7 +2,7 @@
   "name": "@qingmalaya/server",
   "version": "0.0.0",
   "private": true,
-  "description": "Qing Malaya NestJS backend API",
+  "description": "万卷回响 NestJS backend API",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",

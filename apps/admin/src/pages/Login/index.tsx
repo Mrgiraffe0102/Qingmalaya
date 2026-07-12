@@ -60,7 +60,7 @@ const LoginPage: React.FC = () => {
       >
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <Title level={3} style={{ marginBottom: 4, color: '#4d6265' }}>
-            清马拉雅后台
+            万卷回响后台
           </Title>
           <Text type="secondary" style={{ fontSize: 13 }}>
             管理员登录

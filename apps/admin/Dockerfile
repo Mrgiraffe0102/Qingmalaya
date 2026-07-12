@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# Multi-stage Dockerfile for the Qing Malaya admin console (apps/admin).
+# Multi-stage Dockerfile for the 万卷回响 admin console (apps/admin).
 # Builds the React + Vite static bundle, then serves it with nginx.
 #
 # Build context must be the repository root so pnpm can resolve the workspace.

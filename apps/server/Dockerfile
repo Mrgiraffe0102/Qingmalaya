@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# Multi-stage Dockerfile for the Qing Malaya NestJS backend (apps/server).
+# Multi-stage Dockerfile for the 万卷回响 NestJS backend (apps/server).
 #
 # Build context must be the repository root so pnpm can resolve the workspace.
 # Usage in docker-compose:

@@ -116,7 +116,7 @@ export default function Login() {
                 lineHeight: '40px'
               }}
             >
-              清马拉雅
+              万卷回响
             </Text>
             <Text
               className="mt-2 text-on-surface-variant"

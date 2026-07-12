@@ -2,7 +2,7 @@
   "name": "@qingmalaya/root",
   "version": "0.0.0",
   "private": true,
-  "description": "Qing Malaya campus podcast platform monorepo",
+  "description": "万卷回响 campus podcast platform monorepo",
   "scripts": {
     "dev:mobile": "pnpm --filter @qingmalaya/mobile dev:h5",
     "dev:server": "pnpm --filter @qingmalaya/server dev",

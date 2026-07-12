@@ -1,5 +1,5 @@
 ---
-name: Qing Malaya
+name: 万卷回响
 colors:
   surface: '#fbf9f8'
   surface-dim: '#dbdad9'

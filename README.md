@@ -1,4 +1,4 @@
-# 清马拉雅 (Qingmalaya) — Campus Podcast Platform
+# 万卷回响 — Campus Podcast Platform
 
 A pnpm monorepo for a campus podcast platform with a NestJS backend, an Ant
 Design Pro admin console, and a Taro 4 mobile H5 app.

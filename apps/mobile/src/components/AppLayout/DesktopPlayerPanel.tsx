@@ -204,7 +204,7 @@ export default function DesktopPlayerPanel() {
           </Text>
         </View>
         <Text className='mb-2 text-lg font-semibold text-on-surface'>
-          欢迎来到清马拉雅
+          欢迎来到万卷回响
         </Text>
         <Text className='text-center text-sm leading-relaxed text-on-surface-variant'>
           从左侧选择一个播客开始播放{'\n'}这里将显示播放界面

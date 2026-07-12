@@ -363,7 +363,7 @@ function CreationCard({ podcast, onMore, onTap }: CreationCardProps) {
 /** Centered empty state: icon-in-circle + guide text + upload button. */
 function EmptyState({ onUpload }: { onUpload: () => void }) {
   return (
-    <View className='flex flex-col items-center justify-center px-6 pt-24 text-center'>
+    <View className='flex h-full w-full flex-col items-center justify-center px-6 text-center'>
       <View className='mb-6 flex h-32 w-32 items-center justify-center'>
         <Icon name='mic' style={{ fontSize: '48px', color: '#727879' }} />
       </View>
@@ -387,7 +387,7 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
 /** Teacher review empty state — no pending podcasts to review. */
 function ReviewEmptyState() {
   return (
-    <View className='flex flex-col items-center justify-center px-6 pt-24 text-center'>
+    <View className='flex h-full w-full flex-col items-center justify-center px-6 text-center'>
       <View className='mb-6 flex h-32 w-32 items-center justify-center'>
         <Icon name='fact_check' style={{ fontSize: '48px', color: '#727879' }} />
       </View>

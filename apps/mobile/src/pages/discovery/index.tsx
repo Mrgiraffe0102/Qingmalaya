@@ -113,6 +113,16 @@ function SectionHeader({ label, right }: SectionHeaderProps) {
   )
 }
 
+/** Centered icon + guidance text shown inside a section when it has no data. */
+function SectionEmpty({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View className='flex flex-col items-center justify-center px-4 py-12'>
+      <Icon name={icon} style={{ fontSize: '32px', color: '#c2c7c8' }} />
+      <Text className='mt-2 text-xs text-on-surface-variant'>{text}</Text>
+    </View>
+  )
+}
+
 export default function Discovery() {
   const ok = useAuthRedirect()
   const [data, setData] = useState<DiscoveryResponse | null>(null)
@@ -190,7 +200,7 @@ export default function Discovery() {
       {/* Page header */}
       <View className='px-4 pb-2 pt-4'>
         <Text className='text-xl font-bold tracking-tight text-primary'>
-          清马拉雅
+          万卷回响
         </Text>
         <Text className='mt-0.5 block text-sm font-medium tracking-widest text-on-surface-variant'>
           G25 学生播客平台
@@ -234,9 +244,11 @@ export default function Discovery() {
       )}
 
       {/* 16.2 Hot podcasts — three leaderboard columns, horizontal scroll */}
-      {(byPlay.length > 0 || byLike.length > 0 || byComment.length > 0) && (
-        <View className='mb-8'>
-          <SectionHeader label='热门播客' />
+      <View className='mb-8'>
+        <SectionHeader label='热门播客' />
+        {byPlay.length === 0 && byLike.length === 0 && byComment.length === 0 ? (
+          <SectionEmpty icon='whatshot' text='暂无热门播客' />
+        ) : (
           <ScrollView scrollX className='w-full' enhanced showScrollbar={false}>
             <View className='flex gap-3 px-4 pb-1'>
               <HotColumn
@@ -265,44 +277,36 @@ export default function Discovery() {
               />
             </View>
           </ScrollView>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* 16.3 Recent uploads — responsive grid */}
-      {recent.length > 0 && (
-        <View className='mb-8'>
-          <SectionHeader label='最近上传' />
+      <View className='mb-8'>
+        <SectionHeader label='最近上传' />
+        {recent.length === 0 ? (
+          <SectionEmpty icon='schedule' text='暂无上传内容' />
+        ) : (
           <View className='grid grid-cols-2 gap-3 px-4 md:grid-cols-3 lg:grid-cols-4'>
             {recent.map((p) => (
               <RecentCard key={p.id} podcast={p} />
             ))}
           </View>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* 16.4 Classmate creations — responsive grid */}
-      {classmates.length > 0 && (
-        <View className='mb-10'>
-          <SectionHeader label='同班同学' />
+      <View className='mb-10'>
+        <SectionHeader label='同班同学' />
+        {classmates.length === 0 ? (
+          <SectionEmpty icon='group' text='暂无同学作品' />
+        ) : (
           <View className='grid grid-cols-1 gap-2 px-4 md:grid-cols-2 lg:grid-cols-3'>
             {classmates.map((p) => (
               <ClassmateRow key={p.id} podcast={p} />
             ))}
           </View>
-        </View>
-      )}
-
-      {/* Empty state when the API returned no sections at all */}
-      {banners.length === 0 &&
-        byPlay.length === 0 &&
-        recent.length === 0 &&
-        classmates.length === 0 && (
-          <View className='flex min-h-[40vh] items-center justify-center px-6'>
-            <Text className='text-center text-sm text-on-surface-variant'>
-              暂无发现内容，稍后再来看看吧
-            </Text>
-          </View>
         )}
+      </View>
       </PageContainer>
     </AppLayout>
   )

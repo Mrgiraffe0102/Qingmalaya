@@ -301,7 +301,7 @@ export default function Playback() {
   // --- Share ---
   const handleShare = useCallback((): void => {
     Taro.setClipboardData({
-      data: podcast ? `${podcast.title} - 清马拉雅` : '清马拉雅',
+      data: podcast ? `${podcast.title} - 万卷回响` : '万卷回响',
       success: () => {
         Taro.showToast({ title: '已复制分享内容', icon: 'success' })
       },
@@ -397,7 +397,7 @@ export default function Playback() {
           <Icon name='expand_more' style={{ fontSize: '22px' }} />
         </View>
         <Text className='text-sm font-semibold tracking-wide text-on-surface'>
-          清马拉雅
+          万卷回响
         </Text>
         <View
           onClick={handleShare}

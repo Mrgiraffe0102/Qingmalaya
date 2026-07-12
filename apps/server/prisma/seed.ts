@@ -1,5 +1,5 @@
 /**
- * Prisma seed script for the Qing Malaya campus podcast platform (Task 7).
+ * Prisma seed script for the 万卷回响 campus podcast platform (Task 7).
  *
  * Idempotent: safe to run repeatedly. Uses upsert for entities with a unique
  * business key (User.studentId, Tag.name, SystemSetting.key) and a
@@ -63,7 +63,7 @@ async function upsertClass(def: {
 }
 
 async function main(): Promise<void> {
-  console.log('[seed] Start seeding Qing Malaya database...');
+  console.log('[seed] Start seeding 万卷回响 database...');
 
   // ----------------------------------------------------------------- Classes
   console.log('[seed] Classes (3)');
@@ -319,9 +319,9 @@ async function main(): Promise<void> {
 
   // ----------------------------------------------------------- Announcement
   console.log('[seed] Announcement (1)');
-  const announcementTitle = '欢迎来到清马拉雅';
+  const announcementTitle = '欢迎来到万卷回响';
   const announcementContent =
-    '清马拉雅是 G25 学生的专属播客平台,在这里你可以收听同学的分享,也可以上传自己的播客。请使用学号登录,首次登录后请及时修改密码。';
+    '万卷回响是 G25 学生的专属播客平台,在这里你可以收听同学的分享,也可以上传自己的播客。请使用学号登录,首次登录后请及时修改密码。';
   const announcementData = {
     title: announcementTitle,
     content: announcementContent,

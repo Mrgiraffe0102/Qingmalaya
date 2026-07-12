@@ -22,7 +22,7 @@ export default {
   window: {
     backgroundTextStyle: 'light',
     navigationBarBackgroundColor: '#fbf9f8',
-    navigationBarTitleText: '清马拉雅',
+    navigationBarTitleText: '万卷回响',
     navigationBarTextStyle: 'black'
   },
   tabBar: {

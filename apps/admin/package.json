@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Qing Malaya admin console built on Ant Design Pro",
+  "description": "万卷回响 admin console built on Ant Design Pro",
   "scripts": {
     "dev": "vite --port 5174",
     "build": "tsc && vite build",

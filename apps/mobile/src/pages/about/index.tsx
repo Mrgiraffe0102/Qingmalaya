@@ -106,7 +106,7 @@ export default function AboutPage() {
             className='block text-center text-white'
             style={{ fontSize: '26px', fontWeight: '700', letterSpacing: '-0.02em' }}
           >
-            清马拉雅
+            万卷回响
           </Text>
           <Text
             className='block text-center'
@@ -148,7 +148,7 @@ export default function AboutPage() {
         </View>
 
         {/* App introduction */}
-        <Section title='关于清马拉雅' icon='info'>
+        <Section title='关于万卷回响' icon='info'>
           <Text
             className='block'
             style={{
@@ -157,7 +157,7 @@ export default function AboutPage() {
               color: '#424849',
             }}
           >
-            清马拉雅是一个面向 G25 级学生的校园播客平台。在这里，你可以收听同学们创作的播客节目，分享你的观点与灵感，也可以拿起麦克风，记录属于你的校园之声。
+            万卷回响是一个面向 G25 级学生的校园播客平台。在这里，你可以收听同学们创作的播客节目，分享你的观点与灵感，也可以拿起麦克风，记录属于你的校园之声。
           </Text>
         </Section>
 
@@ -345,7 +345,7 @@ export default function AboutPage() {
             className='block text-outline'
             style={{ fontSize: '11px', opacity: 0.7 }}
           >
-            © 2026 清马拉雅 · 保留所有权利
+            © 2026 万卷回响 · 保留所有权利
           </Text>
         </View>
       </PageContainer>
