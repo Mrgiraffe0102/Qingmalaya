@@ -36,6 +36,7 @@ export const AUDIO_MIME_WHITELIST = [
   'audio/x-wav',
   'audio/x-m4a',
   'audio/m4a',
+  'audio/mp4',
 ] as const;
 
 type MulterFile = Express.Multer.File;

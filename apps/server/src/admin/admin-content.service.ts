@@ -12,6 +12,7 @@ import { AdminPodcastUpdateDto } from './dto/admin-podcast-update.dto';
 import { AdminPodcastBatchTakedownDto } from './dto/admin-podcast-batch-takedown.dto';
 import { AdminPodcastBatchPublishDto } from './dto/admin-podcast-batch-publish.dto';
 import { AdminPodcastBatchTagDto } from './dto/admin-podcast-batch-tag.dto';
+import { AdminPodcastBatchDeleteDto } from './dto/admin-podcast-batch-delete.dto';
 import { AdminCommentListDto } from './dto/admin-comment-list.dto';
 
 /**
@@ -522,6 +523,80 @@ export class AdminPodcastsService {
           tagIds: dto.tagIds,
           count: podcasts.length,
         },
+      },
+    });
+
+    return { success: true, count: podcasts.length };
+  }
+
+  /**
+   * Delete a single podcast (DELETE /admin/podcasts/:id). Hard-deletes the row
+   * — the DB schema cascades deletion to PodcastTag, Comment, Favorite,
+   * PlayHistory, and CollectionPodcast. Like.podcastId and Notification.podcastId
+   * are nullable so they are SetNull automatically. Writes an AdminLog entry.
+   */
+  async remove(id: number, adminId: number): Promise<{ success: true }> {
+    const existing = await this.prisma.podcast.findUnique({
+      where: { id },
+      select: { id: true, title: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('播客不存在');
+    }
+
+    await this.prisma.podcast.delete({ where: { id } });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'delete_podcast',
+        targetType: 'Podcast',
+        targetId: id,
+        detail: { title: existing.title },
+      },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Batch delete podcasts (POST /admin/podcasts/batch-delete). Hard-deletes
+   * every podcast in `ids` (same cascade/SetNull semantics as single delete).
+   * Missing IDs are silently skipped. A single AdminLog entry is written.
+   */
+  async batchRemove(
+    dto: AdminPodcastBatchDeleteDto,
+    adminId: number,
+  ): Promise<{ success: true; count: number }> {
+    const podcasts = await this.prisma.podcast.findMany({
+      where: { id: { in: dto.ids } },
+      select: { id: true, title: true },
+    });
+
+    if (podcasts.length === 0) {
+      await this.prisma.adminLog.create({
+        data: {
+          adminId,
+          action: 'batch_delete_podcast',
+          targetType: 'Podcast',
+          targetId: null,
+          detail: { ids: dto.ids, count: 0 },
+        },
+      });
+      return { success: true, count: 0 };
+    }
+
+    await this.prisma.podcast.deleteMany({
+      where: { id: { in: dto.ids } },
+    });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'batch_delete_podcast',
+        targetType: 'Podcast',
+        targetId: null,
+        detail: { ids: dto.ids, count: podcasts.length },
       },
     });
 

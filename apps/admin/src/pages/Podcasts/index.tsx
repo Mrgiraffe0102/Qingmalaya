@@ -36,6 +36,7 @@ import {
 import {
   AuditOutlined,
   CheckCircleOutlined,
+  DeleteOutlined,
   EditOutlined,
   EyeOutlined,
   StopOutlined,
@@ -43,9 +44,11 @@ import {
 import dayjs from 'dayjs';
 import type { PodcastWithRelations, Tag as TagType } from '@qingmalaya/shared';
 import {
+  batchDeleteAdminPodcasts,
   batchPublishAdminPodcasts,
   batchTagAdminPodcasts,
   batchTakedownAdminPodcasts,
+  deleteAdminPodcast,
   listAdminPodcasts,
   listAllTags,
   publishAdminPodcast,
@@ -256,6 +259,31 @@ const PodcastsPage: React.FC = () => {
     }
   };
 
+  // --- Delete (single + batch) ---
+  const handleDelete = async (id: number): Promise<boolean> => {
+    try {
+      await deleteAdminPodcast(id);
+      message.success('已删除');
+      actionRef.current?.reload();
+      return true;
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '删除失败');
+      return false;
+    }
+  };
+
+  const handleBatchDelete = async (): Promise<void> => {
+    const ids = selectedRowKeys.map((k) => Number(k));
+    try {
+      const res = await batchDeleteAdminPodcasts(ids);
+      message.success(`已删除 ${res.count} 个播客`);
+      setSelectedRowKeys([]);
+      actionRef.current?.reload();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '操作失败');
+    }
+  };
+
   const columns: ProColumns<PodcastWithRelations>[] = [
     {
       title: '封面',
@@ -350,7 +378,7 @@ const PodcastsPage: React.FC = () => {
       title: '操作',
       dataIndex: 'option',
       valueType: 'option',
-      width: 240,
+      width: 300,
       fixed: 'right',
       render: (_, row) => [
         <a key="view" onClick={() => handleViewDetail(row)}>
@@ -391,6 +419,15 @@ const PodcastsPage: React.FC = () => {
             </a>
           </Popconfirm>
         ) : null,
+        <Popconfirm
+          key="delete"
+          title="确认彻底删除该播客？删除后无法恢复，相关评论、点赞等数据将一并清除。"
+          onConfirm={() => handleDelete(row.id)}
+        >
+          <a style={{ color: '#ba1a1a' }}>
+            <DeleteOutlined /> 删除
+          </a>
+        </Popconfirm>,
       ],
     },
   ];
@@ -452,6 +489,14 @@ const PodcastsPage: React.FC = () => {
             <Button size="small" onClick={handleOpenBatchTag}>
               批量打标签
             </Button>
+            <Popconfirm
+              title={`确认彻底删除选中的 ${selectedRowKeys.length} 个播客？删除后无法恢复，相关评论、点赞等数据将一并清除。`}
+              onConfirm={handleBatchDelete}
+            >
+              <Button danger size="small">
+                批量删除
+              </Button>
+            </Popconfirm>
           </Space>
         )}
         pagination={{

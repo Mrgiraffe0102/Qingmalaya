@@ -4,7 +4,7 @@
  * NestJS returns raw payloads (no { code, message, data } envelope).
  */
 import type { Paginated, Role, UserStatus } from '@qingmalaya/shared';
-import { get, put, post } from '@/utils/request';
+import { del, get, put, post } from '@/utils/request';
 
 /** User row projected by GET /admin/users (extends shared User with admin extras). */
 export interface AdminUserListItem {
@@ -70,4 +70,22 @@ export function unbanUser(id: number): Promise<void> {
 /** POST /admin/users/:id/reset-password — reset to studentId-derived password. */
 export function resetUserPassword(id: number): Promise<ResetPasswordResult> {
   return post<ResetPasswordResult>(`/admin/users/${id}/reset-password`);
+}
+
+/** DELETE /admin/users/:id — delete a single user (STUDENT/TEACHER only). */
+export function deleteUser(id: number): Promise<void> {
+  return del<void>(`/admin/users/${id}`);
+}
+
+export interface BatchDeleteUsersResult {
+  success: true;
+  count: number;
+  skipped: number;
+}
+
+/** POST /admin/users/batch-delete — bulk delete users (STUDENT/TEACHER only). */
+export function batchDeleteUsers(
+  ids: number[],
+): Promise<BatchDeleteUsersResult> {
+  return post<BatchDeleteUsersResult>('/admin/users/batch-delete', { ids });
 }

@@ -24,6 +24,7 @@ import {
   AdminUpdateClassDto,
 } from './dto/admin-classes.dto';
 import { AdminUserCreateDto } from './dto/admin-user-create.dto';
+import { AdminUserBatchDeleteDto } from './dto/admin-user-batch-delete.dto';
 
 /**
  * Admin user management endpoints (Task 26). All routes require
@@ -31,9 +32,11 @@ import { AdminUserCreateDto } from './dto/admin-user-create.dto';
  *
  * - GET    /admin/users                   — paginated list (search, classId filter)
  * - POST   /admin/users                   — create a STUDENT or TEACHER account
+ * - POST   /admin/users/batch-delete       — bulk delete (STUDENT/TEACHER only)
  * - PUT    /admin/users/:id/ban           — set status BANNED
  * - PUT    /admin/users/:id/unban         — set status ACTIVE
  * - POST   /admin/users/:id/reset-password — reset to studentId-derived password
+ * - DELETE /admin/users/:id               — delete a single user (STUDENT/TEACHER only)
  *
  * Each mutation is audited via AdminLog inside the service.
  */
@@ -61,6 +64,15 @@ export class AdminUsersController {
     return this.users.create(dto, adminId);
   }
 
+  /** POST /admin/users/batch-delete — bulk delete users (STUDENT/TEACHER only). */
+  @Post('batch-delete')
+  batchDelete(
+    @Body() dto: AdminUserBatchDeleteDto,
+    @CurrentUser('id') adminId: number,
+  ) {
+    return this.users.batchRemove(dto, adminId);
+  }
+
   @Put(':id/ban')
   @HttpCode(HttpStatus.NO_CONTENT)
   async ban(
@@ -85,6 +97,16 @@ export class AdminUsersController {
     @CurrentUser('id') adminId: number,
   ) {
     return this.users.resetPassword(id, adminId);
+  }
+
+  /** DELETE /admin/users/:id — delete a single user (STUDENT/TEACHER only). */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') adminId: number,
+  ): Promise<void> {
+    await this.users.remove(id, adminId);
   }
 }
 

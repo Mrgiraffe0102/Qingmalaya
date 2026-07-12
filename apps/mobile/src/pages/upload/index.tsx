@@ -353,7 +353,7 @@ export default function Upload() {
           <input
             ref={audioInputRef}
             type='file'
-            accept='audio/*'
+            accept="audio/mpeg,audio/mp3,audio/aac,audio/wav,audio/x-wav,audio/x-m4a,audio/m4a,audio/mp4,video/mp4,.mp3,.m4a,.wav,.aac,.mp4"
             style={{ display: 'none' }}
             onChange={onAudioChange}
           />

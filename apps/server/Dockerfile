@@ -71,7 +71,11 @@ RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories
 
 # openssl: needed by the Prisma engine binary.
 # libstdc++: runtime dependency for bcrypt's native addon.
-RUN apk add --no-cache openssl libstdc++
+# ffmpeg: required by the audio upload flow — every uploaded track is
+# transcoded to 320 kbps MP3 via execFile('ffmpeg'). Without it the
+# transcode fails and the controller returns HTTP 400 for every upload.
+# The Alpine ffmpeg package bundles ffprobe too.
+RUN apk add --no-cache openssl libstdc++ ffmpeg
 
 WORKDIR /app
 

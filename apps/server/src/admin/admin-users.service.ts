@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import {
   AdminUpdateClassDto,
 } from './dto/admin-classes.dto';
 import { AdminUserCreateDto } from './dto/admin-user-create.dto';
+import { AdminUserBatchDeleteDto } from './dto/admin-user-batch-delete.dto';
 
 /**
  * User row projected for the admin list view. Extends the shared `User`
@@ -330,6 +332,174 @@ export class AdminUsersService {
     });
 
     return { newPassword };
+  }
+
+  /**
+   * Delete a user (DELETE /admin/users/:id). Prevents deleting SUPER_ADMIN
+   * accounts and self-deletion. Inside a transaction:
+   *   1. Decrement commentCount on podcasts where the user commented, then
+   *      delete the user's comments (Comment.userId is a required FK).
+   *   2. Delete the user's podcasts — cascade handles PodcastTag, Comment,
+   *      Favorite, PlayHistory, CollectionPodcast; Like.podcastId and
+   *      Notification.podcastId are SetNull.
+   *   3. Delete AdminLog rows authored by this user (required FK, no cascade).
+   *   4. Delete the user — cascade handles Like, Favorite, PlayHistory,
+   *      UserActivityLog, Notification (as recipient); Notification.actorId
+   *      is SetNull.
+   * Writes an AdminLog entry before the user's logs are purged (the entry
+   * itself survives because it's created by the admin, not the deleted user).
+   */
+  async remove(id: number, adminId: number): Promise<void> {
+    if (id === adminId) {
+      throw new ForbiddenException('不能删除自己的账号');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, studentId: true, name: true, role: true },
+    });
+    if (!user) {
+      throw new NotFoundException(`用户 ${id} 不存在`);
+    }
+    if (user.role === 'SUPER_ADMIN') {
+      throw new ForbiddenException('不能删除超级管理员账号');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Decrement commentCount on affected podcasts, then delete comments.
+      const comments = await tx.comment.findMany({
+        where: { userId: id },
+        select: { podcastId: true },
+      });
+      const commentCountByPodcast = new Map<number, number>();
+      for (const c of comments) {
+        commentCountByPodcast.set(
+          c.podcastId,
+          (commentCountByPodcast.get(c.podcastId) ?? 0) + 1,
+        );
+      }
+      for (const [podcastId, count] of commentCountByPodcast) {
+        await tx.podcast.update({
+          where: { id: podcastId },
+          data: { commentCount: { decrement: count } },
+        });
+      }
+      await tx.comment.deleteMany({ where: { userId: id } });
+
+      // 2. Delete the user's podcasts (cascade handles related rows).
+      await tx.podcast.deleteMany({ where: { authorId: id } });
+
+      // 3. Delete AdminLog entries authored by this user (required FK).
+      await tx.adminLog.deleteMany({ where: { adminId: id } });
+
+      // 4. Delete the user (cascade handles remaining relations).
+      await tx.user.delete({ where: { id } });
+    });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'delete_user',
+        targetType: 'User',
+        targetId: id,
+        detail: { studentId: user.studentId, name: user.name, role: user.role },
+      },
+    });
+  }
+
+  /**
+   * Batch delete users (POST /admin/users/batch-delete). Same per-user logic
+   * as `remove`, applied to each ID. SUPER_ADMIN accounts and the caller's own
+   * ID are skipped (counted in `skipped`). A single AdminLog entry is written.
+   */
+  async batchRemove(
+    dto: AdminUserBatchDeleteDto,
+    adminId: number,
+  ): Promise<{ success: true; count: number; skipped: number }> {
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: dto.ids } },
+      select: { id: true, studentId: true, name: true, role: true },
+    });
+
+    const deletable = users.filter(
+      (u) => u.role !== 'SUPER_ADMIN' && u.id !== adminId,
+    );
+    const skipped = users.length - deletable.length;
+
+    if (deletable.length === 0) {
+      await this.prisma.adminLog.create({
+        data: {
+          adminId,
+          action: 'batch_delete_user',
+          targetType: 'User',
+          targetId: null,
+          detail: { ids: dto.ids, count: 0, skipped },
+        },
+      });
+      return { success: true, count: 0, skipped };
+    }
+
+    const deletableIds = deletable.map((u) => u.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Decrement commentCount on affected podcasts, then delete comments.
+      const comments = await tx.comment.findMany({
+        where: { userId: { in: deletableIds } },
+        select: { podcastId: true },
+      });
+      const commentCountByPodcast = new Map<number, number>();
+      for (const c of comments) {
+        commentCountByPodcast.set(
+          c.podcastId,
+          (commentCountByPodcast.get(c.podcastId) ?? 0) + 1,
+        );
+      }
+      for (const [podcastId, count] of commentCountByPodcast) {
+        await tx.podcast.update({
+          where: { id: podcastId },
+          data: { commentCount: { decrement: count } },
+        });
+      }
+      await tx.comment.deleteMany({
+        where: { userId: { in: deletableIds } },
+      });
+
+      // 2. Delete the users' podcasts (cascade handles related rows).
+      await tx.podcast.deleteMany({
+        where: { authorId: { in: deletableIds } },
+      });
+
+      // 3. Delete AdminLog entries authored by these users.
+      await tx.adminLog.deleteMany({
+        where: { adminId: { in: deletableIds } },
+      });
+
+      // 4. Delete the users (cascade handles remaining relations).
+      await tx.user.deleteMany({
+        where: { id: { in: deletableIds } },
+      });
+    });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'batch_delete_user',
+        targetType: 'User',
+        targetId: null,
+        detail: {
+          ids: deletableIds,
+          count: deletable.length,
+          skipped,
+          users: deletable.map((u) => ({
+            studentId: u.studentId,
+            name: u.name,
+            role: u.role,
+          })),
+        },
+      },
+    });
+
+    return { success: true, count: deletable.length, skipped };
   }
 }
 

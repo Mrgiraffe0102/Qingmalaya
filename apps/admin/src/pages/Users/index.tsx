@@ -17,13 +17,15 @@ import {
   type ActionType,
   type ProColumns,
 } from '@ant-design/pro-components';
-import { Button, Modal, Space, Tag, App as AntdApp } from 'antd';
+import { Button, Modal, Popconfirm, Space, Tag, App as AntdApp } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Role, UserStatus } from '@qingmalaya/shared';
 import {
   banUser,
+  batchDeleteUsers,
   createUser,
+  deleteUser,
   listAdminUsers,
   resetUserPassword,
   unbanUser,
@@ -51,6 +53,7 @@ const UsersPage: React.FC = () => {
   const { message } = AntdApp.useApp();
   const [classes, setClasses] = useState<AdminClassListItem[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // Load class options once for the classId search filter.
   useEffect(() => {
@@ -140,6 +143,43 @@ const UsersPage: React.FC = () => {
     });
   };
 
+  /** Confirm-then-delete a single user, reloading the table on success. */
+  const handleDelete = (record: AdminUserListItem) => {
+    Modal.confirm({
+      title: '删除用户',
+      content: `确定要删除「${record.name}（${record.studentId}）」吗？该用户的播客、评论等数据将一并删除，且无法恢复。`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteUser(record.id);
+          message.success('已删除');
+          actionRef.current?.reload();
+        } catch (e) {
+          message.error((e as Error).message || '操作失败');
+        }
+      },
+    });
+  };
+
+  /** Batch delete selected users, reporting how many were skipped. */
+  const handleBatchDelete = async (): Promise<void> => {
+    const ids = selectedRowKeys.map((k) => Number(k));
+    try {
+      const res = await batchDeleteUsers(ids);
+      if (res.skipped > 0) {
+        message.success(`已删除 ${res.count} 个用户，跳过 ${res.skipped} 个（超级管理员或自身）`);
+      } else {
+        message.success(`已删除 ${res.count} 个用户`);
+      }
+      setSelectedRowKeys([]);
+      actionRef.current?.reload();
+    } catch (e) {
+      message.error((e as Error).message || '操作失败');
+    }
+  };
+
   const columns: ProColumns<AdminUserListItem>[] = [
     {
       title: '学号',
@@ -223,7 +263,7 @@ const UsersPage: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 200,
+      width: 240,
       fixed: 'right',
       hideInSearch: true,
       render: (_: unknown, record: AdminUserListItem) => (
@@ -253,6 +293,14 @@ const UsersPage: React.FC = () => {
           >
             重置密码
           </Button>
+          <Button
+            type="link"
+            size="small"
+            danger
+            onClick={() => handleDelete(record)}
+          >
+            删除
+          </Button>
         </Space>
       ),
     },
@@ -272,6 +320,20 @@ const UsersPage: React.FC = () => {
           showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条`,
         }}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys),
+        }}
+        tableAlertOptionRender={() => (
+          <Popconfirm
+            title={`确认删除选中的 ${selectedRowKeys.length} 个用户？该用户的播客、评论等数据将一并删除，且无法恢复。`}
+            onConfirm={handleBatchDelete}
+          >
+            <Button danger size="small">
+              批量删除
+            </Button>
+          </Popconfirm>
+        )}
         toolBarRender={() => [
           <Button
             key="create"

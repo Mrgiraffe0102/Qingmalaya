@@ -12,7 +12,7 @@ import type {
   PodcastWithRelations,
   Tag,
 } from '@qingmalaya/shared';
-import { get, post, put } from '@/utils/request';
+import { del, get, post, put } from '@/utils/request';
 
 export interface AdminPodcastListParams {
   keyword?: string;
@@ -94,6 +94,18 @@ export function batchTagAdminPodcasts(
   tagIds: number[],
 ): Promise<AdminBatchResult> {
   return post<AdminBatchResult>('/admin/podcasts/batch-tag', { ids, tagIds });
+}
+
+/** DELETE /admin/podcasts/:id — hard-delete a single podcast. */
+export function deleteAdminPodcast(id: number): Promise<void> {
+  return del<void>(`/admin/podcasts/${id}`);
+}
+
+/** POST /admin/podcasts/batch-delete — bulk hard-delete podcasts. */
+export function batchDeleteAdminPodcasts(
+  ids: number[],
+): Promise<AdminBatchResult> {
+  return post<AdminBatchResult>('/admin/podcasts/batch-delete', { ids });
 }
 
 /**

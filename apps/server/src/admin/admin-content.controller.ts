@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -20,6 +22,7 @@ import { AdminPodcastUpdateDto } from './dto/admin-podcast-update.dto';
 import { AdminPodcastBatchTakedownDto } from './dto/admin-podcast-batch-takedown.dto';
 import { AdminPodcastBatchPublishDto } from './dto/admin-podcast-batch-publish.dto';
 import { AdminPodcastBatchTagDto } from './dto/admin-podcast-batch-tag.dto';
+import { AdminPodcastBatchDeleteDto } from './dto/admin-podcast-batch-delete.dto';
 import { AdminCommentListDto } from './dto/admin-comment-list.dto';
 import { AdminCommentBatchDeleteDto } from './dto/admin-comment-batch-delete.dto';
 
@@ -35,9 +38,11 @@ import { AdminCommentBatchDeleteDto } from './dto/admin-comment-batch-delete.dto
  *     PUT    /:id             — edit metadata (title/description/coverPath/tagIds)
  *     PUT    /:id/takedown    — set status TAKEN_DOWN
  *     PUT    /:id/publish     — set status PUBLISHED + publishedAt = now
+ *     DELETE /:id             — hard-delete single podcast
  *     POST   /batch-takedown  — bulk TAKEN_DOWN
  *     POST   /batch-publish   — bulk PUBLISHED (审核通过)
  *     POST   /batch-tag       — bulk add tags (merge, no replace)
+ *     POST   /batch-delete    — bulk hard-delete
  *
  *   AdminCommentsController  — /admin/comments
  *     GET    /                — paginated list (podcastId/userId/keyword/date)
@@ -92,6 +97,15 @@ export class AdminPodcastsController {
     return this.podcasts.batchPublish(dto, adminId);
   }
 
+  /** POST /admin/podcasts/batch-delete — bulk hard-delete podcasts. */
+  @Post('batch-delete')
+  batchDelete(
+    @Body() dto: AdminPodcastBatchDeleteDto,
+    @CurrentUser('id') adminId: number,
+  ) {
+    return this.podcasts.batchRemove(dto, adminId);
+  }
+
   /**
    * GET /admin/podcasts/options — lightweight id+title list for selectors.
    * Returns only PUBLISHED podcasts. Declared before @Get(':id') so the
@@ -134,6 +148,16 @@ export class AdminPodcastsController {
     @CurrentUser('id') adminId: number,
   ) {
     return this.podcasts.publish(id, adminId);
+  }
+
+  /** DELETE /admin/podcasts/:id — hard-delete a single podcast. */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') adminId: number,
+  ): Promise<void> {
+    await this.podcasts.remove(id, adminId);
   }
 }
 
