@@ -12,7 +12,30 @@
 # ----------------------------------------------------------------------------
 # Stage 1 — Builder
 # ----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+# Use Debian slim (glibc) instead of Alpine (musl) because Taro 4.2's native
+# binding @tarojs/binding does not publish a linux-x64-musl variant — only
+# linux-x64-gnu. Alpine builds fail with "Cannot find module
+# '@tarojs/binding-linux-x64-musl'" at build time.
+FROM node:20-slim AS builder
+
+# Use Aliyun mirror for Debian packages (much faster from China mainland).
+RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources; \
+    elif [ -f /etc/apt/sources.list ]; then \
+        sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list; \
+    fi
+
+# Native build tools for bcrypt (server dependency compiled by node-gyp).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 make g++ openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Use npmmirror.com (China mainland) for npm / pnpm.
+ENV npm_config_registry=https://registry.npmmirror.com
+# Node.js headers mirror for node-gyp (used by bcrypt to compile its native
+# addon). The default unofficial-builds.nodejs.org is unreliable from China
+# mainland — point node-gyp at the npmmirror binary proxy instead.
+ENV NODEJS_ORG_MIRROR=https://registry.npmmirror.com/-/binary/node
 
 RUN npm install -g pnpm@10.33.0
 
@@ -28,6 +51,9 @@ COPY packages/shared/package.json packages/shared/
 RUN pnpm install --frozen-lockfile
 
 # Copy source for shared + mobile.
+# tsconfig.base.json is required because packages/shared/tsconfig.json
+# `extends` it — without it `tsc` fails with TS5083 in the shared build.
+COPY tsconfig.base.json ./
 COPY packages/shared/ packages/shared/
 COPY apps/mobile/ apps/mobile/
 

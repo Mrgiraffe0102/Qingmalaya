@@ -14,6 +14,21 @@
 # ----------------------------------------------------------------------------
 FROM node:20-alpine AS builder
 
+# Use Aliyun mirror for Alpine packages (much faster from China mainland).
+RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories
+
+# Native build tools are required because pnpm install pulls in server's
+# bcrypt dependency, which has no prebuilt binary for Alpine musl and must
+# be compiled from source by node-gyp.
+RUN apk add --no-cache python3 make g++ openssl
+
+# Use npmmirror.com (China mainland) for npm / pnpm.
+ENV npm_config_registry=https://registry.npmmirror.com
+# Node.js headers mirror for node-gyp (used by bcrypt to compile its native
+# addon). The default unofficial-builds.nodejs.org is unreliable from China
+# mainland — point node-gyp at the npmmirror binary proxy instead.
+ENV NODEJS_ORG_MIRROR=https://registry.npmmirror.com/-/binary/node
+
 RUN npm install -g pnpm@10.33.0
 
 WORKDIR /app
@@ -28,6 +43,9 @@ COPY packages/shared/package.json packages/shared/
 RUN pnpm install --frozen-lockfile
 
 # Copy source for shared + admin.
+# tsconfig.base.json is required because packages/shared/tsconfig.json
+# `extends` it — without it `tsc` fails with TS5083 in the shared build.
+COPY tsconfig.base.json ./
 COPY packages/shared/ packages/shared/
 COPY apps/admin/ apps/admin/
 

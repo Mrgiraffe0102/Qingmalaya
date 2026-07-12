@@ -33,7 +33,7 @@ Thumbs.db
 coverage/
 
 # Uploads (runtime user content)
-uploads/
+apps/server/uploads/
 
 # Agent state
 .trae/
