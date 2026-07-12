@@ -82,9 +82,14 @@ COPY --from=builder /app/apps/server/node_modules ./apps/server/node_modules
 COPY --from=builder /app/packages/shared ./packages/shared
 
 # Copy the compiled server, Prisma schema, and package.json (for npx).
+# tsconfig.json + tsconfig.base.json are needed for `npx ts-node prisma/seed.ts`
+# — without them ts-node can't resolve `module: "commonjs"` and falls back to
+# Node's ESM loader, which fails with ERR_UNKNOWN_FILE_EXTENSION for .ts files.
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 COPY --from=builder /app/apps/server/prisma ./apps/server/prisma
 COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
+COPY --from=builder /app/apps/server/tsconfig.json ./apps/server/tsconfig.json
+COPY --from=builder /app/tsconfig.base.json ./tsconfig.base.json
 
 WORKDIR /app/apps/server
 

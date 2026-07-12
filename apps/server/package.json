@@ -48,5 +48,13 @@
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true,
+    "esm": false,
+    "compilerOptions": {
+      "module": "commonjs"
+    }
   }
 }
