@@ -218,9 +218,9 @@ export class PodcastService {
   /**
    * Filtered, paginated list of published podcasts (GET /podcasts). Supports
    * sort, tag multi-select (OR semantics — podcasts matching any tag), classId,
-   * and keyword (title contains, case-insensitive in MySQL). When the caller is
-   * authenticated, each item is annotated with liked/favorited flags fetched in
-   * batch to avoid N+1 queries.
+   * and keyword (matches title, author name, or tag name, case-insensitive in
+   * MySQL). When the caller is authenticated, each item is annotated with
+   * liked/favorited flags fetched in batch to avoid N+1 queries.
    */
   async list(
     dto: ListPodcastDto,
@@ -238,7 +238,11 @@ export class PodcastService {
       where.classId = dto.classId;
     }
     if (dto.keyword) {
-      where.title = { contains: dto.keyword };
+      where.OR = [
+        { title: { contains: dto.keyword } },
+        { author: { name: { contains: dto.keyword } } },
+        { tags: { some: { tag: { name: { contains: dto.keyword } } } } },
+      ];
     }
 
     const [total, rows] = await Promise.all([
