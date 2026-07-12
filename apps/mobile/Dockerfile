@@ -50,6 +50,16 @@ COPY packages/shared/package.json packages/shared/
 
 RUN pnpm install --frozen-lockfile
 
+# Build-time API + static origin. Override via:
+#   docker build --build-arg API_BASE_URL=https://qhfzwjhx.cn/api \
+#                   --build-arg STATIC_ORIGIN=https://qhfzwjhx.cn .
+# or the `args:` block in docker-compose.yml. Defaults point at the local
+# server so `docker compose build mobile` keeps working out of the box.
+ARG API_BASE_URL=http://localhost:3000/api
+ARG STATIC_ORIGIN=http://localhost:3000
+ENV API_BASE_URL=$API_BASE_URL
+ENV STATIC_ORIGIN=$STATIC_ORIGIN
+
 # Copy source for shared + mobile.
 # tsconfig.base.json is required because packages/shared/tsconfig.json
 # `extends` it — without it `tsc` fails with TS5083 in the shared build.

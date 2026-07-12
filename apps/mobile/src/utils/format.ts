@@ -1,8 +1,7 @@
 /**
  * Pure formatting helpers shared across pages.
  */
-
-const STATIC_ORIGIN = 'http://localhost:3000'
+import { STATIC_ORIGIN } from '../config/env'
 
 /**
  * Resolve a backend-served cover path into a usable image URL.

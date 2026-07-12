@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { API_BASE_URL } from '../config/env'
 
 /**
  * Promise-based Taro.request wrapper.
@@ -12,8 +13,6 @@ import Taro from '@tarojs/taro'
  * - On other errors: surfaces a non-blocking toast so the user gets feedback.
  * - Returns the parsed response body directly (typed as T by the caller).
  */
-
-export const API_BASE_URL = 'http://localhost:3000/api'
 
 const TOKEN_STORAGE_KEY = 'token'
 const REFRESH_TOKEN_STORAGE_KEY = 'refreshToken'

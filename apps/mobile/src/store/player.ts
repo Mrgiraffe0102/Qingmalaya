@@ -10,8 +10,7 @@
  */
 import { create } from 'zustand'
 import type { PodcastWithRelations } from '@qingmalaya/shared'
-
-const STATIC_ORIGIN = 'http://localhost:3000'
+import { STATIC_ORIGIN } from '../config/env'
 
 /** Module-level audio element — set once by GlobalAudioPlayer on mount. */
 let audioEl: HTMLAudioElement | null = null

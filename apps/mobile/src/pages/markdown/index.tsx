@@ -7,9 +7,8 @@ import AppLayout from '../../components/AppLayout'
 import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { get } from '../../utils/request'
+import { STATIC_ORIGIN } from '../../config/env'
 import type { BannerWithMarkdown } from '@qingmalaya/shared'
-
-const STATIC_ORIGIN = 'http://localhost:3000'
 
 function handleBack(): void {
   Taro.navigateBack({

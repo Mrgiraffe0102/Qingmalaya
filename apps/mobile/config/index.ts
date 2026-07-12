@@ -31,7 +31,17 @@ export const baseConfig = {
   sourceRoot: 'src',
   outputRoot: 'dist',
   plugins: [],
-  defineConstants: {},
+  defineConstants: {
+    // Injected at build time so `src/config/env.ts` can read them. Override
+    // via API_BASE_URL / STATIC_ORIGIN env vars (or Dockerfile ARG) to point
+    // a production build at the real server. Defaults keep local dev working.
+    __API_BASE_URL__: JSON.stringify(
+      process.env.API_BASE_URL ?? 'http://localhost:3000/api'
+    ),
+    __STATIC_ORIGIN__: JSON.stringify(
+      process.env.STATIC_ORIGIN ?? 'http://localhost:3000'
+    )
+  },
   copy: { patterns: [], options: {} },
   framework: 'react',
   compiler: { type: 'webpack5', prebundle: { enable: false } },

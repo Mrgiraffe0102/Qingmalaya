@@ -7,9 +7,9 @@ import { useAuthRedirect } from '../../utils/route-guard'
 import { useAuthStore } from '../../store/auth'
 import { get, put } from '../../utils/request'
 import { coverUrl } from '../../utils/format'
+import { API_BASE_URL } from '../../config/env'
 import type { User, Class } from '@qingmalaya/shared'
 
-const API_BASE = 'http://localhost:3000/api'
 const IS_WEAPP = process.env.TARO_ENV === 'weapp'
 
 interface UploadResult {
@@ -22,7 +22,7 @@ async function uploadAvatarH5(file: File): Promise<UploadResult> {
   const formData = new FormData()
   formData.append('file', file)
   const token = Taro.getStorageSync('token')
-  const res = await fetch(`${API_BASE}/upload/cover`, {
+  const res = await fetch(`${API_BASE_URL}/upload/cover`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -38,7 +38,7 @@ function uploadAvatarWeapp(filePath: string): Promise<UploadResult> {
   const token = Taro.getStorageSync('token')
   return new Promise((resolve, reject) => {
     Taro.uploadFile({
-      url: `${API_BASE}/upload/cover`,
+      url: `${API_BASE_URL}/upload/cover`,
       filePath,
       name: 'file',
       header: { Authorization: `Bearer ${token}` },

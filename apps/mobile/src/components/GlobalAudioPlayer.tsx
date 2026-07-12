@@ -15,9 +15,9 @@
 import { useEffect } from 'react'
 import { usePlayerStore, setAudioEl, setSeeking, isSeeking } from '../store/player'
 import { post } from '../utils/request'
+import { STATIC_ORIGIN } from '../config/env'
 
 const REPORT_INTERVAL_MS = 5000
-const STATIC_ORIGIN = 'http://localhost:3000'
 
 export default function GlobalAudioPlayer() {
   useEffect(() => {

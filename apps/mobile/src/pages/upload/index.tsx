@@ -5,9 +5,9 @@ import { useAuthRedirect } from '../../utils/route-guard'
 import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
 import { get, post, put } from '../../utils/request'
 import { coverUrl, formatDuration } from '../../utils/format'
+import { API_BASE_URL } from '../../config/env'
 import type { Tag, PodcastWithRelations } from '@qingmalaya/shared'
 
-const API_BASE = 'http://localhost:3000/api'
 const IS_WEAPP = process.env.TARO_ENV === 'weapp'
 
 /** Upload response shape from POST /api/upload/{cover,audio}. */
@@ -33,7 +33,7 @@ function uploadFileH5(
     formData.append('file', file)
     const token = Taro.getStorageSync('token')
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', `${API_BASE}/upload/${type}`)
+    xhr.open('POST', `${API_BASE_URL}/upload/${type}`)
     xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     if (onProgress && xhr.upload) {
       xhr.upload.onprogress = (e) => {
@@ -74,7 +74,7 @@ function uploadFileWeapp(
   const token = Taro.getStorageSync('token')
   return new Promise((resolve, reject) => {
     const task = Taro.uploadFile({
-      url: `${API_BASE}/upload/${type}`,
+      url: `${API_BASE_URL}/upload/${type}`,
       filePath,
       name: 'file',
       header: { Authorization: `Bearer ${token}` },

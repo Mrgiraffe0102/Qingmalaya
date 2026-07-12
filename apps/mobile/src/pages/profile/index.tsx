@@ -6,6 +6,7 @@ import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { get } from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
+import { STATIC_ORIGIN } from '../../config/env'
 import type { User, Class } from '@qingmalaya/shared'
 
 /**
@@ -16,9 +17,8 @@ import type { User, Class } from '@qingmalaya/shared'
  * use emoji glyphs as lightweight icon stand-ins for the function list.
  */
 
-// Relative path of the static file server. Avatar URLs come back as something
-// like "uploads/2026/07/uuid.jpg" — prepended with /static/.
-const STATIC_BASE = 'http://localhost:3000/static/'
+// Avatar URLs come back as something like "uploads/2026/07/uuid.jpg" —
+// prepended with /static/ via STATIC_ORIGIN from config/env.
 
 /** Compact number formatter: 1000+ -> "1k", 10000+ -> "1w". */
 function formatCount(n: number): string {
@@ -103,7 +103,7 @@ export default function Profile() {
 
   const className =
     classes.find((c) => c.id === user.classId)?.name ?? '未分班'
-  const avatarUrl = user.avatar ? `${STATIC_BASE}${user.avatar}` : null
+  const avatarUrl = user.avatar ? `${STATIC_ORIGIN}/static/${user.avatar}` : null
   const initial = user.name ? user.name.charAt(0) : '?'
   const placeholderBg = `hsl(${avatarHue(user.id)} 40% 70%)`
 

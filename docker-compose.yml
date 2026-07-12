@@ -77,6 +77,11 @@ services:
     build:
       context: .
       dockerfile: apps/mobile/Dockerfile
+      args:
+        # Production: point at the real domain. Override locally by editing
+        # these or by passing `--build-arg API_BASE_URL=...` on the CLI.
+        API_BASE_URL: https://api.qhfzwjhx.cn/api
+        STATIC_ORIGIN: https://static.qhfzwjhx.cn
     container_name: qingmalaya-mobile
     restart: unless-stopped
     depends_on:
