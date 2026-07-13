@@ -17,6 +17,7 @@ import { del, get, post, put } from '@/utils/request';
 export interface AdminPodcastListParams {
   keyword?: string;
   status?: PodcastStatus;
+  classIds?: number[];
   page?: number;
   pageSize?: number;
 }
@@ -37,7 +38,13 @@ export interface AdminBatchResult {
 export function listAdminPodcasts(
   params: AdminPodcastListParams,
 ): Promise<Paginated<PodcastWithRelations>> {
-  return get<Paginated<PodcastWithRelations>>('/admin/podcasts', { params });
+  const { classIds, ...rest } = params;
+  return get<Paginated<PodcastWithRelations>>('/admin/podcasts', {
+    params: {
+      ...rest,
+      classIds: classIds && classIds.length > 0 ? classIds.join(',') : undefined,
+    },
+  });
 }
 
 /** GET /admin/podcasts/:id — detail with author + tags + commentCount. */

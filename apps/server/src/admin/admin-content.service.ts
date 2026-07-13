@@ -7,7 +7,7 @@ import type {
 } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { AdminPodcastListDto } from './dto/admin-podcast-list.dto';
+import { AdminPodcastListDto, parseClassIds } from './dto/admin-podcast-list.dto';
 import { AdminPodcastUpdateDto } from './dto/admin-podcast-update.dto';
 import { AdminPodcastBatchTakedownDto } from './dto/admin-podcast-batch-takedown.dto';
 import { AdminPodcastBatchPublishDto } from './dto/admin-podcast-batch-publish.dto';
@@ -186,6 +186,10 @@ export class AdminPodcastsService {
     }
     if (dto.status) {
       where.status = dto.status as PodcastStatus;
+    }
+    const classIds = parseClassIds(dto.classIds);
+    if (classIds) {
+      where.classId = { in: classIds };
     }
 
     const [total, rows] = await Promise.all([
@@ -635,6 +639,10 @@ export class AdminCommentsService {
     }
     if (dto.keyword) {
       where.content = { contains: dto.keyword };
+    }
+    const classIds = parseClassIds(dto.classIds);
+    if (classIds) {
+      where.podcast = { classId: { in: classIds } };
     }
     if (dto.startDate || dto.endDate) {
       where.createdAt = {};

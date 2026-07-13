@@ -12,6 +12,7 @@ import {
   ModalForm,
   ProFormDependency,
   ProFormSelect,
+  ProFormSwitch,
   ProFormText,
   ProTable,
   type ActionType,
@@ -26,13 +27,16 @@ import {
   batchDeleteUsers,
   createUser,
   deleteUser,
+  getUserManagedClasses,
   listAdminUsers,
   resetUserPassword,
   unbanUser,
+  updateUserManagedClasses,
   type AdminUserListItem,
   type CreateUserPayload,
 } from '@/api/users';
 import { listAdminClasses, type AdminClassListItem } from '@/api/classes';
+import { useClassScope } from '@/store/class-scope';
 
 /** Role → Chinese label map for the table column + tag color. */
 const ROLE_LABEL: Record<Role, { text: string; color: string }> = {
@@ -51,11 +55,14 @@ const STATUS_LABEL: Record<UserStatus, { text: string; color: string }> = {
 const UsersPage: React.FC = () => {
   const actionRef = useRef<ActionType>();
   const { message } = AntdApp.useApp();
+  const { classIds, scopeVersion } = useClassScope();
   const [classes, setClasses] = useState<AdminClassListItem[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignTeacher, setAssignTeacher] = useState<AdminUserListItem | null>(null);
 
-  // Load class options once for the classId search filter.
+  // Load class options once for the classId search filter + teacher assignment.
   useEffect(() => {
     let cancelled = false;
     listAdminClasses()
@@ -69,6 +76,17 @@ const UsersPage: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  // Reload the table whenever the teacher's class scope changes.
+  useEffect(() => {
+    actionRef.current?.reload();
+  }, [scopeVersion]);
+
+  /** Open the managed-classes assignment modal for a teacher row. */
+  const handleAssignClasses = (record: AdminUserListItem) => {
+    setAssignTeacher(record);
+    setAssignOpen(true);
+  };
 
   /** Confirm-then-ban a user, reloading the table on success. */
   const handleBan = (record: AdminUserListItem) => {
@@ -263,11 +281,20 @@ const UsersPage: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 240,
+      width: 320,
       fixed: 'right',
       hideInSearch: true,
       render: (_: unknown, record: AdminUserListItem) => (
         <Space size="small">
+          {record.role === 'TEACHER' && (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleAssignClasses(record)}
+            >
+              分配班级
+            </Button>
+          )}
           {record.status === 'ACTIVE' ? (
             <Button
               type="link"
@@ -354,6 +381,9 @@ const UsersPage: React.FC = () => {
               classId: classId !== undefined && classId !== null
                 ? Number(classId)
                 : undefined,
+              classIds,
+              // Admins (OPERATOR/SUPER_ADMIN) are managed in /admins, not here.
+              roles: 'STUDENT,TEACHER',
             });
             return {
               data: res.items,
@@ -372,7 +402,7 @@ const UsersPage: React.FC = () => {
         open={createOpen}
         onOpenChange={setCreateOpen}
         modalProps={{ destroyOnClose: true }}
-        initialValues={{ role: 'STUDENT' }}
+        initialValues={{ role: 'STUDENT', manageAllClasses: false }}
         onFinish={async (values) => {
           try {
             await createUser(values);
@@ -423,6 +453,88 @@ const UsersPage: React.FC = () => {
                 label="班级"
                 placeholder="选择班级（可选）"
                 allowClear
+                options={classes.map((c) => ({ label: c.name, value: c.id }))}
+              />
+            ) : role === 'TEACHER' ? (
+              <>
+                <ProFormSwitch
+                  name="manageAllClasses"
+                  label="管理所有班级"
+                  fieldProps={{ defaultChecked: false }}
+                />
+                <ProFormDependency name={['manageAllClasses']}>
+                  {({ manageAllClasses }) =>
+                    !manageAllClasses ? (
+                      <ProFormSelect
+                        name="managedClassIds"
+                        label="管理班级"
+                        mode="multiple"
+                        placeholder="选择该教师管理的班级"
+                        options={classes.map((c) => ({
+                          label: c.name,
+                          value: c.id,
+                        }))}
+                      />
+                    ) : null
+                  }
+                </ProFormDependency>
+              </>
+            ) : null
+          }
+        </ProFormDependency>
+      </ModalForm>
+
+      <ModalForm<{
+        manageAllClasses: boolean;
+        classIds: number[];
+      }>
+        title={`分配班级 - ${assignTeacher?.name ?? ''}（${assignTeacher?.studentId ?? ''}）`}
+        open={assignOpen}
+        onOpenChange={(open) => {
+          setAssignOpen(open);
+          if (!open) setAssignTeacher(null);
+        }}
+        modalProps={{ destroyOnClose: true }}
+        initialValues={{ manageAllClasses: false, classIds: [] }}
+        request={async () => {
+          if (!assignTeacher) return { manageAllClasses: false, classIds: [] };
+          try {
+            const res = await getUserManagedClasses(assignTeacher.id);
+            return {
+              manageAllClasses: res.manageAllClasses,
+              classIds: res.classes.map((c) => c.id),
+            };
+          } catch {
+            return { manageAllClasses: false, classIds: [] };
+          }
+        }}
+        onFinish={async (values) => {
+          if (!assignTeacher) return false;
+          try {
+            await updateUserManagedClasses(assignTeacher.id, {
+              classIds: values.classIds ?? [],
+              manageAllClasses: values.manageAllClasses ?? false,
+            });
+            message.success('已更新班级分配');
+            setAssignOpen(false);
+            setAssignTeacher(null);
+            actionRef.current?.reload();
+            return true;
+          } catch (e) {
+            message.error((e as Error).message || '更新失败');
+            return false;
+          }
+        }}
+      >
+        <ProFormSwitch name="manageAllClasses" label="管理所有班级" />
+        <ProFormDependency name={['manageAllClasses']}>
+          {({ manageAllClasses }) =>
+            !manageAllClasses ? (
+              <ProFormSelect
+                name="classIds"
+                label="管理班级"
+                mode="multiple"
+                placeholder="选择该教师管理的班级"
                 options={classes.map((c) => ({ label: c.name, value: c.id }))}
               />
             ) : null

@@ -3,8 +3,13 @@
  * instance (baseURL = '/api'), so '/admin/users' hits '/api/admin/users'.
  * NestJS returns raw payloads (no { code, message, data } envelope).
  */
-import type { Paginated, Role, UserStatus } from '@qingmalaya/shared';
+import type { ManagedClassesResponse, Paginated, Role, UserStatus } from '@qingmalaya/shared';
 import { del, get, put, post } from '@/utils/request';
+
+/** Serialize a number[] to a comma-separated string for query params. */
+function joinClassIds(classIds?: number[]): string | undefined {
+  return classIds && classIds.length > 0 ? classIds.join(',') : undefined;
+}
 
 /** User row projected by GET /admin/users (extends shared User with admin extras). */
 export interface AdminUserListItem {
@@ -29,6 +34,8 @@ export interface AdminUserListItem {
 export interface AdminUsersListParams {
   keyword?: string;
   classId?: number;
+  classIds?: number[];
+  roles?: string;
   page?: number;
   pageSize?: number;
 }
@@ -39,6 +46,8 @@ export interface CreateUserPayload {
   password: string;
   role: 'STUDENT' | 'TEACHER';
   classId?: number;
+  managedClassIds?: number[];
+  manageAllClasses?: boolean;
 }
 
 export interface ResetPasswordResult {
@@ -49,7 +58,10 @@ export interface ResetPasswordResult {
 export function listAdminUsers(
   params: AdminUsersListParams,
 ): Promise<Paginated<AdminUserListItem>> {
-  return get<Paginated<AdminUserListItem>>('/admin/users', { params });
+  const { classIds, ...rest } = params;
+  return get<Paginated<AdminUserListItem>>('/admin/users', {
+    params: { ...rest, classIds: joinClassIds(classIds) },
+  });
 }
 
 /** POST /admin/users — create a new STUDENT or TEACHER account. */
@@ -88,4 +100,27 @@ export function batchDeleteUsers(
   ids: number[],
 ): Promise<BatchDeleteUsersResult> {
   return post<BatchDeleteUsersResult>('/admin/users/batch-delete', { ids });
+}
+
+/** GET /admin/me/managed-classes — current user's managed classes (teachers). */
+export function getManagedClasses(): Promise<ManagedClassesResponse> {
+  return get<ManagedClassesResponse>('/admin/me/managed-classes');
+}
+
+/** GET /admin/users/:id/managed-classes — a specific teacher's managed classes. */
+export function getUserManagedClasses(
+  userId: number,
+): Promise<ManagedClassesResponse> {
+  return get<ManagedClassesResponse>(`/admin/users/${userId}/managed-classes`);
+}
+
+/** PUT /admin/users/:id/managed-classes — set a teacher's managed classes. */
+export function updateUserManagedClasses(
+  userId: number,
+  payload: { classIds: number[]; manageAllClasses: boolean },
+): Promise<ManagedClassesResponse> {
+  return put<ManagedClassesResponse>(
+    `/admin/users/${userId}/managed-classes`,
+    payload,
+  );
 }

@@ -21,11 +21,9 @@ const STATUS_OPTIONS = ['PENDING', 'PUBLISHED', 'TAKEN_DOWN'] as const;
  * - `keyword` matches Podcast.title (contains, case-insensitive under MySQL's
  *   default collation).
  * - `status` filters by the PodcastStatus enum (PENDING/PUBLISHED/TAKEN_DOWN).
+ * - `classIds` is a comma-separated list of class IDs (e.g. "1,2,3") used by
+ *   the teacher class-scope dropdown to filter podcasts by class.
  * - `page` / `pageSize` are 1-indexed, pageSize clamped to [1, 100].
- *
- * The `!` definite-assignment assertions follow the NestJS DTO convention
- * (properties are populated by ValidationPipe's transform step, not via a
- * constructor).
  */
 export class AdminPodcastListDto {
   @IsString()
@@ -36,6 +34,10 @@ export class AdminPodcastListDto {
   @IsIn([...STATUS_OPTIONS])
   @IsOptional()
   status?: string;
+
+  @IsString()
+  @IsOptional()
+  classIds?: string;
 
   @IsInt()
   @Min(1)
@@ -49,4 +51,16 @@ export class AdminPodcastListDto {
   @IsOptional()
   @Type(() => Number)
   pageSize?: number = 20;
+}
+
+/** Parse a comma-separated classIds string ("1,2,3") into number[] | undefined. */
+export function parseClassIds(raw: string | undefined): number[] | undefined {
+  if (!raw) return undefined;
+  const ids = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map(Number)
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return ids.length > 0 ? ids : undefined;
 }

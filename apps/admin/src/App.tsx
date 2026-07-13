@@ -22,6 +22,7 @@ import SettingsPage from '@/pages/Settings';
 import LogsPage from '@/pages/Logs';
 import SuperLogsPage from '@/pages/SuperLogs';
 import { isAuthenticated } from '@/store/auth';
+import { ClassScopeProvider } from '@/store/class-scope';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated()) {
@@ -39,7 +40,9 @@ const App: React.FC = () => {
           path="/"
           element={
             <ProtectedRoute>
-              <AdminLayout />
+              <ClassScopeProvider>
+                <AdminLayout />
+              </ClassScopeProvider>
             </ProtectedRoute>
           }
         >

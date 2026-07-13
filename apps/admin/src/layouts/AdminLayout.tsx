@@ -12,7 +12,7 @@
 import React, { useMemo } from 'react';
 import { ProLayout } from '@ant-design/pro-components';
 import type { MenuDataItem } from '@ant-design/pro-components';
-import { Dropdown, Space, Typography, App as AntdApp, type MenuProps } from 'antd';
+import { Dropdown, Select, Space, Typography, App as AntdApp, type MenuProps } from 'antd';
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearToken, getRole, getUser } from '@/store/auth';
+import { useClassScope } from '@/store/class-scope';
 import { Role } from '@qingmalaya/shared';
 
 const { Text } = Typography;
@@ -136,6 +137,7 @@ const AdminLayout: React.FC = () => {
 
   const role = getRole();
   const user = getUser();
+  const { isTeacher, scope, setScope, loading: scopeLoading } = useClassScope();
 
   const filteredMenu = useMemo(() => filterMenuByRole(menuData, role), [role]);
 
@@ -193,6 +195,24 @@ const AdminLayout: React.FC = () => {
       menuItemRender={(item, defaultDom) => {
         if (!item.path) return defaultDom;
         return <Link to={item.path}>{defaultDom}</Link>;
+      }}
+      actionsRender={() => {
+        if (!isTeacher) return [];
+        return [
+          <Select
+            key="class-scope"
+            value={scope}
+            onChange={setScope}
+            loading={scopeLoading}
+            disabled={scopeLoading}
+            style={{ width: 120, height: 32 }}
+            popupMatchSelectWidth={120}
+            options={[
+              { value: 'my', label: '我的班级' },
+              { value: 'all', label: '看全校' },
+            ]}
+          />,
+        ];
       }}
       avatarProps={{
         icon: <UserOutlined />,

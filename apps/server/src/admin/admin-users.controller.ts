@@ -25,6 +25,7 @@ import {
 } from './dto/admin-classes.dto';
 import { AdminUserCreateDto } from './dto/admin-user-create.dto';
 import { AdminUserBatchDeleteDto } from './dto/admin-user-batch-delete.dto';
+import { SetManagedClassesDto } from './dto/managed-classes.dto';
 
 /**
  * Admin user management endpoints (Task 26). All routes require
@@ -51,6 +52,8 @@ export class AdminUsersController {
     return this.users.list({
       keyword: query.keyword,
       classId: query.classId,
+      classIds: query.classIds,
+      roles: query.roles,
       page: query.page ?? 1,
       pageSize: query.pageSize ?? 20,
     });
@@ -71,6 +74,29 @@ export class AdminUsersController {
     @CurrentUser('id') adminId: number,
   ) {
     return this.users.batchRemove(dto, adminId);
+  }
+
+  /**
+   * GET /admin/users/:id/managed-classes — get a teacher's managed classes.
+   * Returns { manageAllClasses: false, classes: [] } for non-teachers.
+   */
+  @Get(':id/managed-classes')
+  getManagedClasses(@Param('id', ParseIntPipe) id: number) {
+    return this.users.getManagedClasses(id);
+  }
+
+  /**
+   * PUT /admin/users/:id/managed-classes — set a teacher's managed classes.
+   * Body: { classIds: number[], manageAllClasses: boolean }. Only valid for
+   * TEACHER users (throws 400 otherwise).
+   */
+  @Put(':id/managed-classes')
+  setManagedClasses(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetManagedClassesDto,
+    @CurrentUser('id') adminId: number,
+  ) {
+    return this.users.setManagedClasses(id, dto.classIds, dto.manageAllClasses, adminId);
   }
 
   @Put(':id/ban')

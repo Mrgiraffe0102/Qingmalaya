@@ -31,6 +31,7 @@ export interface AdminCommentListParams {
   podcastId?: number;
   userId?: number;
   keyword?: string;
+  classIds?: number[];
   startDate?: string;
   endDate?: string;
   page?: number;
@@ -46,7 +47,13 @@ export interface AdminBatchResult {
 export function listAdminComments(
   params: AdminCommentListParams,
 ): Promise<Paginated<AdminCommentListItem>> {
-  return get<Paginated<AdminCommentListItem>>('/admin/comments', { params });
+  const { classIds, ...rest } = params;
+  return get<Paginated<AdminCommentListItem>>('/admin/comments', {
+    params: {
+      ...rest,
+      classIds: classIds && classIds.length > 0 ? classIds.join(',') : undefined,
+    },
+  });
 }
 
 /** DELETE /admin/comments/:id — delete single comment. */

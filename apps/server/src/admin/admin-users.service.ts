@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import type { Class, Paginated, User } from '@qingmalaya/shared';
+import type { Class, ManagedClassesResponse, Paginated, User } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AdminCreateClassDto,
@@ -15,6 +15,7 @@ import {
 } from './dto/admin-classes.dto';
 import { AdminUserCreateDto } from './dto/admin-user-create.dto';
 import { AdminUserBatchDeleteDto } from './dto/admin-user-batch-delete.dto';
+import { parseClassIds } from './dto/admin-podcast-list.dto';
 
 /**
  * User row projected for the admin list view. Extends the shared `User`
@@ -64,6 +65,7 @@ const ADMIN_USER_SELECT = {
   status: true,
   firstLogin: true,
   mustChangePassword: true,
+  manageAllClasses: true,
   createdAt: true,
   updatedAt: true,
   class: { select: { name: true } },
@@ -92,6 +94,7 @@ function toAdminUserListItem(row: AdminUserRow): AdminUserListItem {
     status: row.status,
     firstLogin: row.firstLogin,
     mustChangePassword: row.mustChangePassword,
+    manageAllClasses: row.manageAllClasses,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     className: row.class?.name ?? null,
@@ -139,16 +142,21 @@ export class AdminUsersService {
 
   /**
    * Paginated user list. `keyword` matches studentId OR name (contains);
-   * `classId` filters by class membership. Each item carries the user's class
-   * name and podcast count. passwordHash is never selected.
+   * `classId` filters by class membership; `classIds` (comma-separated string)
+   * filters by multiple classes (teacher scope dropdown); `roles` (comma-
+   * separated string) restricts to a set of Role enum values. Each item
+   * carries the user's class name and podcast count. passwordHash is never
+   * selected.
    */
   async list(params: {
     keyword?: string;
     classId?: number;
+    classIds?: string;
+    roles?: string;
     page: number;
     pageSize: number;
   }): Promise<Paginated<AdminUserListItem>> {
-    const { keyword, classId, page, pageSize } = params;
+    const { keyword, classId, classIds, roles, page, pageSize } = params;
 
     const where: Prisma.UserWhereInput = {};
     if (keyword) {
@@ -159,6 +167,20 @@ export class AdminUsersService {
     }
     if (classId) {
       where.classId = classId;
+    } else {
+      const parsedClassIds = parseClassIds(classIds);
+      if (parsedClassIds) {
+        where.classId = { in: parsedClassIds };
+      }
+    }
+    if (roles) {
+      const parsedRoles = roles
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0) as Role[];
+      if (parsedRoles.length > 0) {
+        where.role = { in: parsedRoles };
+      }
     }
 
     const [total, rows] = await Promise.all([
@@ -185,7 +207,9 @@ export class AdminUsersService {
   /**
    * Create a new STUDENT or TEACHER account. Checks for a duplicate studentId,
    * validates the classId (when provided), hashes the password with bcrypt, and
-   * forces mustChangePassword=true. Writes an AdminLog entry tagged create_user.
+   * forces mustChangePassword=true. For TEACHER accounts, also creates
+   * TeacherClass rows from `managedClassIds` (when `manageAllClasses` is false)
+   * and sets `manageAllClasses` on the user. Writes an AdminLog entry.
    */
   async create(dto: AdminUserCreateDto, adminId: number): Promise<AdminUserListItem> {
     const existing = await this.prisma.user.findUnique({
@@ -206,6 +230,19 @@ export class AdminUsersService {
       }
     }
 
+    const manageAllClasses = dto.role === 'TEACHER' ? (dto.manageAllClasses ?? false) : false;
+    const managedClassIds = dto.role === 'TEACHER' && !manageAllClasses ? (dto.managedClassIds ?? []) : [];
+
+    if (managedClassIds.length > 0) {
+      const validClasses = await this.prisma.class.findMany({
+        where: { id: { in: managedClassIds } },
+        select: { id: true },
+      });
+      if (validClasses.length !== managedClassIds.length) {
+        throw new BadRequestException('部分班级不存在');
+      }
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, AdminUsersService.BCRYPT_COST);
     const created = await this.prisma.user.create({
       data: {
@@ -217,9 +254,19 @@ export class AdminUsersService {
         status: 'ACTIVE',
         mustChangePassword: true,
         firstLogin: true,
+        manageAllClasses,
       },
       select: ADMIN_USER_SELECT,
     });
+
+    if (managedClassIds.length > 0) {
+      await this.prisma.teacherClass.createMany({
+        data: managedClassIds.map((classId) => ({
+          teacherId: created.id,
+          classId,
+        })),
+      });
+    }
 
     await this.prisma.adminLog.create({
       data: {
@@ -227,7 +274,14 @@ export class AdminUsersService {
         action: 'create_user',
         targetType: 'User',
         targetId: created.id,
-        detail: { studentId: dto.studentId, name: dto.name, role: dto.role, classId: dto.classId ?? null },
+        detail: {
+          studentId: dto.studentId,
+          name: dto.name,
+          role: dto.role,
+          classId: dto.classId ?? null,
+          manageAllClasses,
+          managedClassIds,
+        },
       },
     });
 
@@ -500,6 +554,105 @@ export class AdminUsersService {
     });
 
     return { success: true, count: deletable.length, skipped };
+  }
+
+  /**
+   * Get a user's managed classes (GET /admin/users/:id/managed-classes or
+   * GET /admin/me/managed-classes). For non-TEACHER users, returns empty.
+   * For teachers with manageAllClasses=true, returns an empty class list
+   * (the frontend interprets manageAllClasses to skip filtering).
+   */
+  async getManagedClasses(userId: number): Promise<ManagedClassesResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, manageAllClasses: true },
+    });
+    if (!user) {
+      throw new NotFoundException(`用户 ${userId} 不存在`);
+    }
+    if (user.role !== 'TEACHER') {
+      return { manageAllClasses: false, classes: [] };
+    }
+    if (user.manageAllClasses) {
+      return { manageAllClasses: true, classes: [] };
+    }
+    const rows = await this.prisma.teacherClass.findMany({
+      where: { teacherId: userId },
+      select: { class: { select: { id: true, name: true } } },
+      orderBy: { classId: 'asc' },
+    });
+    return {
+      manageAllClasses: false,
+      classes: rows.map((r) => r.class),
+    };
+  }
+
+  /**
+   * Set a teacher's managed classes (PUT /admin/users/:id/managed-classes).
+   * Only valid for TEACHER users — throws BadRequestException otherwise.
+   * Validates that all classIds exist, then atomically replaces the
+   * TeacherClass rows and updates User.manageAllClasses. Writes an AdminLog.
+   */
+  async setManagedClasses(
+    userId: number,
+    classIds: number[],
+    manageAllClasses: boolean,
+    adminId: number,
+  ): Promise<ManagedClassesResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, studentId: true, name: true },
+    });
+    if (!user) {
+      throw new NotFoundException(`用户 ${userId} 不存在`);
+    }
+    if (user.role !== 'TEACHER') {
+      throw new BadRequestException('仅教师角色可分配班级');
+    }
+
+    const effectiveClassIds = manageAllClasses ? [] : classIds;
+    if (effectiveClassIds.length > 0) {
+      const validClasses = await this.prisma.class.findMany({
+        where: { id: { in: effectiveClassIds } },
+        select: { id: true },
+      });
+      if (validClasses.length !== effectiveClassIds.length) {
+        throw new BadRequestException('部分班级不存在');
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.teacherClass.deleteMany({ where: { teacherId: userId } });
+      if (effectiveClassIds.length > 0) {
+        await tx.teacherClass.createMany({
+          data: effectiveClassIds.map((classId) => ({
+            teacherId: userId,
+            classId,
+          })),
+        });
+      }
+      await tx.user.update({
+        where: { id: userId },
+        data: { manageAllClasses },
+      });
+    });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'set_managed_classes',
+        targetType: 'User',
+        targetId: userId,
+        detail: {
+          studentId: user.studentId,
+          name: user.name,
+          manageAllClasses,
+          classIds: effectiveClassIds,
+        },
+      },
+    });
+
+    return this.getManagedClasses(userId);
   }
 }
 

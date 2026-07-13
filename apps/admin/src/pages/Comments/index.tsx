@@ -6,7 +6,7 @@
  * ones too). Soft-hidden comments (status=HIDDEN, content cleared) render as
  * "[已删除]" in the content column.
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ProTable,
   type ActionType,
@@ -27,6 +27,7 @@ import {
   listAdminComments,
   type AdminCommentListItem,
 } from '@/api/comments';
+import { useClassScope } from '@/store/class-scope';
 
 const { Text } = Typography;
 
@@ -44,7 +45,13 @@ const renderContent = (row: AdminCommentListItem): React.ReactNode => {
 const CommentsPage: React.FC = () => {
   const actionRef = useRef<ActionType>();
   const { message } = AntdApp.useApp();
+  const { classIds, scopeVersion } = useClassScope();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+  // Reload the table whenever the teacher's class scope changes.
+  useEffect(() => {
+    actionRef.current?.reload();
+  }, [scopeVersion]);
 
   // --- Delete single ---
   const handleDelete = async (id: number): Promise<void> => {
@@ -182,6 +189,7 @@ const CommentsPage: React.FC = () => {
           const res = await listAdminComments({
             keyword: (params.keyword as string | undefined) || undefined,
             podcastId: params.podcastId ? Number(params.podcastId) : undefined,
+            classIds,
             startDate: params.startDate as string | undefined,
             endDate: params.endDate as string | undefined,
             page: params.current,

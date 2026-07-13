@@ -59,6 +59,7 @@ import {
   listAdminComments,
   type AdminCommentListItem,
 } from '@/api/comments';
+import { useClassScope } from '@/store/class-scope';
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -100,6 +101,7 @@ const PodcastsPage: React.FC = () => {
   const actionRef = useRef<ActionType>();
   const formRef = useRef<ProFormInstance>();
   const { message } = AntdApp.useApp();
+  const { classIds, scopeVersion } = useClassScope();
 
   // Allow deep-linking with a preset status filter (e.g. from the Dashboard
   // "待审核播客" card → /podcasts?status=PENDING). The value seeds the search
@@ -134,6 +136,11 @@ const PodcastsPage: React.FC = () => {
       .then(setTags)
       .catch(() => undefined);
   }, []);
+
+  // Reload the table whenever the teacher's class scope changes.
+  useEffect(() => {
+    actionRef.current?.reload();
+  }, [scopeVersion]);
 
   // --- Detail drawer ---
   const handleViewDetail = async (row: PodcastWithRelations): Promise<void> => {
@@ -451,6 +458,7 @@ const PodcastsPage: React.FC = () => {
             const res = await listAdminPodcasts({
               keyword: (params.keyword as string | undefined) || undefined,
               status: params.status as PodcastWithRelations['status'] | undefined,
+              classIds,
               page: params.current,
               pageSize: params.pageSize,
             });

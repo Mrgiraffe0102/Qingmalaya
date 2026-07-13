@@ -109,6 +109,7 @@ model User {
   status             UserStatus @default(ACTIVE)
   firstLogin         Boolean    @default(true)
   mustChangePassword Boolean    @default(true)
+  manageAllClasses   Boolean    @default(false)
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -122,6 +123,7 @@ model User {
   activityLogs  UserActivityLog[]
   notifications         Notification[] @relation("NotificationRecipient")
   triggeredNotifications Notification[] @relation("NotificationActor")
+  teacherClasses TeacherClass[]
 
   @@index([classId])
   @@index([role])
@@ -133,8 +135,20 @@ model Class {
   grade      String?
   createdAt  DateTime @default(now())
 
-  users    User[]
-  podcasts Podcast[]
+  users         User[]
+  podcasts      Podcast[]
+  teacherClasses TeacherClass[]
+}
+
+model TeacherClass {
+  teacherId Int
+  classId   Int
+
+  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, classId])
+  @@index([classId])
 }
 
 model Podcast {

@@ -17,6 +17,8 @@ import {
  * - `podcastId` filters by the commented podcast.
  * - `userId` filters by the comment author.
  * - `keyword` matches Comment.content (contains, case-insensitive).
+ * - `classIds` is a comma-separated list of class IDs — filters comments to
+ *   those on podcasts belonging to the given classes (teacher scope dropdown).
  * - `startDate` / `endDate` are ISO date strings (YYYY-MM-DD or full ISO);
  *   both bounds are inclusive and applied against Comment.createdAt.
  * - `page` / `pageSize` are 1-indexed, pageSize clamped to [1, 100].
@@ -42,6 +44,10 @@ export class AdminCommentListDto {
   @MaxLength(200)
   @IsOptional()
   keyword?: string;
+
+  @IsString()
+  @IsOptional()
+  classIds?: string;
 
   @IsString()
   @IsOptional()

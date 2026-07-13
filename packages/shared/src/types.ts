@@ -51,8 +51,21 @@ export interface User {
   status: UserStatus;
   firstLogin: boolean;
   mustChangePassword: boolean;
+  manageAllClasses: boolean;
   createdAt: ISODateString;
   updatedAt: ISODateString;
+}
+
+/** A class managed by a teacher (id + name projection). */
+export interface ManagedClass {
+  id: number;
+  name: string;
+}
+
+/** Response shape for GET /admin/me/managed-classes. */
+export interface ManagedClassesResponse {
+  manageAllClasses: boolean;
+  classes: ManagedClass[];
 }
 
 /** Lightweight user reference embedded in other entities. */

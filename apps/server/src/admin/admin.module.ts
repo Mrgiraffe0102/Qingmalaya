@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminAuthController } from './admin-auth.controller';
 import { AdminAuthService } from './admin-auth.service';
+import { AdminMeController } from './admin-me.controller';
 import { AdminDashboardController } from './admin-dashboard.controller';
 import { AdminDashboardService } from './admin-dashboard.service';
 import { AdminUsersController, AdminClassesController } from './admin-users.controller';
@@ -64,6 +65,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
   ],
   controllers: [
     AdminAuthController,
+    AdminMeController,
     AdminDashboardController,
     AdminUsersController,
     AdminClassesController,

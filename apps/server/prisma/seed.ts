@@ -133,7 +133,7 @@ async function main(): Promise<void> {
 
   // ----------------------------------------------------------------- Teacher
   console.log('[seed] Teacher (1)');
-  await prisma.user.upsert({
+  const teacher = await prisma.user.upsert({
     where: { studentId: 'T2024' },
     update: {
       name: '王老师',
@@ -143,6 +143,7 @@ async function main(): Promise<void> {
       status: UserStatus.ACTIVE,
       mustChangePassword: true,
       firstLogin: true,
+      manageAllClasses: false,
     },
     create: {
       studentId: 'T2024',
@@ -153,7 +154,18 @@ async function main(): Promise<void> {
       status: UserStatus.ACTIVE,
       mustChangePassword: true,
       firstLogin: true,
+      manageAllClasses: false,
     },
+  });
+
+  // Assign teacher to manage cs1 + cs2
+  console.log('[seed] Teacher class assignments (2)');
+  await prisma.teacherClass.deleteMany({ where: { teacherId: teacher.id } });
+  await prisma.teacherClass.createMany({
+    data: [
+      { teacherId: teacher.id, classId: cs1.id },
+      { teacherId: teacher.id, classId: cs2.id },
+    ],
   });
 
   // ---------------------------------------------------------------- Operator
