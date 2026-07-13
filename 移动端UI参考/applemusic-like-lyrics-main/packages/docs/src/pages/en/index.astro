@@ -1,0 +1,107 @@
+---
+import { Icon } from "@astrojs/starlight/components";
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { AMLLPreview } from "../../components/AMLLPreview";
+import "../../styles/index.css";
+import { amllCoreVersionLabel } from "../../utils/core-version";
+
+const entryLinks = [
+	{
+		title: "Component Quick Start",
+		description: "Bring word-by-word lyrics into your frontend project.",
+		href: "/en/guides/component/quickstart",
+		icon: "right-arrow",
+	},
+	{
+		title: "Lyric Processing",
+		description:
+			"Parse, generate, and convert formats including LRC, TTML, and more.",
+		href: "/en/guides/lyric/quickstart",
+		icon: "document",
+	},
+	{
+		title: "API Reference",
+		description:
+			"Look up types for Core, React, Vue, and lyric utility packages.",
+		href: "/en/reference",
+		icon: "information",
+	},
+	{
+		title: "Playground",
+		description: "Import audio and lyrics to tune rendering in real time.",
+		href: "/en/playground",
+		icon: "puzzle",
+	},
+] as const;
+
+const topicLinks = [
+	{ label: "Overview", href: "/en/guides/overview/intro" },
+	{ label: "Ecosystem", href: "/en/guides/overview/eco" },
+	{ label: "Contributing", href: "/en/contribute" },
+] as const;
+---
+
+<StarlightPage
+	frontmatter={({
+		title: "Apple Music-like Lyrics",
+		description: "A lyrics player component library built for the web",
+		template: "splash",
+	})}
+	lang="en"
+>
+	<div class="home-shell">
+		<section class="home-hero" aria-labelledby="home-title">
+			<div class="home-preview" aria-hidden="true">
+				<AMLLPreview client:only="react" />
+			</div>
+			<div class="home-hero-copy">
+				<p class="home-eyebrow">{amllCoreVersionLabel}</p>
+				<h1 id="home-title">Apple Music-like Lyrics</h1>
+				<p class="home-summary">
+					Apple Music style word-by-word lyric rendering for the web, from UI
+					components to framework bindings and lyric format tooling.
+				</p>
+				<div class="home-actions">
+					<a class="home-button home-button-primary" href="/en/guides">
+						Guides
+						<Icon name="right-arrow" />
+					</a>
+					<a class="home-button" href="/en/reference">
+						API Reference
+						<Icon name="information" />
+					</a>
+				</div>
+			</div>
+		</section>
+
+		<section class="home-entry" aria-labelledby="home-entry-title">
+			<div class="home-section-heading">
+				<p class="home-eyebrow">Explore</p>
+				<h2 id="home-entry-title">Ready to get started?</h2>
+			</div>
+			<div class="home-card-grid">
+				{entryLinks.map((link) => (
+						<a class="home-card" href={link.href}>
+							<span class="home-card-icon">
+								<Icon name={link.icon} />
+							</span>
+							<span class="home-card-copy">
+								<strong>{link.title}</strong>
+								<span>{link.description}</span>
+							</span>
+							<Icon name="right-arrow" class="home-card-arrow" />
+						</a>
+					))}
+			</div>
+		</section>
+
+		<nav class="home-topic-links" aria-label="More documentation links">
+			{topicLinks.map((link) => (
+					<a href={link.href}>
+						{link.label}
+						<Icon name="right-arrow" />
+					</a>
+				))}
+		</nav>
+	</div>
+</StarlightPage>

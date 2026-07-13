@@ -8,6 +8,7 @@ import { get, post, del } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
 import CommentDrawer from '../../components/CommentDrawer'
 import FluidBackground from '../../components/FluidBackground'
+import AMLLBackground from '../../components/AMLLBackground'
 import type { PodcastWithRelations, Class, TagColor } from '@qingmalaya/shared'
 
 /**
@@ -49,7 +50,7 @@ const GLASS_STYLE: CSSProperties = {
 const TEXT_GLASS: CSSProperties = {
   backdropFilter: 'blur(12px) saturate(1.1)',
   WebkitBackdropFilter: 'blur(12px) saturate(1.1)',
-  backgroundColor: 'rgba(255, 255, 255, 0.38)',
+  backgroundColor: 'rgba(255, 255, 255, 0.72)',
   borderRadius: '16px',
 }
 
@@ -384,7 +385,11 @@ export default function Playback() {
       className={`flex h-screen flex-col overflow-hidden ${animClass}`}
       style={{ willChange: 'transform', position: 'relative' }}
     >
-      <FluidBackground src={cover} />
+      {process.env.TARO_ENV === 'h5' ? (
+        <AMLLBackground src={cover} />
+      ) : (
+        <FluidBackground src={cover} />
+      )}
 
       {/* ---- Top bar ---- */}
       <View
@@ -392,16 +397,16 @@ export default function Playback() {
       >
         <View
           onClick={handleBack}
-          className='flex h-10 w-10 items-center justify-center rounded-full text-on-surface'
+          className='flex h-10 w-10 items-center justify-center rounded-full text-inverse-on-surface'
         >
           <Icon name='expand_more' style={{ fontSize: '22px' }} />
         </View>
-        <Text className='text-sm font-semibold tracking-wide text-on-surface'>
+        <Text className='text-sm font-semibold tracking-wide text-inverse-on-surface'>
           万卷回响
         </Text>
         <View
           onClick={handleShare}
-          className='flex h-10 w-10 items-center justify-center rounded-full text-on-surface'
+          className='flex h-10 w-10 items-center justify-center rounded-full text-inverse-on-surface'
         >
           <Icon name='share' style={{ fontSize: '20px' }} />
         </View>
@@ -447,7 +452,11 @@ export default function Playback() {
                   <View
                     key={tag.id}
                     className='rounded-full px-3 py-1'
-                    style={{ backgroundColor: c.bg }}
+                    style={{
+                      backgroundColor: c.bg,
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                    }}
                   >
                     <Text
                       className='text-xs font-medium'
@@ -535,7 +544,7 @@ export default function Playback() {
               right: 0,
               height: '4px',
               borderRadius: '2px',
-              backgroundColor: '#e3e2e2',
+              backgroundColor: 'rgba(255, 255, 255, 0.28)',
             }}
           />
           <View
@@ -544,7 +553,7 @@ export default function Playback() {
               left: 0,
               height: '4px',
               borderRadius: '2px',
-              backgroundColor: '#4d6265',
+              backgroundColor: '#ffffff',
               width: `${sliderValue}%`,
             }}
           />
@@ -555,17 +564,17 @@ export default function Playback() {
               width: '18px',
               height: '18px',
               borderRadius: '50%',
-              backgroundColor: '#4d6265',
+              backgroundColor: '#ffffff',
               transform: 'translateX(-50%)',
-              boxShadow: '0 0 4px rgba(0,0,0,0.2)',
+              boxShadow: '0 0 6px rgba(0,0,0,0.4)',
             }}
           />
         </View>
         <View className='flex justify-between px-1'>
-          <Text className='text-xs text-outline'>
+          <Text className='text-xs text-inverse-on-surface'>
             {formatDuration(position)}
           </Text>
-          <Text className='text-xs text-outline'>
+          <Text className='text-xs text-inverse-on-surface'>
             {formatDuration(effectiveDuration)}
           </Text>
         </View>
@@ -574,8 +583,8 @@ export default function Playback() {
         <View className='relative mt-3 flex items-center justify-center'>
           <View
             onClick={handleTogglePlay}
-            className='flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-primary shadow-lg active:scale-95'
-            style={{ transition: 'transform 0.15s' }}
+            className='flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full shadow-lg active:scale-95'
+            style={{ transition: 'transform 0.15s', backgroundColor: '#ffffff' }}
           >
             {isPlaying ? (
               <View
@@ -590,7 +599,7 @@ export default function Playback() {
                     width: '5px',
                     height: '22px',
                     borderRadius: '2px',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: '#1b1c1c',
                   }}
                 />
                 <View
@@ -598,7 +607,7 @@ export default function Playback() {
                     width: '5px',
                     height: '22px',
                     borderRadius: '2px',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: '#1b1c1c',
                   }}
                 />
               </View>
@@ -609,7 +618,7 @@ export default function Playback() {
                   height: 0,
                   borderTop: '11px solid transparent',
                   borderBottom: '11px solid transparent',
-                  borderLeft: '18px solid #ffffff',
+                  borderLeft: '18px solid #1b1c1c',
                   marginLeft: '4px',
                 }}
               />
@@ -618,8 +627,8 @@ export default function Playback() {
 
           <View
             onClick={handleSpeedCycle}
-            className='absolute right-0 flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-on-surface-variant'
-            style={{ border: '1px solid #c2c7c8' }}
+            className='absolute right-0 flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-inverse-on-surface'
+            style={{ border: '1px solid rgba(255, 255, 255, 0.5)' }}
           >
             <Text>{speedLabel}</Text>
           </View>
@@ -628,7 +637,7 @@ export default function Playback() {
 
       {/* ---- Bottom action bar: like / comment / favorite ---- */}
       <View
-        className='relative z-10 mx-auto flex w-full max-w-md flex-shrink-0 items-center justify-around border-t border-outline-variant/20 px-5 py-3'
+        className='relative z-10 mx-auto flex w-full max-w-md flex-shrink-0 items-center justify-around border-t border-white/15 px-5 py-3'
         style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))', maxWidth: isDesktop ? '672px' : undefined }}
       >
         {/* Like */}
@@ -644,12 +653,12 @@ export default function Playback() {
           >
             <Text
               className='text-2xl'
-              style={{ color: liked ? '#ba1a1a' : '#727879' }}
+              style={{ color: liked ? '#ff5252' : '#f2f0f0' }}
             >
               {liked ? '♥' : '♡'}
             </Text>
           </View>
-          <Text className='text-xs text-outline'>
+          <Text className='text-xs text-inverse-on-surface'>
             {formatCount(likeCount)}
           </Text>
         </View>
@@ -659,8 +668,8 @@ export default function Playback() {
           onClick={() => setDrawerOpen(true)}
           className='flex flex-col items-center gap-1'
         >
-          <Icon name='chat_bubble_outline' style={{ fontSize: '24px', color: '#727879' }} />
-          <Text className='text-xs text-outline'>
+          <Icon name='chat_bubble_outline' style={{ fontSize: '24px', color: '#f2f0f0' }} />
+          <Text className='text-xs text-inverse-on-surface'>
             {formatCount(commentCount)}
           </Text>
         </View>
@@ -672,11 +681,11 @@ export default function Playback() {
         >
           <Text
             className='text-2xl'
-            style={{ color: favorited ? '#4d6265' : '#727879' }}
+            style={{ color: favorited ? '#ffd54f' : '#f2f0f0' }}
           >
             {favorited ? '★' : '☆'}
           </Text>
-          <Text className='text-xs text-outline'>收藏</Text>
+          <Text className='text-xs text-inverse-on-surface'>收藏</Text>
         </View>
       </View>
 

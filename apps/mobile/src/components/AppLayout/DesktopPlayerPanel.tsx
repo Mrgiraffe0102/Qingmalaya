@@ -4,6 +4,7 @@ import { usePlayerStore, setSeeking } from '../../store/player'
 import { get, post, del } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
 import CommentDrawer from '../CommentDrawer'
+import AMLLBackground from '../AMLLBackground'
 import type { Class, TagColor } from '@qingmalaya/shared'
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2]
@@ -17,6 +18,14 @@ const TAG_COLORS: Record<TagColor, { text: string; bg: string }> = {
   teal: { text: '#0ca678', bg: 'rgba(12, 166, 120, 0.15)' },
   indigo: { text: '#4263eb', bg: 'rgba(66, 99, 235, 0.15)' },
   amber: { text: '#b8860b', bg: 'rgba(184, 134, 11, 0.15)' },
+}
+
+/** Frosted glass card for text over the AMLL background. */
+const TEXT_GLASS: CSSProperties = {
+  backdropFilter: 'blur(12px) saturate(1.1)',
+  WebkitBackdropFilter: 'blur(12px) saturate(1.1)',
+  backgroundColor: 'rgba(255, 255, 255, 0.72)',
+  borderRadius: '16px',
 }
 
 /**
@@ -233,8 +242,9 @@ export default function DesktopPlayerPanel() {
   }
 
   return (
-    <View className='flex h-full flex-col bg-surface'>
-      <ScrollView scrollY className='flex-1' style={{ minHeight: 0 }}>
+    <View className='flex h-full flex-col' style={{ position: 'relative' }}>
+      <AMLLBackground src={cover} />
+      <ScrollView scrollY className='relative z-10 flex-1' style={{ minHeight: 0 }}>
         <View className='mx-auto flex min-h-full max-w-md flex-col justify-center px-6 py-8'>
           {/* Cover */}
           <View className='flex items-center justify-center pb-6'>
@@ -243,12 +253,12 @@ export default function DesktopPlayerPanel() {
                 src={cover}
                 mode='aspectFill'
                 className='rounded-2xl shadow-2xl'
-                style={{ width: '240px', height: '240px' }}
+                style={{ width: '350px', height: '350px' }}
               />
             ) : (
               <View
                 className='flex items-center justify-center rounded-2xl bg-primary/15 shadow-2xl'
-                style={{ width: '240px', height: '240px' }}
+                style={{ width: '300px', height: '300px' }}
               >
                 <Text className='text-5xl font-bold text-on-primary-container'>
                   {(pod.title || '?').charAt(0)}
@@ -266,7 +276,11 @@ export default function DesktopPlayerPanel() {
                   <View
                     key={tag.id}
                     className='rounded-full px-3 py-1'
-                    style={{ backgroundColor: c.bg }}
+                    style={{
+                      backgroundColor: c.bg,
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                    }}
                   >
                     <Text className='text-xs font-medium' style={{ color: c.text }}>
                       #{tag.name}
@@ -277,51 +291,52 @@ export default function DesktopPlayerPanel() {
             </View>
           )}
 
-          {/* Title */}
-          <Text className='text-center text-xl font-bold leading-tight text-on-surface'>
-            {pod.title}
-          </Text>
-
-          {/* Author + class pill */}
-          <View className='mt-2 flex flex-wrap items-center justify-center gap-2'>
-            <Text className='text-sm text-on-surface-variant'>
-              {pod.author.name}
-            </Text>
-            {authorClass && (
-              <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-xs font-medium text-on-tertiary-container'>
-                {authorClass}
+          {/* Title + author + description — glass card for readability over AMLL bg */}
+          <View style={TEXT_GLASS} className='p-4'>
+            {/* Title + author + class — on the same line */}
+            <View className='flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1'>
+              <Text className='text-xl font-bold leading-tight text-on-surface'>
+                {pod.title}
               </Text>
-            )}
-            {pod.author.role === 'TEACHER' && (
-              <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-xs font-medium text-on-secondary-container'>
-                教师
+              <Text className='text-sm text-on-surface-variant'>
+                {pod.author.name}
               </Text>
-            )}
-          </View>
-
-          {/* Description */}
-          {pod.description && (
-            <View className='mt-4'>
-              <Text
-                className='block text-sm leading-relaxed text-on-surface-variant'
-                style={isLongDesc ? clampedDescStyle : undefined}
-              >
-                {pod.description}
-              </Text>
-              {isLongDesc && (
-                <View onClick={openDescModal} className='mt-1'>
-                  <Text className='text-xs font-semibold text-primary'>
-                    更多
-                  </Text>
-                </View>
+              {authorClass && (
+                <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-xs font-medium text-on-tertiary-container'>
+                  {authorClass}
+                </Text>
+              )}
+              {pod.author.role === 'TEACHER' && (
+                <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-xs font-medium text-on-secondary-container'>
+                  教师
+                </Text>
               )}
             </View>
-          )}
+
+            {/* Description */}
+            {pod.description && (
+              <View className='mt-3'>
+                <Text
+                  className='block text-sm leading-relaxed text-on-surface-variant'
+                  style={isLongDesc ? clampedDescStyle : undefined}
+                >
+                  {pod.description}
+                </Text>
+                {isLongDesc && (
+                  <View onClick={openDescModal} className='mt-1'>
+                    <Text className='text-xs font-semibold text-primary'>
+                      更多
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
       {/* Controls: progress + play/pause + speed */}
-      <View className='mx-auto w-full max-w-md flex-shrink-0 px-6 pb-3 pt-2'>
+      <View className='relative z-10 mx-auto w-full max-w-md flex-shrink-0 px-6 pb-3 pt-2'>
         {/* Progress bar */}
         <View
           ref={trackRef as any}
@@ -341,7 +356,7 @@ export default function DesktopPlayerPanel() {
               left: 0, right: 0,
               height: '4px',
               borderRadius: '2px',
-              backgroundColor: '#e3e2e2',
+              backgroundColor: 'rgba(255, 255, 255, 0.28)',
             }}
           />
           <View
@@ -350,7 +365,7 @@ export default function DesktopPlayerPanel() {
               left: 0,
               height: '4px',
               borderRadius: '2px',
-              backgroundColor: '#4d6265',
+              backgroundColor: '#ffffff',
               width: `${sliderValue}%`,
             }}
           />
@@ -361,17 +376,17 @@ export default function DesktopPlayerPanel() {
               width: '16px',
               height: '16px',
               borderRadius: '50%',
-              backgroundColor: '#4d6265',
+              backgroundColor: '#ffffff',
               transform: 'translateX(-50%)',
-              boxShadow: '0 0 4px rgba(0,0,0,0.2)',
+              boxShadow: '0 0 6px rgba(0,0,0,0.4)',
             }}
           />
         </View>
         <View className='flex justify-between px-1'>
-          <Text className='text-xs text-outline'>
+          <Text className='text-xs text-inverse-on-surface'>
             {formatDuration(position)}
           </Text>
-          <Text className='text-xs text-outline'>
+          <Text className='text-xs text-inverse-on-surface'>
             {formatDuration(effectiveDuration)}
           </Text>
         </View>
@@ -383,12 +398,12 @@ export default function DesktopPlayerPanel() {
             <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Text
                 className='material-symbols-outlined'
-                style={{ fontSize: '22px', lineHeight: '24px', color: liked ? '#ba1a1a' : '#727879' }}
+                style={{ fontSize: '22px', lineHeight: '24px', color: liked ? '#ff5252' : '#f2f0f0' }}
               >
                 {liked ? 'favorite' : 'favorite_border'}
               </Text>
             </View>
-            <Text className='text-xs text-outline'>
+            <Text className='text-xs text-inverse-on-surface'>
               {formatCount(likeCount)}
             </Text>
           </View>
@@ -401,12 +416,12 @@ export default function DesktopPlayerPanel() {
             <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Text
                 className='material-symbols-outlined'
-                style={{ fontSize: '22px', lineHeight: '24px', color: '#727879' }}
+                style={{ fontSize: '22px', lineHeight: '24px', color: '#f2f0f0' }}
               >
                 chat_bubble_outline
               </Text>
             </View>
-            <Text className='text-xs text-outline'>
+            <Text className='text-xs text-inverse-on-surface'>
               {formatCount(commentCount)}
             </Text>
           </View>
@@ -414,20 +429,20 @@ export default function DesktopPlayerPanel() {
           {/* Play/pause */}
           <View
             onClick={togglePlayPause}
-            className='flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary shadow-lg active:scale-95'
-            style={{ transition: 'transform 0.15s' }}
+            className='flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full shadow-lg active:scale-95'
+            style={{ transition: 'transform 0.15s', backgroundColor: '#ffffff' }}
           >
             {isPlaying ? (
               <View style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <View style={{ width: '4px', height: '18px', borderRadius: '2px', backgroundColor: '#fff' }} />
-                <View style={{ width: '4px', height: '18px', borderRadius: '2px', backgroundColor: '#fff' }} />
+                <View style={{ width: '4px', height: '18px', borderRadius: '2px', backgroundColor: '#1b1c1c' }} />
+                <View style={{ width: '4px', height: '18px', borderRadius: '2px', backgroundColor: '#1b1c1c' }} />
               </View>
             ) : (
               <View style={{
                 width: 0, height: 0,
                 borderTop: '9px solid transparent',
                 borderBottom: '9px solid transparent',
-                borderLeft: '14px solid #fff',
+                borderLeft: '14px solid #1b1c1c',
                 marginLeft: '3px',
               }} />
             )}
@@ -438,19 +453,19 @@ export default function DesktopPlayerPanel() {
             <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Text
                 className='material-symbols-outlined'
-                style={{ fontSize: '22px', lineHeight: '24px', color: favorited ? '#4d6265' : '#727879' }}
+                style={{ fontSize: '22px', lineHeight: '24px', color: favorited ? '#ffd54f' : '#f2f0f0' }}
               >
                 {favorited ? 'star' : 'star_border'}
               </Text>
             </View>
-            <Text className='text-xs text-outline'>收藏</Text>
+            <Text className='text-xs text-inverse-on-surface'>收藏</Text>
           </View>
 
           {/* Speed */}
           <View
             onClick={handleSpeedCycle}
-            className='flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold text-on-surface-variant'
-            style={{ border: '1px solid #c2c7c8' }}
+            className='flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold text-inverse-on-surface'
+            style={{ border: '1px solid rgba(255, 255, 255, 0.5)' }}
           >
             <Text>{playbackRate}x</Text>
           </View>

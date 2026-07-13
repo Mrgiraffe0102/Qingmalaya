@@ -1,0 +1,102 @@
+---
+title: 仓库结构介绍
+---
+
+import { FileTree } from "@astrojs/starlight/components";
+
+## Monorepo 结构
+
+仓库使用 `Nx` 管理任务编排，`pnpm workspace` 管理依赖，主要目录如下：
+
+<FileTree>
+
+- packages/
+  - core/ 核心组件，Vanilla JS 实现
+  - react/ 核心组件的 React 绑定
+  - vue/ 核心组件的 Vue 绑定
+  - react-full/ 可直接使用的完整播放器组件，仅 React 版本
+  - ttml/ TTML 解析与处理库
+  - lyric/ 歌词解析与处理库，TTML 实际依赖 ttml 包
+  - docs/ Astro + Starlight 文档站
+  - playground/ 用于开发和测试的示例项目
+    - core/ 使用核心组件的示例
+    - react/ 使用 React 绑定的示例
+    - vue/ 使用 Vue 绑定的示例
+    - react-full/ 使用完整播放器组件的示例
+- .github/
+  - workflows/
+  - scripts/
+
+</FileTree>
+
+## Nx 发布分组
+
+`nx.json` 中的发布配置包含两个主要 group：
+
+- `core-bundle` 三个包版本保持一致：
+  - `@applemusic-like-lyrics/core`
+  - `@applemusic-like-lyrics/react`
+  - `@applemusic-like-lyrics/vue`
+- 其余包版本各自独立：
+  - `@applemusic-like-lyrics/lyric`
+  - `@applemusic-like-lyrics/react-full`
+  - `@applemusic-like-lyrics/ttml`
+
+## 依赖关系
+
+你可以在终端执行：
+
+```sh
+pnpm nx graph
+```
+
+来查看完整的依赖关系图。
+
+在提升版本号时，如果被依赖的包发生了更新，则依赖它的包也会被自动提升版本号，即使代码没有改动。
+
+## 命令行
+
+### 库开发
+
+Nx 提供了便捷的命令行工具，无需输入 `@applemusic-like-lyrics/` 前缀也可执行命令。
+
+例如，要构建 `@applemusic-like-lyrics/react` 包，可以直接执行：
+
+```sh
+pnpm nx build react
+```
+
+Nx 会自动解析依赖，因此会先构建 `core` 包，然后构建 `react` 包。
+
+我们在 `package/playground` 中准备了用于测试的 web app，基于 Vite，具有 HMR 支持。我们从 `core`、`react`、`vue`、`react-full` 中添加了转发，因此要启动对应环境，只需要：
+
+```sh
+# 启动 package/playground/core 的开发服务器
+pnpm nx dev core
+
+# 下面同理
+pnpm nx dev react
+pnpm nx dev vue
+pnpm nx dev react-full
+```
+
+要构建全部包，执行：
+
+```sh
+pnpm build:libs
+```
+
+即可自动并行构建所有包，构建顺序由依赖关系决定。
+
+### 文档开发
+
+同理，文档站的别名是 `docs`，有如下命令：
+
+```sh
+# 启动文档站开发服务器
+pnpm nx dev docs
+# 构建文档站
+pnpm nx build docs
+```
+
+会自动处理依赖关系。

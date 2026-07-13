@@ -1,0 +1,105 @@
+:root {
+	--amll-accent: #ff4545;
+	--amll-accent-strong: #d51d1d;
+	--amll-radius: 0.5rem;
+	--amll-nav-border: color-mix(in srgb, var(--sl-color-white) 9%, transparent);
+	--amll-soft-border: color-mix(
+		in srgb,
+		var(--sl-color-white) 12%,
+		transparent
+	);
+	--sl-content-width: 48rem;
+	--sl-sidebar-width: 18.25rem;
+	--sl-color-text: var(--sl-color-gray-1);
+	--amll-page-illumination: radial-gradient(
+		49.63% 57.02% at 58.99% -7.2%,
+		#ff60601a 39.4%,
+		transparent 100%
+	);
+}
+
+:root[data-theme="light"] {
+	--sl-color-accent-high: #8f1010;
+	--sl-color-accent: var(--amll-accent);
+	--sl-color-accent-low: #ffe8e8;
+	--sl-color-text-accent: #cc2d1f;
+	--sl-color-text-invert: #fff7f7;
+	--sl-color-bg: #fffafa;
+	--sl-color-bg-nav: #fffcfc;
+	--sl-color-bg-sidebar: #fdfdfdc7;
+	--sl-color-bg-inline-code: #fff0f0;
+	--sl-color-bg-accent: var(--sl-color-accent);
+	--sl-color-hairline: #2d222014;
+	--sl-color-hairline-light: #2d222014;
+	--sl-color-hairline-shade: #2d21201a;
+	--sl-color-white: #171417;
+	--sl-color-gray-1: #252020;
+	--sl-color-gray-2: #423939;
+	--sl-color-gray-3: #6b6060;
+	--sl-color-gray-4: #998f8f;
+	--sl-color-gray-5: #d8d0d0;
+	--sl-color-gray-6: #f2eded;
+	--sl-color-gray-7: #faf7f7;
+	--sl-color-black: #fffdfd;
+	--amll-page-bg: white;
+	--amll-card-bg: #fffa;
+	--amll-surface: #f0eeee88;
+	--amll-surface-strong: #fffdfd;
+	--amll-surface-hover: #fbeff1;
+	--amll-muted-border: #2d20201f;
+	--amll-shadow-soft: 0 18px 48px #37181814;
+}
+
+:root[data-theme="dark"] {
+	--sl-color-accent-high: #ffa19a;
+	--sl-color-accent: #ff5754;
+	--sl-color-accent-low: #2c1515;
+	--sl-color-text-accent: #ff928e;
+	--sl-color-text-invert: #250808;
+	--sl-color-bg: #100d0d;
+	--sl-color-bg-nav: #100e0dd1;
+	--sl-color-bg-sidebar: #130f0fbd;
+	--sl-color-bg-inline-code: #211a18;
+	--sl-color-bg-accent: var(--sl-color-accent-high);
+	--sl-color-hairline: #ffffff14;
+	--sl-color-hairline-light: #ffffff17;
+	--sl-color-hairline-shade: #ffffff14;
+	--sl-color-white: #fff8fa;
+	--sl-color-gray-1: #efe4e4;
+	--sl-color-gray-2: #cbbcbc;
+	--sl-color-gray-3: #9a8d8d;
+	--sl-color-gray-4: #665b5b;
+	--sl-color-gray-5: #332929;
+	--sl-color-gray-6: #1d1717;
+	--sl-color-gray-7: #151111;
+	--sl-color-black: #100d0d;
+	--amll-page-bg: #100d0d;
+	--amll-card-bg: #ffffff0b;
+	--amll-surface: #ffffff0b;
+	--amll-surface-strong: #ffffff11;
+	--amll-surface-hover: #ffffff16;
+	--amll-muted-border: #ffffff1a;
+	--amll-shadow-soft: 0 18px 54px #00000057;
+}
+
+:root {
+	--sl-font:
+		"Inter", -apple-system, BlinkMacSystemFont, sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--sl-font-mono:
+		ui-monospace, "Jetbrains Mono", "Iosevka", "Menlo", "Monaco", "Consolas",
+		"Liberation Mono", "Courier New", monospace;
+}
+
+[lang]:where(:is(:lang(zh), :lang(ja), :lang(ko))) {
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6,
+	li,
+	p {
+		line-break: strict;
+	}
+}
