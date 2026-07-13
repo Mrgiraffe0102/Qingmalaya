@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image, Input, ScrollView } from '@tarojs/components'
+import ReasonModal from '../ReasonModal'
 import { get, post, del } from '../../utils/request'
 import { coverUrl, formatRelativeTime, formatCount } from '../../utils/format'
 import { useAuthStore } from '../../store/auth'
@@ -269,11 +270,53 @@ export default function CommentDrawer({
     }
   }
 
-  // --- Delete a comment (author or OPERATOR+) ---
+  // --- Delete a comment (author or TEACHER/OPERATOR+) ---
   const canDeleteBy = (authorId: number): boolean => {
     if (!user) return false
     if (authorId === user.id) return true
-    return user.role === 'OPERATOR' || user.role === 'SUPER_ADMIN'
+    return user.role === 'TEACHER' || user.role === 'OPERATOR' || user.role === 'SUPER_ADMIN'
+  }
+
+  // --- Report a comment (student admins only, not on own/teacher comments) ---
+  const isStudentAdmin = user?.isStudentAdmin === true && user?.role === 'STUDENT'
+  const canReport = (authorId: number, authorRole?: string): boolean => {
+    if (!isStudentAdmin) return false
+    if (authorId === user?.id) return false
+    if (authorRole === 'TEACHER') return false
+    return true
+  }
+
+  const [reportVisible, setReportVisible] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportCommentId, setReportCommentId] = useState<number | null>(null)
+
+  const openReport = (commentId: number): void => {
+    Taro.showModal({
+      title: '举报评论',
+      content: '确定要举报这条评论吗？',
+      confirmText: '举报',
+      cancelText: '取消',
+      confirmColor: '#ba1a1a',
+      success: (res) => {
+        if (!res.confirm) return
+        setReportCommentId(commentId)
+        setReportReason('')
+        setReportVisible(true)
+      },
+    })
+  }
+
+  const handleReportConfirm = async (): Promise<void> => {
+    if (reportCommentId === null) return
+    const reason = reportReason.trim()
+    if (!reason) return
+    try {
+      await post(`/comments/${reportCommentId}/report`, { reason })
+      Taro.showToast({ title: '已举报', icon: 'success' })
+      setReportVisible(false)
+    } catch {
+      // request.ts surfaces the error toast
+    }
   }
 
   const handleDelete = (commentId: number, isReply: boolean, parentId?: number): void => {
@@ -343,9 +386,11 @@ export default function CommentDrawer({
                 comment={c}
                 classMap={classMap}
                 canDelete={canDeleteBy}
+                canReport={canReport}
                 onLike={(id) => toggleLike(id, false)}
                 onReply={setReplyTarget}
                 onDelete={(id) => handleDelete(id, false)}
+                onReport={(commentId) => openReport(commentId)}
                 onLikeReply={(id, pid) => toggleLike(id, true, pid)}
                 onDeleteReply={(id, pid) => handleDelete(id, true, pid)}
               />
@@ -412,6 +457,21 @@ export default function CommentDrawer({
     </View>
   )
 
+  const reportModal = (
+    <ReasonModal
+      visible={reportVisible}
+      title='举报评论'
+      reason={reportReason}
+      onReasonChange={setReportReason}
+      reasonRequired
+      reasonPlaceholder='请输入举报原因...'
+      onConfirm={() => void handleReportConfirm()}
+      onCancel={() => setReportVisible(false)}
+      confirmText='提交举报'
+      confirmDanger
+    />
+  )
+
   // --- Desktop variant: right-side panel at 50% width ---
   if (variant === 'desktop') {
     return (
@@ -457,6 +517,7 @@ export default function CommentDrawer({
           {replyBanner}
           {inputBar}
         </View>
+        {reportModal}
       </View>
     )
   }
@@ -505,6 +566,7 @@ export default function CommentDrawer({
         {replyBanner}
         {inputBar}
       </View>
+      {reportModal}
     </View>
   )
 }
@@ -515,9 +577,11 @@ interface CommentItemProps {
   comment: CommentWithUser
   classMap: Map<number, string>
   canDelete: (authorId: number) => boolean
+  canReport: (authorId: number, authorRole?: string) => boolean
   onLike: (id: number) => void
   onReply: (comment: CommentWithUser) => void
   onDelete: (id: number) => void
+  onReport: (commentId: number) => void
   onLikeReply: (id: number, parentId: number) => void
   onDeleteReply: (id: number, parentId: number) => void
 }
@@ -526,13 +590,16 @@ function CommentItem({
   comment,
   classMap,
   canDelete,
+  canReport,
   onLike,
   onReply,
   onDelete,
+  onReport,
   onLikeReply,
   onDeleteReply,
 }: CommentItemProps) {
   const commentCanDelete = canDelete(comment.user.id)
+  const commentCanReport = canReport(comment.user.id, comment.user.role)
 
   return (
     <View className='flex gap-3'>
@@ -580,9 +647,14 @@ function CommentItem({
           <View onClick={() => onReply(comment)}>
             <Text className='text-xs text-outline'>回复</Text>
           </View>
+          {commentCanReport && (
+            <View onClick={() => onReport(comment.id)}>
+              <Text className='text-xs' style={{ color: '#ba1a1a' }}>举报</Text>
+            </View>
+          )}
           {commentCanDelete && (
             <View onClick={() => onDelete(comment.id)}>
-              <Text className='text-xs text-outline'>删除</Text>
+              <Text className='text-xs' style={{ color: '#ba1a1a' }}>删除</Text>
             </View>
           )}
         </View>
@@ -592,6 +664,7 @@ function CommentItem({
           <View className='mt-3 space-y-3 rounded-lg bg-surface-container/60 p-3'>
             {comment.replies.map((reply) => {
               const replyCanDelete = canDelete(reply.user.id)
+              const replyCanReport = canReport(reply.user.id, reply.user.role)
               return (
                 <View key={reply.id} className='flex gap-2.5'>
                   <Avatar
@@ -637,9 +710,14 @@ function CommentItem({
                           {formatCount(reply.likeCount)}
                         </Text>
                       </View>
+                      {replyCanReport && (
+                        <View onClick={() => onReport(reply.id)}>
+                          <Text className='text-xs' style={{ color: '#ba1a1a' }}>举报</Text>
+                        </View>
+                      )}
                       {replyCanDelete && (
                         <View onClick={() => onDeleteReply(reply.id, comment.id)}>
-                          <Text className='text-xs text-outline'>删除</Text>
+                          <Text className='text-xs' style={{ color: '#ba1a1a' }}>删除</Text>
                         </View>
                       )}
                     </View>

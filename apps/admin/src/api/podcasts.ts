@@ -11,8 +11,12 @@ import type {
   PodcastStatus,
   PodcastWithRelations,
   Tag,
+  FlaggedPodcastItem,
 } from '@qingmalaya/shared';
+import { COMMON_REJECT_REASONS } from '@qingmalaya/shared';
 import { del, get, post, put } from '@/utils/request';
+
+export { COMMON_REJECT_REASONS };
 
 export interface AdminPodcastListParams {
   keyword?: string;
@@ -113,6 +117,31 @@ export function batchDeleteAdminPodcasts(
   ids: number[],
 ): Promise<AdminBatchResult> {
   return post<AdminBatchResult>('/admin/podcasts/batch-delete', { ids });
+}
+
+/**
+ * GET /admin/podcasts/flagged — list FLAGGED podcasts with flag reason +
+ * reviewer. Optionally filtered by classIds (teacher scope).
+ */
+export function listFlaggedPodcasts(
+  classIds?: number[],
+): Promise<FlaggedPodcastItem[]> {
+  return get<FlaggedPodcastItem[]>('/admin/podcasts/flagged', {
+    params: {
+      classIds: classIds && classIds.length > 0 ? classIds.join(',') : undefined,
+    },
+  });
+}
+
+/**
+ * PUT /admin/podcasts/:id/reject — reject a podcast with a reason. Sets
+ * status TAKEN_DOWN and creates a PodcastReview (action=REJECT).
+ */
+export function rejectAdminPodcast(
+  id: number,
+  payload: { reasonTags?: number[]; reason?: string },
+): Promise<{ success: true }> {
+  return put<{ success: true }>(`/admin/podcasts/${id}/reject`, payload);
 }
 
 /**

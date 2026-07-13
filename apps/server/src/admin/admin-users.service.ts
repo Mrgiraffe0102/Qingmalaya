@@ -82,6 +82,7 @@ const ADMIN_USER_SELECT = {
   firstLogin: true,
   mustChangePassword: true,
   manageAllClasses: true,
+  isStudentAdmin: true,
   createdAt: true,
   updatedAt: true,
   class: { select: { name: true } },
@@ -111,6 +112,7 @@ function toAdminUserListItem(row: AdminUserRow): AdminUserListItem {
     firstLogin: row.firstLogin,
     mustChangePassword: row.mustChangePassword,
     manageAllClasses: row.manageAllClasses,
+    isStudentAdmin: row.isStudentAdmin,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     className: row.class?.name ?? null,
@@ -971,5 +973,81 @@ export class AdminClassesService {
     });
 
     return { created: records.length, skipped, errors };
+  }
+
+  /**
+   * List all STUDENT users in a class with their isStudentAdmin flag
+   * (GET /admin/classes/:id/student-admins). Used by the admin Classes page
+   * to render the student-admin checkbox modal.
+   */
+  async getStudentAdmins(
+    classId: number,
+  ): Promise<{ id: number; studentId: string; name: string; isStudentAdmin: boolean }[]> {
+    const cls = await this.prisma.class.findUnique({
+      where: { id: classId },
+      select: { id: true },
+    });
+    if (!cls) {
+      throw new NotFoundException(`班级 ${classId} 不存在`);
+    }
+
+    return this.prisma.user.findMany({
+      where: { classId, role: 'STUDENT' },
+      select: { id: true, studentId: true, name: true, isStudentAdmin: true },
+      orderBy: { studentId: 'asc' },
+    });
+  }
+
+  /**
+   * Set which students in a class are designated as student admins
+   * (PUT /admin/classes/:id/student-admins). `userIds` is the complete list —
+   * students not in the list are demoted to regular students. All userIds must
+   * belong to STUDENTs in the given class. Writes an AdminLog entry.
+   */
+  async setStudentAdmins(
+    classId: number,
+    userIds: number[],
+    adminId: number,
+  ): Promise<{ success: true }> {
+    const cls = await this.prisma.class.findUnique({
+      where: { id: classId },
+      select: { id: true, name: true },
+    });
+    if (!cls) {
+      throw new NotFoundException(`班级 ${classId} 不存在`);
+    }
+
+    if (userIds.length > 0) {
+      const validUsers = await this.prisma.user.findMany({
+        where: { id: { in: userIds }, classId, role: 'STUDENT' },
+        select: { id: true },
+      });
+      if (validUsers.length !== userIds.length) {
+        throw new BadRequestException('部分用户不属于该班级或不是学生');
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({
+        where: { classId, role: 'STUDENT', id: { in: userIds } },
+        data: { isStudentAdmin: true },
+      });
+      await tx.user.updateMany({
+        where: { classId, role: 'STUDENT', id: { notIn: userIds } },
+        data: { isStudentAdmin: false },
+      });
+    });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'set_student_admins',
+        targetType: 'Class',
+        targetId: classId,
+        detail: { className: cls.name, userIds },
+      },
+    });
+
+    return { success: true };
   }
 }

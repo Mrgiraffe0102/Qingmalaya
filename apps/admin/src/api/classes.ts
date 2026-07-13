@@ -87,3 +87,29 @@ export function getSubmissionStatus(
     `/admin/classes/${id}/submission-status`,
   );
 }
+
+/** Student row returned by GET /admin/classes/:id/student-admins. */
+export interface StudentAdminItem {
+  id: number;
+  studentId: string;
+  name: string;
+  isStudentAdmin: boolean;
+}
+
+/** GET /admin/classes/:id/student-admins — list all students + isStudentAdmin flag. */
+export function getStudentAdmins(
+  classId: number,
+): Promise<StudentAdminItem[]> {
+  return get<StudentAdminItem[]>(`/admin/classes/${classId}/student-admins`);
+}
+
+/** PUT /admin/classes/:id/student-admins — set which students are student admins. */
+export function setStudentAdmins(
+  classId: number,
+  userIds: number[],
+): Promise<{ success: true }> {
+  return put<{ success: true }>(
+    `/admin/classes/${classId}/student-admins`,
+    { userIds },
+  );
+}

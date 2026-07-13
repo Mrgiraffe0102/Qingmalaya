@@ -16,6 +16,7 @@ import { CollectionsModule } from './collections/collections.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
+import { StudentReviewModule } from './student-review/student-review.module';
 import { appConfig } from './app.config';
 
 /**
@@ -45,6 +46,7 @@ import { appConfig } from './app.config';
     AdminModule,
     NotificationsModule,
     ActivityLogModule,
+    StudentReviewModule,
     ServeStaticModule.forRoot({
       rootPath: resolve(appConfig().upload.dir),
       serveRoot: '/static',

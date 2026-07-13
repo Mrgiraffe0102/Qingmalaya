@@ -26,6 +26,7 @@ import {
 import { AdminUserCreateDto } from './dto/admin-user-create.dto';
 import { AdminUserBatchDeleteDto } from './dto/admin-user-batch-delete.dto';
 import { SetManagedClassesDto } from './dto/managed-classes.dto';
+import { SetStudentAdminsDto } from './dto/set-student-admins.dto';
 
 /**
  * Admin user management endpoints (Task 26). All routes require
@@ -161,6 +162,22 @@ export class AdminClassesController {
   @Get(':id/submission-status')
   submissionStatus(@Param('id', ParseIntPipe) id: number) {
     return this.classes.getSubmissionStatus(id);
+  }
+
+  /** GET /admin/classes/:id/student-admins — list all students + isStudentAdmin flag. */
+  @Get(':id/student-admins')
+  getStudentAdmins(@Param('id', ParseIntPipe) id: number) {
+    return this.classes.getStudentAdmins(id);
+  }
+
+  /** PUT /admin/classes/:id/student-admins — set which students are student admins. */
+  @Put(':id/student-admins')
+  setStudentAdmins(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetStudentAdminsDto,
+    @CurrentUser('id') adminId: number,
+  ) {
+    return this.classes.setStudentAdmins(id, dto.userIds, adminId);
   }
 
   @Post()

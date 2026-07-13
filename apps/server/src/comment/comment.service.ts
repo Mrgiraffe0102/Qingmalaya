@@ -475,6 +475,68 @@ export class CommentService {
     });
     return { liked: false, likeCount: updated.likeCount };
   }
+
+  /**
+   * Report a comment (POST /comments/:id/report). Student admins can report
+   * any visible comment. Creates a CommentReport (status=PENDING) and notifies
+   * the teacher(s) managing the comment author's class.
+   */
+  async reportComment(
+    commentId: number,
+    reason: string,
+    userId: number,
+  ): Promise<{ success: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, isStudentAdmin: true },
+    });
+    if (!user || !user.isStudentAdmin) {
+      throw new ForbiddenException('只有学生管理员可以举报评论');
+    }
+
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { id: true, userId: true, content: true, podcastId: true },
+    });
+    if (!comment) {
+      throw new NotFoundException('评论不存在');
+    }
+
+    await this.prisma.commentReport.create({
+      data: { commentId, reporterId: userId, reason },
+    });
+
+    // Notify the teacher(s) managing the comment author's class.
+    const author = await this.prisma.user.findUnique({
+      where: { id: comment.userId },
+      select: { classId: true },
+    });
+    if (author?.classId) {
+      const assigned = await this.prisma.teacherClass.findMany({
+        where: { classId: author.classId },
+        select: { teacherId: true },
+      });
+      const allClass = await this.prisma.user.findMany({
+        where: { role: 'TEACHER', manageAllClasses: true },
+        select: { id: true },
+      });
+      const teacherIds = [...new Set([
+        ...assigned.map((t) => t.teacherId),
+        ...allClass.map((t) => t.id),
+      ])];
+      for (const tid of teacherIds) {
+        await this.notifications.createForUser(
+          tid,
+          'COMMENT_REPORTED',
+          '评论被举报',
+          `学生管理员举报了一条评论：${reason}`,
+          comment.podcastId,
+        );
+      }
+    }
+
+    return { success: true };
+  }
 }
 
 /**

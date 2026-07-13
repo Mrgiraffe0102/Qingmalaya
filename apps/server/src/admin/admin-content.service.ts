@@ -4,7 +4,10 @@ import type {
   Paginated,
   PodcastWithRelations,
   UserSummary,
+  FlaggedPodcastItem,
+  ReportedCommentItem,
 } from '@qingmalaya/shared';
+import { COMMON_REJECT_REASONS } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AdminPodcastListDto, parseClassIds } from './dto/admin-podcast-list.dto';
@@ -14,6 +17,8 @@ import { AdminPodcastBatchPublishDto } from './dto/admin-podcast-batch-publish.d
 import { AdminPodcastBatchTagDto } from './dto/admin-podcast-batch-tag.dto';
 import { AdminPodcastBatchDeleteDto } from './dto/admin-podcast-batch-delete.dto';
 import { AdminCommentListDto } from './dto/admin-comment-list.dto';
+import { AdminPodcastRejectDto } from './dto/admin-podcast-reject.dto';
+import { ResolveReportDto } from './dto/resolve-report.dto';
 
 /**
  * Prisma include shape for a podcast with its author (UserSummary projection)
@@ -138,6 +143,88 @@ function toAdminCommentListItem(c: AdminCommentRow): AdminCommentListItem {
       classId: c.user.classId,
     },
     podcast: { id: c.podcast.id, title: c.podcast.title },
+  };
+}
+
+/**
+ * Combine reason-tag indices (into COMMON_REJECT_REASONS) and free-text reason
+ * into a single human-readable string stored in PodcastReview.reason.
+ */
+function combineRejectReason(
+  reasonTags?: number[],
+  reason?: string,
+): string | null {
+  const parts: string[] = [];
+  if (reasonTags && reasonTags.length > 0) {
+    for (const idx of reasonTags) {
+      if (idx >= 0 && idx < COMMON_REJECT_REASONS.length) {
+        parts.push(COMMON_REJECT_REASONS[idx]);
+      }
+    }
+  }
+  if (reason && reason.trim()) {
+    parts.push(reason.trim());
+  }
+  return parts.length > 0 ? parts.join('；') : null;
+}
+
+/**
+ * Prisma include for a FLAGGED podcast — extends PODCAST_INCLUDE with the
+ * latest FLAG review (with reviewer info) so the teacher can see who flagged
+ * it and why.
+ */
+const FLAGGED_PODCAST_INCLUDE = {
+  author: {
+    select: {
+      id: true,
+      studentId: true,
+      name: true,
+      avatar: true,
+      role: true,
+      classId: true,
+    },
+  },
+  tags: { include: { tag: true } },
+  reviews: {
+    where: { action: 'FLAG' },
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+    include: {
+      reviewer: {
+        select: {
+          id: true,
+          studentId: true,
+          name: true,
+          avatar: true,
+          role: true,
+          classId: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.PodcastInclude;
+
+type FlaggedPodcastRow = Prisma.PodcastGetPayload<{
+  include: typeof FLAGGED_PODCAST_INCLUDE;
+}>;
+
+/** Map a Prisma podcast row (with FLAG reviews) to FlaggedPodcastItem. */
+function toFlaggedPodcastItem(row: FlaggedPodcastRow): FlaggedPodcastItem {
+  const base = toPodcastWithRelations(row);
+  const flagReview = row.reviews[0];
+  return {
+    ...base,
+    flagReason: flagReview?.reason ?? null,
+    flagReviewer: flagReview
+      ? {
+          id: flagReview.reviewer.id,
+          studentId: flagReview.reviewer.studentId,
+          name: flagReview.reviewer.name,
+          avatar: flagReview.reviewer.avatar,
+          role: flagReview.reviewer.role,
+          classId: flagReview.reviewer.classId,
+        }
+      : null,
   };
 }
 
@@ -370,6 +457,84 @@ export class AdminPodcastsService {
     );
 
     return { success: true };
+  }
+
+  /**
+   * Reject a podcast with a reason (PUT /admin/podcasts/:id/reject). Sets
+   * status to TAKEN_DOWN, creates a PodcastReview record with action=REJECT
+   * and the combined reason, notifies the author with the reason, and writes
+   * an AdminLog entry. Used for both PENDING and FLAGGED podcasts.
+   */
+  async reject(
+    id: number,
+    dto: AdminPodcastRejectDto,
+    adminId: number,
+  ): Promise<{ success: true }> {
+    const existing = await this.prisma.podcast.findUnique({
+      where: { id },
+      select: { id: true, title: true, authorId: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('播客不存在');
+    }
+
+    const combinedReason = combineRejectReason(dto.reasonTags, dto.reason);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.podcast.update({
+        where: { id },
+        data: { status: 'TAKEN_DOWN' },
+      });
+      await tx.podcastReview.create({
+        data: {
+          podcastId: id,
+          reviewerId: adminId,
+          action: 'REJECT',
+          reason: combinedReason,
+        },
+      });
+    });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'reject_podcast',
+        targetType: 'Podcast',
+        targetId: id,
+        detail: { reason: combinedReason },
+      },
+    });
+
+    await this.notifications.createForUser(
+      existing.authorId,
+      'PODCAST_REJECTED',
+      '播客审核未通过',
+      `您的播客《${existing.title}》审核未通过${combinedReason ? `，原因：${combinedReason}` : ''}`,
+      id,
+    );
+
+    return { success: true };
+  }
+
+  /**
+   * List all FLAGGED podcasts (GET /admin/podcasts/flagged). Each item carries
+   * the flag reason and reviewer info from the latest FLAG PodcastReview.
+   * Optionally filtered by classIds (teacher scope). Not paginated — flagged
+   * volume should be small.
+   */
+  async listFlagged(classIds?: number[]): Promise<FlaggedPodcastItem[]> {
+    const where: Prisma.PodcastWhereInput = { status: 'FLAGGED' };
+    if (classIds && classIds.length > 0) {
+      where.classId = { in: classIds };
+    }
+
+    const rows = await this.prisma.podcast.findMany({
+      where,
+      include: FLAGGED_PODCAST_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return rows.map(toFlaggedPodcastItem);
   }
 
   /**
@@ -807,5 +972,130 @@ export class AdminCommentsService {
     });
 
     return { success: true, count: comments.length };
+  }
+
+  /**
+   * List all PENDING comment reports (GET /admin/comments/reported). Each item
+   * carries the report reason, reporter info, and the comment with its author +
+   * podcast. Optionally filtered by the comment author's classIds (teacher
+   * scope). Not paginated — report volume should be small.
+   */
+  async listReported(classIds?: number[]): Promise<ReportedCommentItem[]> {
+    const where: Prisma.CommentReportWhereInput = { status: 'PENDING' };
+    if (classIds && classIds.length > 0) {
+      where.comment = { user: { classId: { in: classIds } } };
+    }
+
+    const rows = await this.prisma.commentReport.findMany({
+      where,
+      include: {
+        comment: {
+          include: {
+            user: { select: USER_SUMMARY_SELECT },
+            podcast: { select: { id: true, title: true } },
+          },
+        },
+        reporter: { select: USER_SUMMARY_SELECT },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return rows.map((r) => ({
+      reportId: r.id,
+      reason: r.reason,
+      reporter: {
+        id: r.reporter.id,
+        studentId: r.reporter.studentId,
+        name: r.reporter.name,
+        avatar: r.reporter.avatar,
+        role: r.reporter.role,
+        classId: r.reporter.classId,
+      },
+      createdAt: r.createdAt.toISOString(),
+      comment: {
+        id: r.comment.id,
+        content: r.comment.content,
+        createdAt: r.comment.createdAt.toISOString(),
+        user: {
+          id: r.comment.user.id,
+          studentId: r.comment.user.studentId,
+          name: r.comment.user.name,
+          avatar: r.comment.user.avatar,
+          role: r.comment.user.role,
+          classId: r.comment.user.classId,
+        },
+        podcast: { id: r.comment.podcast.id, title: r.comment.podcast.title },
+      },
+    }));
+  }
+
+  /**
+   * Resolve a comment report (PUT /admin/comments/:id/report/resolve). If
+   * action='delete', the comment is soft-hidden (if it has replies) or
+   * hard-deleted and commentCount decremented — reusing the same logic as
+   * `delete()`. The report is marked RESOLVED with resolverId + resolvedAt.
+   * Writes an AdminLog entry.
+   */
+  async resolveReport(
+    commentId: number,
+    dto: ResolveReportDto,
+    adminId: number,
+  ): Promise<{ success: true }> {
+    const report = await this.prisma.commentReport.findFirst({
+      where: { commentId, status: 'PENDING' },
+      select: { id: true },
+    });
+    if (!report) {
+      throw new NotFoundException('未找到该评论的待处理举报');
+    }
+
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { id: true, podcastId: true, content: true },
+    });
+    if (!comment) {
+      throw new NotFoundException('评论不存在');
+    }
+
+    if (dto.action === 'delete') {
+      const replyCount = await this.prisma.comment.count({
+        where: { parentId: commentId },
+      });
+      await this.prisma.$transaction(async (tx) => {
+        if (replyCount > 0) {
+          await tx.comment.update({
+            where: { id: commentId },
+            data: { status: 'HIDDEN', content: '' },
+          });
+        } else {
+          await tx.comment.delete({ where: { id: commentId } });
+        }
+        await tx.podcast.update({
+          where: { id: comment.podcastId },
+          data: { commentCount: { decrement: 1 } },
+        });
+      });
+    }
+
+    await this.prisma.commentReport.update({
+      where: { id: report.id },
+      data: {
+        status: 'RESOLVED',
+        resolvedById: adminId,
+        resolvedAt: new Date(),
+      },
+    });
+
+    await this.prisma.adminLog.create({
+      data: {
+        adminId,
+        action: 'resolve_comment_report',
+        targetType: 'Comment',
+        targetId: commentId,
+        detail: { action: dto.action, reason: dto.reason, reportId: report.id },
+      },
+    });
+
+    return { success: true };
   }
 }

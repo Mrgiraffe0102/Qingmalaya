@@ -30,9 +30,10 @@ export const PodcastStatus = {
   PENDING: 'PENDING',
   PUBLISHED: 'PUBLISHED',
   TAKEN_DOWN: 'TAKEN_DOWN',
+  FLAGGED: 'FLAGGED',
 } as const;
 export type PodcastStatus = (typeof PodcastStatus)[keyof typeof PodcastStatus];
-export const podcastStatusSchema = z.enum(['PENDING', 'PUBLISHED', 'TAKEN_DOWN']);
+export const podcastStatusSchema = z.enum(['PENDING', 'PUBLISHED', 'TAKEN_DOWN', 'FLAGGED']);
 
 // --- TagColor ---
 // Spec stores lowercase color names in DB; uppercase keys are the TS accessors.
@@ -109,6 +110,8 @@ export const NotificationType = {
   PODCAST_REJECTED: 'PODCAST_REJECTED',
   PODCAST_LIKED: 'PODCAST_LIKED',
   PODCAST_COMMENTED: 'PODCAST_COMMENTED',
+  PODCAST_FLAGGED: 'PODCAST_FLAGGED',
+  COMMENT_REPORTED: 'COMMENT_REPORTED',
 } as const;
 export type NotificationType =
   (typeof NotificationType)[keyof typeof NotificationType];
@@ -118,7 +121,27 @@ export const notificationTypeSchema = z.enum([
   'PODCAST_REJECTED',
   'PODCAST_LIKED',
   'PODCAST_COMMENTED',
+  'PODCAST_FLAGGED',
+  'COMMENT_REPORTED',
 ]);
+
+// --- ReviewAction (student admin review actions) ---
+export const ReviewAction = {
+  APPROVE: 'APPROVE',
+  FLAG: 'FLAG',
+  REJECT: 'REJECT',
+} as const;
+export type ReviewAction = (typeof ReviewAction)[keyof typeof ReviewAction];
+export const reviewActionSchema = z.enum(['APPROVE', 'FLAG', 'REJECT']);
+
+// --- CommentReportStatus ---
+export const CommentReportStatus = {
+  PENDING: 'PENDING',
+  RESOLVED: 'RESOLVED',
+} as const;
+export type CommentReportStatus =
+  (typeof CommentReportStatus)[keyof typeof CommentReportStatus];
+export const commentReportStatusSchema = z.enum(['PENDING', 'RESOLVED']);
 
 // --- Convenience: podcast list sort options ---
 export const PodcastSort = {
@@ -163,3 +186,13 @@ export const userActionSchema = z.enum([
   'DELETE_PODCAST',
   'UPDATE_PROFILE',
 ]);
+
+// --- Common reject reasons (shared by student admin + teacher reject modals) ---
+export const COMMON_REJECT_REASONS = [
+  '内容不当',
+  '音频质量差',
+  '与主题无关',
+  '涉及个人隐私',
+  '包含广告内容',
+  '重复投稿',
+] as const;

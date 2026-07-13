@@ -22,9 +22,11 @@ import { useSearchParams } from 'react-router-dom';
 import {
   App as AntdApp,
   Button,
+  Checkbox,
   Drawer,
   Empty,
   Image,
+  Input,
   Modal,
   Popconfirm,
   Select,
@@ -48,10 +50,12 @@ import {
   batchPublishAdminPodcasts,
   batchTagAdminPodcasts,
   batchTakedownAdminPodcasts,
+  COMMON_REJECT_REASONS,
   deleteAdminPodcast,
   listAdminPodcasts,
   listAllTags,
   publishAdminPodcast,
+  rejectAdminPodcast,
   takedownAdminPodcast,
   updateAdminPodcast,
 } from '@/api/podcasts';
@@ -68,6 +72,7 @@ const STATUS_CONFIG: Record<string, { color: string; text: string }> = {
   PENDING: { color: 'orange', text: '待审核' },
   PUBLISHED: { color: 'green', text: '已发布' },
   TAKEN_DOWN: { color: 'red', text: '已下架' },
+  FLAGGED: { color: 'volcano', text: '存疑' },
 };
 
 /** Prefix a stored relative upload path with /static/ for URL use. */
@@ -123,6 +128,12 @@ const PodcastsPage: React.FC = () => {
   const [batchTagOpen, setBatchTagOpen] = useState(false);
   const [batchTagIds, setBatchTagIds] = useState<number[]>([]);
   const [batchSelectedTags, setBatchSelectedTags] = useState<number[]>([]);
+
+  // Reject modal state
+  const [rejectPodcast, setRejectPodcast] = useState<PodcastWithRelations | null>(null);
+  const [rejectReasonTags, setRejectReasonTags] = useState<number[]>([]);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectBusy, setRejectBusy] = useState(false);
 
   // Tag options (shared by edit + batch-tag modals)
   const [tags, setTags] = useState<TagType[]>([]);
@@ -214,9 +225,8 @@ const PodcastsPage: React.FC = () => {
     if (ok) setDetailOpen(false);
   };
 
-  const handleDetailReject = async (id: number): Promise<void> => {
-    const ok = await handleTakedown(id);
-    if (ok) setDetailOpen(false);
+  const handleDetailReject = (podcast: PodcastWithRelations): void => {
+    openReject(podcast);
   };
 
   // --- Batch operations ---
@@ -291,6 +301,32 @@ const PodcastsPage: React.FC = () => {
     }
   };
 
+  // --- Reject with reason modal ---
+  const openReject = (podcast: PodcastWithRelations): void => {
+    setRejectPodcast(podcast);
+    setRejectReasonTags([]);
+    setRejectReason('');
+  };
+
+  const handleRejectSubmit = async (): Promise<void> => {
+    if (!rejectPodcast) return;
+    setRejectBusy(true);
+    try {
+      await rejectAdminPodcast(rejectPodcast.id, {
+        reasonTags: rejectReasonTags.length > 0 ? rejectReasonTags : undefined,
+        reason: rejectReason.trim() || undefined,
+      });
+      message.success('已驳回');
+      setRejectPodcast(null);
+      actionRef.current?.reload();
+      setDetailOpen(false);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '操作失败');
+    } finally {
+      setRejectBusy(false);
+    }
+  };
+
   const columns: ProColumns<PodcastWithRelations>[] = [
     {
       title: '封面',
@@ -349,6 +385,7 @@ const PodcastsPage: React.FC = () => {
         PENDING: { text: '待审核' },
         PUBLISHED: { text: '已发布' },
         TAKEN_DOWN: { text: '已下架' },
+        FLAGGED: { text: '存疑' },
       },
       width: 100,
       render: (_, row) => {
@@ -415,16 +452,14 @@ const PodcastsPage: React.FC = () => {
             </a>
           </Popconfirm>
         ),
-        row.status === 'PENDING' ? (
-          <Popconfirm
+        row.status === 'PENDING' || row.status === 'FLAGGED' ? (
+          <a
             key="reject"
-            title="确认驳回该播客（下架处理）？"
-            onConfirm={() => handleTakedown(row.id)}
+            style={{ color: '#ba1a1a' }}
+            onClick={() => openReject(row)}
           >
-            <a style={{ color: '#ba1a1a' }}>
-              <StopOutlined /> 驳回
-            </a>
-          </Popconfirm>
+            <StopOutlined /> 驳回
+          </a>
         ) : null,
         <Popconfirm
           key="delete"
@@ -616,7 +651,7 @@ const PodcastsPage: React.FC = () => {
               )}
             </div>
 
-            {detailPodcast.status === 'PENDING' && (
+            {(detailPodcast.status === 'PENDING' || detailPodcast.status === 'FLAGGED') && (
               <div
                 style={{
                   marginTop: 24,
@@ -638,14 +673,9 @@ const PodcastsPage: React.FC = () => {
                       <CheckCircleOutlined /> 通过审核
                     </Button>
                   </Popconfirm>
-                  <Popconfirm
-                    title="确认驳回该播客（下架处理）？"
-                    onConfirm={() => handleDetailReject(detailPodcast.id)}
-                  >
-                    <Button danger>
-                      <StopOutlined /> 驳回
-                    </Button>
-                  </Popconfirm>
+                  <Button danger onClick={() => handleDetailReject(detailPodcast)}>
+                    <StopOutlined /> 驳回
+                  </Button>
                 </Space>
               </div>
             )}
@@ -712,6 +742,48 @@ const PodcastsPage: React.FC = () => {
             value={batchSelectedTags}
             onChange={setBatchSelectedTags}
             options={tags.map((t) => ({ label: t.name, value: t.id }))}
+          />
+        </div>
+      </Modal>
+
+      {/* Reject modal with common reasons + free text */}
+      <Modal
+        title={`驳回播客 — ${rejectPodcast?.title ?? ''}`}
+        open={!!rejectPodcast}
+        onCancel={() => setRejectPodcast(null)}
+        onOk={handleRejectSubmit}
+        okText="确认驳回"
+        okButtonProps={{ danger: true }}
+        cancelText="取消"
+        confirmLoading={rejectBusy}
+        destroyOnClose
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text strong>常见原因（可多选）</Text>
+          <div style={{ marginTop: 8 }}>
+            <Checkbox.Group
+              value={rejectReasonTags}
+              onChange={(vals) => setRejectReasonTags(vals as number[])}
+              style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 0' }}
+            >
+              {COMMON_REJECT_REASONS.map((reason, idx) => (
+                <Checkbox key={idx} value={idx} style={{ marginLeft: 0, width: '50%' }}>
+                  {reason}
+                </Checkbox>
+              ))}
+            </Checkbox.Group>
+          </div>
+        </div>
+        <div>
+          <Text strong>其他原因</Text>
+          <Input.TextArea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={4}
+            maxLength={500}
+            showCount
+            placeholder="请输入驳回原因…"
+            style={{ marginTop: 8 }}
           />
         </div>
       </Modal>

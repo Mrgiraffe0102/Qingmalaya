@@ -16,18 +16,21 @@ import {
   type ActionType,
   type ProColumns,
 } from '@ant-design/pro-components';
-import { App as AntdApp, Button, Dropdown, Input, Modal, Space } from 'antd';
+import { App as AntdApp, Button, Checkbox, Dropdown, Input, Modal, Space, Spin, Table } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import {
   createAdminClass,
   deleteAdminClass,
+  getStudentAdmins,
   getSubmissionStatus,
   importStudents,
   listAdminClasses,
+  setStudentAdmins,
   updateAdminClass,
   type AdminClassListItem,
+  type StudentAdminItem,
   type StudentSubmissionStatus,
 } from '@/api/classes';
 
@@ -132,6 +135,12 @@ const ClassesPage: React.FC = () => {
   const [importingBusy, setImportingBusy] = useState(false);
   const [exportingId, setExportingId] = useState<number | null>(null);
 
+  const [studentAdminClass, setStudentAdminClass] = useState<AdminClassListItem | null>(null);
+  const [studentAdminList, setStudentAdminList] = useState<StudentAdminItem[]>([]);
+  const [studentAdminLoading, setStudentAdminLoading] = useState(false);
+  const [studentAdminSelected, setStudentAdminSelected] = useState<number[]>([]);
+  const [studentAdminSaving, setStudentAdminSaving] = useState(false);
+
   /** Fetch submission status and trigger a CSV or Excel download. */
   const handleExport = async (
     record: AdminClassListItem,
@@ -226,6 +235,38 @@ const ClassesPage: React.FC = () => {
     }
   };
 
+  /** Open the student-admin modal for a class, fetching the current list. */
+  const openStudentAdmins = async (record: AdminClassListItem) => {
+    setStudentAdminClass(record);
+    setStudentAdminList([]);
+    setStudentAdminSelected([]);
+    setStudentAdminLoading(true);
+    try {
+      const list = await getStudentAdmins(record.id);
+      setStudentAdminList(list);
+      setStudentAdminSelected(list.filter((s) => s.isStudentAdmin).map((s) => s.id));
+    } catch (e) {
+      message.error((e as Error).message || '加载学生列表失败');
+    } finally {
+      setStudentAdminLoading(false);
+    }
+  };
+
+  /** Save the selected student admins for the class. */
+  const handleStudentAdminSubmit = async () => {
+    if (!studentAdminClass) return;
+    setStudentAdminSaving(true);
+    try {
+      await setStudentAdmins(studentAdminClass.id, studentAdminSelected);
+      message.success('已更新学生管理员');
+      setStudentAdminClass(null);
+    } catch (e) {
+      message.error((e as Error).message || '保存失败');
+    } finally {
+      setStudentAdminSaving(false);
+    }
+  };
+
   const columns: ProColumns<AdminClassListItem>[] = [
     {
       title: '班级名称',
@@ -263,7 +304,7 @@ const ClassesPage: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 320,
+      width: 380,
       fixed: 'right',
       hideInSearch: true,
       render: (_: unknown, record: AdminClassListItem) => (
@@ -281,6 +322,13 @@ const ClassesPage: React.FC = () => {
             onClick={() => openImport(record)}
           >
             导入学生
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => void openStudentAdmins(record)}
+          >
+            学生管理员
           </Button>
           <Dropdown
             menu={{
@@ -441,6 +489,60 @@ const ClassesPage: React.FC = () => {
           rows={10}
           placeholder="粘贴学生数据，每行一条…"
         />
+      </Modal>
+
+      {/* Student admin management */}
+      <Modal
+        title={`学生管理员 — ${studentAdminClass?.name ?? ''}`}
+        open={!!studentAdminClass}
+        onCancel={() => setStudentAdminClass(null)}
+        onOk={handleStudentAdminSubmit}
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={studentAdminSaving}
+        destroyOnClose
+        width={560}
+      >
+        <p style={{ color: '#727879', fontSize: 13, marginBottom: 12 }}>
+          勾选要设为学生管理员的成员。学生管理员可在前端审核同班级同学的播客，但无后台登录权限。
+        </p>
+        {studentAdminLoading ? (
+          <div style={{ textAlign: 'center', padding: 24 }}>
+            <Spin />
+          </div>
+        ) : (
+          <Table<StudentAdminItem>
+            rowKey="id"
+            dataSource={studentAdminList}
+            pagination={false}
+            size="small"
+            scroll={{ y: 360 }}
+            columns={[
+              { title: '学号', dataIndex: 'studentId', width: 120 },
+              { title: '姓名', dataIndex: 'name' },
+              {
+                title: '学生管理员',
+                dataIndex: 'isStudentAdmin',
+                width: 100,
+                align: 'center',
+                render: (_: unknown, row: StudentAdminItem) => (
+                  <Checkbox
+                    checked={studentAdminSelected.includes(row.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setStudentAdminSelected((prev) => [...prev, row.id]);
+                      } else {
+                        setStudentAdminSelected((prev) =>
+                          prev.filter((id) => id !== row.id),
+                        );
+                      }
+                    }}
+                  />
+                ),
+              },
+            ]}
+          />
+        )}
       </Modal>
     </>
   );

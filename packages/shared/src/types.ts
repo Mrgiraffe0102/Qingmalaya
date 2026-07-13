@@ -15,6 +15,8 @@ import type {
   AnnouncementStatus,
   NotificationType,
   UserAction,
+  ReviewAction,
+  CommentReportStatus,
 } from './enums';
 
 /** ISO date string, e.g. "2025-01-31T08:00:00.000Z". */
@@ -52,6 +54,7 @@ export interface User {
   firstLogin: boolean;
   mustChangePassword: boolean;
   manageAllClasses: boolean;
+  isStudentAdmin: boolean;
   createdAt: ISODateString;
   updatedAt: ISODateString;
 }
@@ -293,4 +296,54 @@ export interface RefreshResponse {
 
 export interface PlayProgressResponse {
   position: number;
+}
+
+// --- PodcastReview (student admin / teacher review action record) ---
+export interface PodcastReview {
+  id: number;
+  podcastId: number;
+  reviewerId: number;
+  action: ReviewAction;
+  reason: string | null;
+  createdAt: ISODateString;
+}
+
+// --- CommentReport ---
+export interface CommentReport {
+  id: number;
+  commentId: number;
+  reporterId: number;
+  reason: string;
+  status: CommentReportStatus;
+  resolvedById: number | null;
+  resolvedAt: ISODateString | null;
+  createdAt: ISODateString;
+}
+
+/** Dynamic review assignment for a student admin. */
+export interface ReviewAssignment {
+  studentRange: { from: string; to: string } | null;
+  adminAuthorIds: number[];
+  summary: string;
+}
+
+/** Podcast with flag reason/reviewer (for teacher's flagged view). */
+export interface FlaggedPodcastItem extends PodcastWithRelations {
+  flagReason: string | null;
+  flagReviewer: UserSummary | null;
+}
+
+/** Comment with report info (for teacher's reported view). */
+export interface ReportedCommentItem {
+  reportId: number;
+  reason: string;
+  reporter: UserSummary;
+  createdAt: ISODateString;
+  comment: {
+    id: number;
+    content: string;
+    createdAt: ISODateString;
+    user: UserSummary;
+    podcast: { id: number; title: string };
+  };
 }

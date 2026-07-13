@@ -11,8 +11,8 @@
  * rather than in @qingmalaya/shared because it's admin-only and not part of
  * the public API contract.
  */
-import type { Paginated, UserSummary } from '@qingmalaya/shared';
-import { del, get, post } from '@/utils/request';
+import type { Paginated, ReportedCommentItem, UserSummary } from '@qingmalaya/shared';
+import { del, get, post, put } from '@/utils/request';
 
 export interface AdminCommentListItem {
   id: number;
@@ -68,4 +68,26 @@ export function batchDeleteAdminComments(
   ids: number[],
 ): Promise<AdminBatchResult> {
   return post<AdminBatchResult>('/admin/comments/batch-delete', { ids });
+}
+
+/** GET /admin/comments/reported — pending comment reports with reporter + comment info. */
+export function listReportedComments(
+  classIds?: number[],
+): Promise<ReportedCommentItem[]> {
+  return get<ReportedCommentItem[]>('/admin/comments/reported', {
+    params: {
+      classIds: classIds && classIds.length > 0 ? classIds.join(',') : undefined,
+    },
+  });
+}
+
+/** PUT /admin/comments/:id/report/resolve — resolve a comment report (delete or dismiss). */
+export function resolveReport(
+  commentId: number,
+  payload: { action: 'dismiss' | 'delete'; reason?: string },
+): Promise<{ success: true }> {
+  return put<{ success: true }>(
+    `/admin/comments/${commentId}/report/resolve`,
+    payload,
+  );
 }

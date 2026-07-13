@@ -28,6 +28,7 @@ enum PodcastStatus {
   PENDING
   PUBLISHED
   TAKEN_DOWN
+  FLAGGED
 }
 
 // TagColor stores lowercase color names in the DB to match
@@ -77,6 +78,19 @@ enum NotificationType {
   PODCAST_REJECTED
   PODCAST_LIKED
   PODCAST_COMMENTED
+  PODCAST_FLAGGED
+  COMMENT_REPORTED
+}
+
+enum ReviewAction {
+  APPROVE
+  FLAG
+  REJECT
+}
+
+enum CommentReportStatus {
+  PENDING
+  RESOLVED
 }
 
 enum UserAction {
@@ -110,6 +124,7 @@ model User {
   firstLogin         Boolean    @default(true)
   mustChangePassword Boolean    @default(true)
   manageAllClasses   Boolean    @default(false)
+  isStudentAdmin     Boolean    @default(false)
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -124,6 +139,9 @@ model User {
   notifications         Notification[] @relation("NotificationRecipient")
   triggeredNotifications Notification[] @relation("NotificationActor")
   teacherClasses TeacherClass[]
+  podcastReviews     PodcastReview[]
+  commentReports     CommentReport[]   @relation("CommentReporter")
+  resolvedReports    CommentReport[]   @relation("CommentResolver")
 
   @@index([classId])
   @@index([role])
@@ -177,6 +195,7 @@ model Podcast {
   PlayHistory PlayHistory[]
   collections CollectionPodcast[]
   notifications Notification[]
+  reviews      PodcastReview[]
 
   @@index([authorId])
   @@index([classId])
@@ -221,6 +240,7 @@ model Comment {
   parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies Comment[] @relation("CommentReplies")
   likes   Like[]
+  reports CommentReport[]
 
   @@index([podcastId])
   @@index([userId])
@@ -398,4 +418,38 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+model PodcastReview {
+  id         Int          @id @default(autoincrement())
+  podcastId  Int
+  reviewerId Int
+  action     ReviewAction
+  reason     String?      @db.Text
+  createdAt  DateTime     @default(now())
+
+  podcast  Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+  reviewer User    @relation(fields: [reviewerId], references: [id])
+
+  @@index([podcastId])
+  @@index([reviewerId])
+}
+
+model CommentReport {
+  id           Int                 @id @default(autoincrement())
+  commentId    Int
+  reporterId   Int
+  reason       String              @db.Text
+  status       CommentReportStatus @default(PENDING)
+  resolvedById Int?
+  resolvedAt   DateTime?
+  createdAt    DateTime            @default(now())
+
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporter  User    @relation("CommentReporter", fields: [reporterId], references: [id])
+  resolver  User?   @relation("CommentResolver", fields: [resolvedById], references: [id])
+
+  @@index([commentId])
+  @@index([reporterId])
+  @@index([status])
 }

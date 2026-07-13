@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { ReportCommentDto } from './dto/report-comment.dto';
 
 /**
  * Comment HTTP endpoints.
@@ -111,5 +112,18 @@ export class CommentController {
     @CurrentUser('id') userId: number,
   ): Promise<{ liked: boolean; likeCount: number }> {
     return this.comments.unlikeComment(commentId, userId);
+  }
+
+  /**
+   * POST /comments/:id/report — student admins report a comment. Creates a
+   * CommentReport and notifies the teacher managing the comment author's class.
+   */
+  @Post('comments/:id/report')
+  reportComment(
+    @Param('id', ParseIntPipe) commentId: number,
+    @Body() dto: ReportCommentDto,
+    @CurrentUser('id') userId: number,
+  ): Promise<{ success: true }> {
+    return this.comments.reportComment(commentId, dto.reason, userId);
   }
 }

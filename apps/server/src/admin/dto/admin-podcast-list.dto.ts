@@ -10,7 +10,7 @@ import {
 } from 'class-validator';
 
 /** Allowed status filter values for the admin podcast list endpoint. */
-const STATUS_OPTIONS = ['PENDING', 'PUBLISHED', 'TAKEN_DOWN'] as const;
+const STATUS_OPTIONS = ['PENDING', 'PUBLISHED', 'TAKEN_DOWN', 'FLAGGED'] as const;
 
 /**
  * Query-string DTO for GET /admin/podcasts. All fields are optional with

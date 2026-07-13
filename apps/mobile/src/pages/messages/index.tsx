@@ -24,6 +24,8 @@ const TYPE_ICON: Record<NotificationType, string> = {
   PODCAST_REJECTED: 'cancel',
   PODCAST_LIKED: 'favorite',
   PODCAST_COMMENTED: 'chat_bubble',
+  PODCAST_FLAGGED: 'flag',
+  COMMENT_REPORTED: 'report',
 }
 
 const TYPE_ICON_COLOR: Record<NotificationType, string> = {
@@ -32,6 +34,8 @@ const TYPE_ICON_COLOR: Record<NotificationType, string> = {
   PODCAST_REJECTED: '#ba1a1a',
   PODCAST_LIKED: '#e53935',
   PODCAST_COMMENTED: '#1976d2',
+  PODCAST_FLAGGED: '#ed6c02',
+  COMMENT_REPORTED: '#ed6c02',
 }
 
 function handleBack(): void {

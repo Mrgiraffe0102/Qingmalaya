@@ -17,7 +17,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AdminPodcastsService, AdminCommentsService } from './admin-content.service';
-import { AdminPodcastListDto } from './dto/admin-podcast-list.dto';
+import { AdminPodcastListDto, parseClassIds } from './dto/admin-podcast-list.dto';
 import { AdminPodcastUpdateDto } from './dto/admin-podcast-update.dto';
 import { AdminPodcastBatchTakedownDto } from './dto/admin-podcast-batch-takedown.dto';
 import { AdminPodcastBatchPublishDto } from './dto/admin-podcast-batch-publish.dto';
@@ -25,6 +25,8 @@ import { AdminPodcastBatchTagDto } from './dto/admin-podcast-batch-tag.dto';
 import { AdminPodcastBatchDeleteDto } from './dto/admin-podcast-batch-delete.dto';
 import { AdminCommentListDto } from './dto/admin-comment-list.dto';
 import { AdminCommentBatchDeleteDto } from './dto/admin-comment-batch-delete.dto';
+import { AdminPodcastRejectDto } from './dto/admin-podcast-reject.dto';
+import { ResolveReportDto } from './dto/resolve-report.dto';
 
 /**
  * Admin podcast + comment management endpoints (Tasks 27 + 28).
@@ -106,14 +108,24 @@ export class AdminPodcastsController {
     return this.podcasts.batchRemove(dto, adminId);
   }
 
-  /**
-   * GET /admin/podcasts/options — lightweight id+title list for selectors.
+  /** GET /admin/podcasts/options — lightweight id+title list for selectors.
    * Returns only PUBLISHED podcasts. Declared before @Get(':id') so the
    * static path wins.
    */
   @Get('options')
   options() {
     return this.podcasts.options();
+  }
+
+  /**
+   * GET /admin/podcasts/flagged — list FLAGGED podcasts with flag reason +
+   * reviewer info. Optionally filtered by classIds (teacher scope). Declared
+   * before @Get(':id') so the static path wins.
+   */
+  @Get('flagged')
+  flagged(@Query('classIds') classIds?: string) {
+    const ids = parseClassIds(classIds);
+    return this.podcasts.listFlagged(ids ?? undefined);
   }
 
   /** GET /admin/podcasts/:id — detail with author + tags + commentCount. */
@@ -148,6 +160,20 @@ export class AdminPodcastsController {
     @CurrentUser('id') adminId: number,
   ) {
     return this.podcasts.publish(id, adminId);
+  }
+
+  /**
+   * PUT /admin/podcasts/:id/reject — reject a podcast with a reason. Sets
+   * status TAKEN_DOWN, creates a PodcastReview (action=REJECT), notifies the
+   * author with the reason. Used for both PENDING and FLAGGED podcasts.
+   */
+  @Put(':id/reject')
+  reject(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AdminPodcastRejectDto,
+    @CurrentUser('id') adminId: number,
+  ) {
+    return this.podcasts.reject(id, dto, adminId);
   }
 
   /** DELETE /admin/podcasts/:id — hard-delete a single podcast. */
@@ -189,6 +215,17 @@ export class AdminCommentsController {
     return this.comments.batchDelete(dto.ids, adminId);
   }
 
+  /**
+   * GET /admin/comments/reported — list pending comment reports with reporter
+   * + comment + author + podcast info. Optionally filtered by classIds
+   * (teacher scope). Declared before @Delete(':id') so the static path wins.
+   */
+  @Get('reported')
+  reported(@Query('classIds') classIds?: string) {
+    const ids = parseClassIds(classIds);
+    return this.comments.listReported(ids ?? undefined);
+  }
+
   /** DELETE /admin/comments/:id — delete single comment. */
   @Delete(':id')
   delete(
@@ -196,5 +233,19 @@ export class AdminCommentsController {
     @CurrentUser('id') adminId: number,
   ) {
     return this.comments.delete(id, adminId);
+  }
+
+  /**
+   * PUT /admin/comments/:id/report/resolve — resolve a comment report. If
+   * action='delete', the comment is deleted; if 'dismiss', the report is
+   * marked resolved without modifying the comment.
+   */
+  @Put(':id/report/resolve')
+  resolveReport(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ResolveReportDto,
+    @CurrentUser('id') adminId: number,
+  ) {
+    return this.comments.resolveReport(id, dto, adminId);
   }
 }
