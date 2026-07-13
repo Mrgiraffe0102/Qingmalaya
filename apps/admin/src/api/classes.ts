@@ -30,6 +30,22 @@ export interface ImportStudentsResult {
   errors: string[];
 }
 
+/** Per-student submission record returned by GET /admin/classes/:id/submission-status. */
+export interface StudentSubmissionStatus {
+  studentId: string;
+  name: string;
+  submitted: boolean;
+  published: number;
+  podcastTitles: string[];
+}
+
+/** Response shape returned by GET /admin/classes/:id/submission-status. */
+export interface ClassSubmissionStatusResponse {
+  className: string;
+  grade: string;
+  students: StudentSubmissionStatus[];
+}
+
 /** GET /admin/classes — list all classes with user/podcast counts. */
 export function listAdminClasses(): Promise<AdminClassListItem[]> {
   return get<AdminClassListItem[]>('/admin/classes');
@@ -61,4 +77,13 @@ export function importStudents(
   lines: string,
 ): Promise<ImportStudentsResult> {
   return post<ImportStudentsResult>(`/admin/classes/${id}/import`, { lines });
+}
+
+/** GET /admin/classes/:id/submission-status — per-student submission status. */
+export function getSubmissionStatus(
+  id: number,
+): Promise<ClassSubmissionStatusResponse> {
+  return get<ClassSubmissionStatusResponse>(
+    `/admin/classes/${id}/submission-status`,
+  );
 }

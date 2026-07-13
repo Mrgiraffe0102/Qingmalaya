@@ -43,6 +43,22 @@ export interface ImportStudentsResult {
   errors: string[];
 }
 
+/** Per-student submission record returned by GET /admin/classes/:id/submission-status. */
+export interface StudentSubmissionStatus {
+  studentId: string;
+  name: string;
+  submitted: boolean;
+  published: number;
+  podcastTitles: string[];
+}
+
+/** Response shape returned by GET /admin/classes/:id/submission-status. */
+export interface ClassSubmissionStatusResponse {
+  className: string;
+  grade: string;
+  students: StudentSubmissionStatus[];
+}
+
 /** Result shape returned by POST /admin/users/:id/reset-password. */
 export interface ResetPasswordResult {
   newPassword: string;
@@ -681,6 +697,58 @@ export class AdminClassesService {
       orderBy: { id: 'asc' },
     });
     return rows.map(toAdminClassListItem);
+  }
+
+  /**
+   * Per-student submission status for a class (GET
+   * /admin/classes/:id/submission-status). Returns every STUDENT in the class
+   * with their submitted podcast titles (ordered by createdAt ascending) and
+   * a `published` count, plus a `submitted` flag (podcastTitles.length > 0).
+   * Throws NotFoundException if the class doesn't exist.
+   */
+  async getSubmissionStatus(
+    classId: number,
+  ): Promise<ClassSubmissionStatusResponse> {
+    const cls = await this.prisma.class.findUnique({
+      where: { id: classId },
+      select: { name: true, grade: true },
+    });
+    if (!cls) {
+      throw new NotFoundException(`班级 ${classId} 不存在`);
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: { classId, role: 'STUDENT' },
+      select: {
+        studentId: true,
+        name: true,
+        podcasts: {
+          select: { title: true, status: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+      orderBy: { studentId: 'asc' },
+    });
+
+    const students: StudentSubmissionStatus[] = users.map((u) => {
+      const podcastTitles = u.podcasts.map((p) => p.title);
+      const published = u.podcasts.filter(
+        (p) => p.status === 'PUBLISHED',
+      ).length;
+      return {
+        studentId: u.studentId,
+        name: u.name,
+        published,
+        submitted: podcastTitles.length > 0,
+        podcastTitles,
+      };
+    });
+
+    return {
+      className: cls.name,
+      grade: cls.grade ?? '',
+      students,
+    };
   }
 
   /** Create a new class. Writes an AdminLog entry tagged create_class. */

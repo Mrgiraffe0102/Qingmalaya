@@ -141,6 +141,7 @@ export class AdminUsersController {
  * OPERATOR or SUPER_ADMIN role.
  *
  * - GET    /admin/classes           — list all classes with user/podcast counts
+ * - GET    /admin/classes/:id/submission-status — per-student submission status
  * - POST   /admin/classes           — create class
  * - PUT    /admin/classes/:id       — update class
  * - DELETE /admin/classes/:id       — delete class (rejected if it has users)
@@ -155,6 +156,11 @@ export class AdminClassesController {
   @Get()
   list() {
     return this.classes.list();
+  }
+
+  @Get(':id/submission-status')
+  submissionStatus(@Param('id', ParseIntPipe) id: number) {
+    return this.classes.getSubmissionStatus(id);
   }
 
   @Post()

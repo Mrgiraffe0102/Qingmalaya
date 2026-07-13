@@ -1,11 +1,12 @@
 /**
- * 班级管理 — class CRUD + batch student import.
+ * 班级管理 — class CRUD + batch student import + submission status export.
  *
  * ProTable lists all classes (no pagination — the catalog is small). The
  * toolbar exposes a "新建班级" button opening a ModalForm. Each row has
  * edit (ModalForm), delete (confirm modal, rejected server-side if the class
- * still has users), and "导入学生" (modal with a TextArea accepting pasted
- * `studentId,name` lines).
+ * still has users), "导入学生" (modal with a TextArea accepting pasted
+ * `studentId,name` lines), and "导出" (dropdown: CSV / Excel per-student
+ * submission status).
  */
 import React, { useRef, useState } from 'react';
 import {
@@ -15,15 +16,19 @@ import {
   type ActionType,
   type ProColumns,
 } from '@ant-design/pro-components';
-import { App as AntdApp, Button, Input, Modal, Space } from 'antd';
+import { App as AntdApp, Button, Dropdown, Input, Modal, Space } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import * as XLSX from 'xlsx';
 import {
   createAdminClass,
   deleteAdminClass,
+  getSubmissionStatus,
   importStudents,
   listAdminClasses,
   updateAdminClass,
   type AdminClassListItem,
+  type StudentSubmissionStatus,
 } from '@/api/classes';
 
 const { TextArea } = Input;
@@ -32,6 +37,88 @@ const { TextArea } = Input;
 interface ClassFormValues {
   name: string;
   grade?: string;
+}
+
+type ExportFormat = 'csv' | 'xlsx';
+
+/** Column labels for the submission-status export. */
+const EXPORT_HEADERS = [
+  '学号',
+  '姓名',
+  '是否已提交',
+  '已发布播客数',
+  '已上传播客',
+] as const;
+
+/** Replace characters that are invalid in filenames. */
+function sanitizeFilename(name: string): string {
+  return name.replace(/[\\/:*?"<>|]/g, '_');
+}
+
+/** Build the 2D data array (header + student rows + summary) for export. */
+function buildExportRows(
+  students: StudentSubmissionStatus[],
+): (string | number)[][] {
+  const dataRows: (string | number)[][] = students.map((s) => [
+    s.studentId,
+    s.name,
+    s.submitted ? '是' : '否',
+    s.published,
+    s.podcastTitles.join('、'),
+  ]);
+  const submittedCount = students.filter((s) => s.submitted).length;
+  const totalPublished = students.reduce((sum, s) => sum + s.published, 0);
+  const summary: (string | number)[] = [
+    '合计',
+    `${students.length} 人`,
+    `已提交 ${submittedCount}/${students.length}`,
+    totalPublished,
+    '—',
+  ];
+  return [[...EXPORT_HEADERS], ...dataRows, summary];
+}
+
+/** Trigger a browser download for a Blob. */
+function triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** Export submission status as CSV (UTF-8 with BOM for Excel compatibility). */
+function exportCsv(className: string, students: StudentSubmissionStatus[]): void {
+  const rows = buildExportRows(students);
+  const csv = rows
+    .map((row) =>
+      row
+        .map((cell) => {
+          const s = String(cell);
+          if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+            return `"${s.replace(/"/g, '""')}"`;
+          }
+          return s;
+        })
+        .join(','),
+    )
+    .join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], {
+    type: 'text/csv;charset=utf-8;',
+  });
+  triggerDownload(blob, `${sanitizeFilename(className)}_提交状况.csv`);
+}
+
+/** Export submission status as a real .xlsx file via SheetJS. */
+function exportExcel(className: string, students: StudentSubmissionStatus[]): void {
+  const rows = buildExportRows(students);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '提交状况');
+  XLSX.writeFile(wb, `${sanitizeFilename(className)}_提交状况.xlsx`);
 }
 
 const ClassesPage: React.FC = () => {
@@ -43,6 +130,32 @@ const ClassesPage: React.FC = () => {
   const [importing, setImporting] = useState<AdminClassListItem | null>(null);
   const [importText, setImportText] = useState('');
   const [importingBusy, setImportingBusy] = useState(false);
+  const [exportingId, setExportingId] = useState<number | null>(null);
+
+  /** Fetch submission status and trigger a CSV or Excel download. */
+  const handleExport = async (
+    record: AdminClassListItem,
+    format: ExportFormat,
+  ) => {
+    setExportingId(record.id);
+    try {
+      const data = await getSubmissionStatus(record.id);
+      if (data.students.length === 0) {
+        message.warning('该班级暂无学生');
+        return;
+      }
+      if (format === 'csv') {
+        exportCsv(data.className, data.students);
+      } else {
+        exportExcel(data.className, data.students);
+      }
+      message.success(`已导出 ${data.students.length} 名学生的提交状况`);
+    } catch (e) {
+      message.error((e as Error).message || '导出失败');
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   /** Delete a class after confirmation. Server rejects if it still has users. */
   const handleDelete = (record: AdminClassListItem) => {
@@ -150,7 +263,7 @@ const ClassesPage: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 240,
+      width: 320,
       fixed: 'right',
       hideInSearch: true,
       render: (_: unknown, record: AdminClassListItem) => (
@@ -169,6 +282,24 @@ const ClassesPage: React.FC = () => {
           >
             导入学生
           </Button>
+          <Dropdown
+            menu={{
+              items: [
+                { key: 'csv', label: '导出 CSV' },
+                { key: 'xlsx', label: '导出 Excel' },
+              ],
+              onClick: ({ key }) =>
+                handleExport(record, key as ExportFormat),
+            }}
+          >
+            <Button
+              type="link"
+              size="small"
+              loading={exportingId === record.id}
+            >
+              导出 <DownOutlined />
+            </Button>
+          </Dropdown>
           <Button
             type="link"
             size="small"
