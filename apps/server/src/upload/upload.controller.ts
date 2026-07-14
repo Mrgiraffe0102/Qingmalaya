@@ -105,13 +105,26 @@ export class UploadController {
       const mp3 = await transcodeToMp3(
         join(UPLOAD_DIR, result.path),
       );
+
+      // Enforce the duration limit (checked after transcoding since the
+      // true duration is only known then).
+      const maxDuration = await this.settings.getNumber('max_audio_duration', 3600);
+      if (mp3.duration > maxDuration) {
+        await fsPromises.unlink(mp3.path).catch(() => undefined);
+        await fsPromises.unlink(join(UPLOAD_DIR, result.path)).catch(() => undefined);
+        throw new PayloadTooLargeException(
+          `音频时长超出限制 (上限 ${Math.floor(maxDuration / 60)} 分钟)`,
+        );
+      }
+
       return {
         path: toRelativePath(mp3.path),
         size: mp3.size,
         mimetype: 'audio/mpeg',
         duration: mp3.duration,
       };
-    } catch {
+    } catch (e) {
+      if (e instanceof PayloadTooLargeException) throw e;
       throw new BadRequestException('音频转码失败，请检查文件是否损坏');
     }
   }

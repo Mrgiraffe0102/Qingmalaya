@@ -1,5 +1,6 @@
 import { type CSSProperties } from 'react'
 import { View, Text, Textarea, ScrollView } from '@tarojs/components'
+import type { RejectReasonCategory } from '@qingmalaya/shared'
 
 /**
  * ReasonModal — custom overlay for text/checkbox input.
@@ -17,9 +18,9 @@ import { View, Text, Textarea, ScrollView } from '@tarojs/components'
 interface ReasonModalProps {
   visible: boolean
   title: string
-  /** Optional list of selectable reason labels (e.g. COMMON_REJECT_REASONS). When provided, a checkbox list is rendered. */
-  reasons?: readonly string[]
-  /** Selected reason indices (into `reasons`). */
+  /** Optional categorized reasons. When provided, a grouped checkbox list is rendered. */
+  reasonCategories?: readonly RejectReasonCategory[]
+  /** Selected reason indices (into the flattened COMMON_REJECT_REASONS array). */
   reasonTags?: number[]
   onReasonTagsChange?: (tags: number[]) => void
   /** Free-text reason. */
@@ -41,7 +42,7 @@ const CARD_STYLE: CSSProperties = {
 export default function ReasonModal({
   visible,
   title,
-  reasons,
+  reasonCategories,
   reasonTags = [],
   onReasonTagsChange,
   reason,
@@ -65,6 +66,7 @@ export default function ReasonModal({
   }
 
   const canConfirm = !reasonRequired || reason.trim().length > 0
+  const hasCategories = !!reasonCategories && reasonCategories.length > 0
 
   return (
     <View
@@ -93,38 +95,52 @@ export default function ReasonModal({
 
         {/* Body */}
         <ScrollView scrollY className='px-5 py-4' style={{ maxHeight: '50vh' }}>
-          {/* Checkbox list (optional) */}
-          {reasons && reasons.length > 0 && (
+          {/* Categorized checkbox list (optional) */}
+          {hasCategories && (
             <View className='mb-4'>
-              <Text className='mb-2 block text-sm font-medium text-on-surface'>
+              <Text className='mb-3 block text-sm font-medium text-on-surface'>
                 常见原因（可多选）
               </Text>
-              <View className='flex flex-wrap gap-2'>
-                {reasons.map((label, idx) => {
-                  const selected = reasonTags.includes(idx)
-                  return (
-                    <View
-                      key={idx}
-                      onClick={() => toggleTag(idx)}
-                      className={`rounded-full px-3 py-1.5 ${
-                        selected
-                          ? 'bg-primary text-on-primary'
-                          : 'bg-surface-container-high text-on-surface-variant'
-                      }`}
-                      style={{ fontSize: '13px', fontWeight: '500' }}
-                    >
-                      {label}
+              {reasonCategories!.map((cat, catIdx) => {
+                let baseIdx = 0
+                for (let i = 0; i < catIdx; i++) {
+                  baseIdx += reasonCategories![i].reasons.length
+                }
+                return (
+                  <View key={catIdx} className={catIdx > 0 ? 'mt-3' : ''}>
+                    <Text className='mb-1.5 block text-xs font-semibold text-on-surface-variant'>
+                      {cat.title}
+                    </Text>
+                    <View className='flex flex-wrap gap-2'>
+                      {cat.reasons.map((label, i) => {
+                        const globalIdx = baseIdx + i
+                        const selected = reasonTags.includes(globalIdx)
+                        return (
+                          <View
+                            key={globalIdx}
+                            onClick={() => toggleTag(globalIdx)}
+                            className={`rounded-full px-3 py-1.5 ${
+                              selected
+                                ? 'bg-primary text-on-primary'
+                                : 'bg-surface-container-high text-on-surface-variant'
+                            }`}
+                            style={{ fontSize: '13px', fontWeight: '500' }}
+                          >
+                            {label}
+                          </View>
+                        )
+                      })}
                     </View>
-                  )
-                })}
-              </View>
+                  </View>
+                )
+              })}
             </View>
           )}
 
           {/* Textarea */}
           <View>
             <Text className='mb-2 block text-sm font-medium text-on-surface'>
-              {reasons ? '其他原因' : '请输入原因'}
+              {hasCategories ? '其他原因' : '请输入原因'}
             </Text>
             <Textarea
               value={reason}

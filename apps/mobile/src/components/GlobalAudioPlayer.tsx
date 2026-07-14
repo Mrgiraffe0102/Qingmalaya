@@ -19,6 +19,16 @@ import { STATIC_ORIGIN } from '../config/env'
 
 const REPORT_INTERVAL_MS = 5000
 
+/** Sum the lengths of all played ranges — seeking does NOT create ranges. */
+function getTotalPlayed(audio: HTMLAudioElement): number {
+  let total = 0
+  const ranges = audio.played
+  for (let i = 0; i < ranges.length; i++) {
+    total += ranges.end(i) - ranges.start(i)
+  }
+  return total
+}
+
 export default function GlobalAudioPlayer() {
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -28,7 +38,16 @@ export default function GlobalAudioPlayer() {
 
     const onTimeUpdate = () => {
       if (isSeeking()) return
-      usePlayerStore.getState().setPosition(audio.currentTime)
+      const pos = audio.currentTime
+      usePlayerStore.getState().setPosition(pos)
+      // Mark as completed only when the user has actually played (not seeked)
+      // nearly the entire audio. Uses audio.played TimeRanges which the browser
+      // tracks natively — seeking over content does not create played ranges.
+      const dur = audio.duration
+      if (dur && getTotalPlayed(audio) >= dur - 2) {
+        const cur = usePlayerStore.getState().currentPodcast
+        if (cur) usePlayerStore.getState().markCompleted(cur.id)
+      }
     }
 
     const onPlay = () => {
@@ -40,6 +59,13 @@ export default function GlobalAudioPlayer() {
     }
 
     const onEnded = () => {
+      // Same played-time guard as onTimeUpdate — seeking to the end and
+      // letting it finish must NOT mark the podcast as completed.
+      const dur = audio.duration
+      if (dur && getTotalPlayed(audio) >= dur - 2) {
+        const cur = usePlayerStore.getState().currentPodcast
+        if (cur) usePlayerStore.getState().markCompleted(cur.id)
+      }
       usePlayerStore.setState({ isPlaying: false, position: 0 })
     }
 

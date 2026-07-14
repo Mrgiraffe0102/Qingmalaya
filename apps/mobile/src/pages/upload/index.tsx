@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Input, Textarea, Image } from '@tarojs/components'
+import { View, Text, Input, Image } from '@tarojs/components'
 import { useAuthRedirect } from '../../utils/route-guard'
 import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
 import { get, post, put } from '../../utils/request'
@@ -96,7 +96,6 @@ function uploadFileWeapp(
 }
 
 const TITLE_MAX = 30
-const DESC_MAX = 500
 
 export default function Upload() {
   const ok = useAuthRedirect()
@@ -104,7 +103,6 @@ export default function Upload() {
   const router = Taro.useRouter<{ id?: string }>()
 
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
   const [coverPath, setCoverPath] = useState('')
   const [audioPath, setAudioPath] = useState('')
   const [audioFileName, setAudioFileName] = useState('')
@@ -149,7 +147,6 @@ export default function Upload() {
       get<PodcastWithRelations>(`/podcasts/${editingIdParam}`)
         .then((p) => {
           setTitle(p.title)
-          setDescription(p.description || '')
           setCoverPath(p.coverPath)
           setAudioPath(p.audioPath)
           setDuration(p.duration)
@@ -226,8 +223,18 @@ export default function Upload() {
       setDuration(result.duration ?? 0)
       setAudioPath(result.path)
       setAudioFileName(file.name)
-    } catch {
-      Taro.showToast({ title: '音频上传失败', icon: 'none' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '音频上传失败'
+      if (message.includes('时长')) {
+        Taro.showModal({
+          title: '音频时长超出限制',
+          content: message,
+          showCancel: false,
+          confirmText: '我知道了',
+        })
+      } else {
+        Taro.showToast({ title: message, icon: 'none' })
+      }
     } finally {
       setAudioUploading(false)
       e.target.value = ''
@@ -262,8 +269,18 @@ export default function Upload() {
       setDuration(result.duration ?? 0)
       setAudioPath(result.path)
       setAudioFileName(file.name)
-    } catch {
-      Taro.showToast({ title: '音频上传失败', icon: 'none' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '音频上传失败'
+      if (message.includes('时长')) {
+        Taro.showModal({
+          title: '音频时长超出限制',
+          content: message,
+          showCancel: false,
+          confirmText: '我知道了',
+        })
+      } else {
+        Taro.showToast({ title: message, icon: 'none' })
+      }
     } finally {
       setAudioUploading(false)
     }
@@ -303,7 +320,6 @@ export default function Upload() {
     try {
       const body = {
         title: title.trim(),
-        description: description.trim(),
         coverPath,
         audioPath,
         duration,
@@ -450,23 +466,7 @@ export default function Upload() {
           />
         </View>
 
-        {/* 3. Description */}
-        <View className='mb-6'>
-          <Text className='mb-2 block px-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant'>
-            内容简介
-          </Text>
-          <Textarea
-            value={description}
-            maxlength={DESC_MAX}
-            placeholder='介绍一下你的播客内容'
-            placeholderClass='text-outline-variant'
-            onInput={(e) => setDescription(e.detail.value)}
-            className='w-full rounded-xl bg-surface-container-low p-4 text-sm text-on-surface'
-            style={{ minHeight: '100px', border: 'none' }}
-          />
-        </View>
-
-        {/* 4. Tags */}
+        {/* 3. Tags */}
         <View className='mb-6'>
           <Text className='mb-2 block px-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant'>
             添加标签
@@ -547,7 +547,7 @@ export default function Upload() {
           )}
         </View>
 
-        {/* 5. Audio upload */}
+        {/* 4. Audio upload */}
         <View className='mb-6'>
           <Text className='mb-2 block px-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant'>
             音频

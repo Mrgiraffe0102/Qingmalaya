@@ -635,26 +635,26 @@ function CommentItem({
             className='flex items-center gap-1'
           >
             <Text
-              className='text-sm'
+              className='text-sm leading-none'
               style={{ color: comment.liked ? '#ba1a1a' : '#727879' }}
             >
               {comment.liked ? '♥' : '♡'}
             </Text>
-            <Text className='text-xs text-outline'>
+            <Text className='text-xs leading-none text-outline'>
               {formatCount(comment.likeCount)}
             </Text>
           </View>
-          <View onClick={() => onReply(comment)}>
-            <Text className='text-xs text-outline'>回复</Text>
+          <View onClick={() => onReply(comment)} className='flex items-center'>
+            <Text className='text-xs leading-none text-outline'>回复</Text>
           </View>
           {commentCanReport && (
-            <View onClick={() => onReport(comment.id)}>
-              <Text className='text-xs' style={{ color: '#ba1a1a' }}>举报</Text>
+            <View onClick={() => onReport(comment.id)} className='flex items-center'>
+              <Text className='text-xs leading-none' style={{ color: '#ba1a1a' }}>举报</Text>
             </View>
           )}
           {commentCanDelete && (
-            <View onClick={() => onDelete(comment.id)}>
-              <Text className='text-xs' style={{ color: '#ba1a1a' }}>删除</Text>
+            <View onClick={() => onDelete(comment.id)} className='flex items-center'>
+              <Text className='text-xs leading-none' style={{ color: '#ba1a1a' }}>删除</Text>
             </View>
           )}
         </View>
@@ -701,23 +701,23 @@ function CommentItem({
                         className='flex items-center gap-1'
                       >
                         <Text
-                          className='text-xs'
+                          className='text-xs leading-none'
                           style={{ color: reply.liked ? '#ba1a1a' : '#727879' }}
                         >
                           {reply.liked ? '♥' : '♡'}
                         </Text>
-                        <Text className='text-xs text-outline'>
+                        <Text className='text-xs leading-none text-outline'>
                           {formatCount(reply.likeCount)}
                         </Text>
                       </View>
                       {replyCanReport && (
-                        <View onClick={() => onReport(reply.id)}>
-                          <Text className='text-xs' style={{ color: '#ba1a1a' }}>举报</Text>
+                        <View onClick={() => onReport(reply.id)} className='flex items-center'>
+                          <Text className='text-xs leading-none' style={{ color: '#ba1a1a' }}>举报</Text>
                         </View>
                       )}
                       {replyCanDelete && (
-                        <View onClick={() => onDeleteReply(reply.id, comment.id)}>
-                          <Text className='text-xs' style={{ color: '#ba1a1a' }}>删除</Text>
+                        <View onClick={() => onDeleteReply(reply.id, comment.id)} className='flex items-center'>
+                          <Text className='text-xs leading-none' style={{ color: '#ba1a1a' }}>删除</Text>
                         </View>
                       )}
                     </View>

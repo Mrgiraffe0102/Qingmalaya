@@ -1,33 +1,35 @@
 /**
- * 系统设置 (Task 33). OPERATOR+.
+ * 系统设置. OPERATOR+.
  *
- * Edits the four SystemSetting keys (upload.maxFileSize, upload.maxDuration,
- * login.whitelist, cache.version). Values are stored as strings on the
- * backend; numeric fields are parsed/serialized here.
+ * Edits the two upload-related SystemSetting keys:
+ *   - max_audio_size      (stored as bytes on the backend, shown as MB)
+ *   - max_audio_duration   (stored as seconds on the backend, shown as minutes)
  */
 import React, { useEffect, useState } from 'react';
 import {
   ProCard,
   ProForm,
   ProFormDigit,
-  ProFormTextArea,
 } from '@ant-design/pro-components';
 import { App as AntdApp, Spin } from 'antd';
 import { getSettings, updateSettings, type SettingsMap } from '@/api/settings';
 
+const BYTES_PER_MB = 1024 * 1024;
+const SECONDS_PER_MIN = 60;
+
+/** Server defaults (must match SystemSettingService). */
+const DEFAULT_MAX_AUDIO_SIZE_MB = 200;
+const DEFAULT_MAX_AUDIO_DURATION_MIN = 60;
+
 /** Keys managed by this page. */
 const SETTING_KEYS = {
-  MAX_FILE_SIZE: 'upload.maxFileSize',
-  MAX_DURATION: 'upload.maxDuration',
-  LOGIN_WHITELIST: 'login.whitelist',
-  CACHE_VERSION: 'cache.version',
+  MAX_AUDIO_SIZE: 'max_audio_size',
+  MAX_AUDIO_DURATION: 'max_audio_duration',
 } as const;
 
 interface SettingsFormValues {
-  [SETTING_KEYS.MAX_FILE_SIZE]: number;
-  [SETTING_KEYS.MAX_DURATION]: number;
-  [SETTING_KEYS.LOGIN_WHITELIST]: string;
-  [SETTING_KEYS.CACHE_VERSION]: number;
+  maxAudioSizeMb: number;
+  maxAudioDurationMin: number;
 }
 
 const SettingsPage: React.FC = () => {
@@ -42,11 +44,17 @@ const SettingsPage: React.FC = () => {
       try {
         const map = await getSettings();
         if (cancelled) return;
+        const rawSize = Number(map[SETTING_KEYS.MAX_AUDIO_SIZE] ?? 0);
+        const rawDuration = Number(map[SETTING_KEYS.MAX_AUDIO_DURATION] ?? 0);
         form.setFieldsValue({
-          [SETTING_KEYS.MAX_FILE_SIZE]: Number(map[SETTING_KEYS.MAX_FILE_SIZE] ?? 0),
-          [SETTING_KEYS.MAX_DURATION]: Number(map[SETTING_KEYS.MAX_DURATION] ?? 0),
-          [SETTING_KEYS.LOGIN_WHITELIST]: map[SETTING_KEYS.LOGIN_WHITELIST] ?? '',
-          [SETTING_KEYS.CACHE_VERSION]: Number(map[SETTING_KEYS.CACHE_VERSION] ?? 0),
+          maxAudioSizeMb:
+            rawSize > 0
+              ? Math.round(rawSize / BYTES_PER_MB)
+              : DEFAULT_MAX_AUDIO_SIZE_MB,
+          maxAudioDurationMin:
+            rawDuration > 0
+              ? Math.round(rawDuration / SECONDS_PER_MIN)
+              : DEFAULT_MAX_AUDIO_DURATION_MIN,
         });
       } catch (e) {
         if (!cancelled) message.error((e as Error).message || '加载设置失败');
@@ -64,10 +72,12 @@ const SettingsPage: React.FC = () => {
   ): Promise<boolean> => {
     try {
       const payload: SettingsMap = {
-        [SETTING_KEYS.MAX_FILE_SIZE]: String(values[SETTING_KEYS.MAX_FILE_SIZE]),
-        [SETTING_KEYS.MAX_DURATION]: String(values[SETTING_KEYS.MAX_DURATION]),
-        [SETTING_KEYS.LOGIN_WHITELIST]: values[SETTING_KEYS.LOGIN_WHITELIST] ?? '',
-        [SETTING_KEYS.CACHE_VERSION]: String(values[SETTING_KEYS.CACHE_VERSION]),
+        [SETTING_KEYS.MAX_AUDIO_SIZE]: String(
+          values.maxAudioSizeMb * BYTES_PER_MB,
+        ),
+        [SETTING_KEYS.MAX_AUDIO_DURATION]: String(
+          values.maxAudioDurationMin * SECONDS_PER_MIN,
+        ),
       };
       await updateSettings(payload);
       message.success('设置已保存');
@@ -92,31 +102,18 @@ const SettingsPage: React.FC = () => {
           style={{ maxWidth: 560 }}
         >
           <ProFormDigit
-            name={[SETTING_KEYS.MAX_FILE_SIZE]}
-            label="上传文件大小上限 (MB)"
+            name="maxAudioSizeMb"
+            label="上传音频文件大小上限 (MB)"
             min={1}
             fieldProps={{ precision: 0 }}
             rules={[{ required: true, message: '请输入文件大小上限' }]}
           />
           <ProFormDigit
-            name={[SETTING_KEYS.MAX_DURATION]}
+            name="maxAudioDurationMin"
             label="上传音频时长上限 (分钟)"
             min={1}
             fieldProps={{ precision: 0 }}
             rules={[{ required: true, message: '请输入时长上限' }]}
-          />
-          <ProFormTextArea
-            name={[SETTING_KEYS.LOGIN_WHITELIST]}
-            label="登录 IP 白名单"
-            tooltip="每行一个 IP，或用逗号分隔"
-            fieldProps={{ rows: 4, placeholder: '每行一个 IP，或用逗号分隔' }}
-          />
-          <ProFormDigit
-            name={[SETTING_KEYS.CACHE_VERSION]}
-            label="缓存版本号"
-            min={0}
-            fieldProps={{ precision: 0 }}
-            rules={[{ required: true, message: '请输入缓存版本号' }]}
           />
         </ProForm>
       </Spin>

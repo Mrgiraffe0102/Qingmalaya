@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Image, Textarea, Button } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import AppLayout from '../../components/AppLayout'
 import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
@@ -68,8 +68,6 @@ export default function AccountSettings() {
   const ok = useAuthRedirect()
   const { user, updateUser } = useAuthStore()
   const [classes, setClasses] = useState<Class[]>([])
-  const [bio, setBio] = useState('')
-  const [bioSaving, setBioSaving] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -80,10 +78,6 @@ export default function AccountSettings() {
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok])
-
-  useEffect(() => {
-    if (user) setBio(user.bio ?? '')
-  }, [user])
 
   if (!ok || !user) return null
 
@@ -148,28 +142,9 @@ export default function AccountSettings() {
     }
   }
 
-  async function handleBioSave() {
-    if (bio === (user?.bio ?? '')) return
-    setBioSaving(true)
-    try {
-      await put<User>('/users/me', { bio }, { silent: true })
-      updateUser({ bio })
-      Taro.showToast({ title: '简介已保存', icon: 'success' })
-    } catch (err) {
-      Taro.showToast({
-        title: err instanceof Error ? err.message : '保存失败',
-        icon: 'none',
-      })
-    } finally {
-      setBioSaving(false)
-    }
-  }
-
   function handleChangePassword() {
     Taro.navigateTo({ url: '/pages/change-password/index?from=settings' })
   }
-
-  const bioChanged = bio !== (user.bio ?? '')
 
   return (
     <AppLayout currentTab='profile' hideChrome>
@@ -287,69 +262,6 @@ export default function AccountSettings() {
             <InfoRow label='学号' value={user.studentId} />
             <Divider />
             <InfoRow label='班级' value={className} />
-          </View>
-
-          {/* Bio editing card */}
-          <Text
-            className='block text-outline'
-            style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              letterSpacing: '0.1em',
-              marginTop: '20px',
-              marginLeft: '4px',
-              marginBottom: '8px',
-            }}
-          >
-            个人简介
-          </Text>
-          <View
-            className='rounded-xl p-4'
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid rgba(194, 199, 200, 0.15)',
-            }}
-          >
-            <Textarea
-              value={bio}
-              onInput={(e) => setBio(e.detail.value)}
-              placeholder='写点什么介绍一下自己吧...'
-              placeholderClass='text-outline-variant'
-              maxlength={200}
-              style={{
-                width: '100%',
-                minHeight: '80px',
-                fontSize: '14px',
-                lineHeight: '22px',
-                color: '#1d1b20',
-              }}
-            />
-            <View
-              className='flex items-center justify-between'
-              style={{ marginTop: '8px' }}
-            >
-              <Text className='text-outline' style={{ fontSize: '11px' }}>
-                {bio.length}/200
-              </Text>
-              <Button
-                onClick={handleBioSave}
-                disabled={!bioChanged || bioSaving}
-                className='text-on-primary'
-                style={{
-                  height: '36px',
-                  lineHeight: '36px',
-                  padding: '0 20px',
-                  borderRadius: '9999px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  backgroundColor: bioChanged && !bioSaving ? '#4d6265' : '#c2c7c8',
-                  border: 'none',
-                }}
-                hoverClass='none'
-              >
-                {bioSaving ? '保存中...' : '保存'}
-              </Button>
-            </View>
           </View>
 
           {/* Security section */}

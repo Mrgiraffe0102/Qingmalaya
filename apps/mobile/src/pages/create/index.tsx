@@ -11,7 +11,7 @@ import { get, del, put, post } from '../../utils/request'
 import { coverUrl, formatCount, formatRelativeTime } from '../../utils/format'
 import { playPodcast } from '../../utils/play'
 import {
-  COMMON_REJECT_REASONS,
+  REJECT_REASON_CATEGORIES,
   type PodcastWithRelations,
   type PodcastStatus,
   type Paginated,
@@ -51,6 +51,7 @@ export default function Create() {
   const ok = useAuthRedirect()
   const isDesktop = useIsDesktop()
   const hasPodcast = usePlayerStore((s) => s.currentPodcast !== null)
+  const completedPodcastIds = usePlayerStore((s) => s.completedPodcastIds)
   const { user } = useAuthStore()
   const isTeacher = user?.role === 'TEACHER'
   const isStudentAdmin = user?.isStudentAdmin === true && user?.role === 'STUDENT'
@@ -157,14 +158,22 @@ export default function Create() {
   }
 
   function onMore(podcast: PodcastWithRelations): void {
+    const canEdit = user?.role === 'TEACHER' || user?.role === 'OPERATOR' || user?.role === 'SUPER_ADMIN'
+    const items = canEdit ? ['编辑', '删除'] : ['删除']
     Taro.showActionSheet({
-      itemList: ['编辑', '删除'],
+      itemList: items,
       itemColor: '#1b1c1c',
       success: (res) => {
-        if (res.tapIndex === 0) {
-          goToUpload(podcast.id)
-        } else if (res.tapIndex === 1) {
-          void onDelete(podcast)
+        if (canEdit) {
+          if (res.tapIndex === 0) {
+            goToUpload(podcast.id)
+          } else if (res.tapIndex === 1) {
+            void onDelete(podcast)
+          }
+        } else {
+          if (res.tapIndex === 0) {
+            void onDelete(podcast)
+          }
         }
       },
       fail: () => {},
@@ -412,6 +421,7 @@ export default function Create() {
                           onFlag={() => openFlagModal(p)}
                           onReject={() => openRejectModal(p, 'reject')}
                           onTap={() => goToPlayback(p.id)}
+                          completed={completedPodcastIds.has(p.id)}
                         />
                       ))}
                     </View>
@@ -458,6 +468,7 @@ export default function Create() {
                             onApprove={() => void onTeacherApprove(p)}
                             onReject={() => openRejectModal(p, 'teacherReject')}
                             onTap={() => goToPlayback(p.id)}
+                            completed={completedPodcastIds.has(p.id)}
                           />
                         ))}
                       </View>
@@ -497,6 +508,7 @@ export default function Create() {
                         onApprove={() => void onTeacherApprove(p)}
                         onReject={() => openRejectModal(p, 'teacherReject')}
                         onTap={() => goToPlayback(p.id)}
+                        completed={completedPodcastIds.has(p.id)}
                       />
                     ))}
                   </View>
@@ -544,10 +556,10 @@ export default function Create() {
             ? '标记存疑'
             : '驳回播客'
         }
-        reasons={
+        reasonCategories={
           reasonModalMode === 'flag'
             ? undefined
-            : COMMON_REJECT_REASONS
+            : REJECT_REASON_CATEGORIES
         }
         reasonTags={reasonTags}
         onReasonTagsChange={setReasonTags}
@@ -756,6 +768,8 @@ interface ReviewCardProps {
   badgeText?: string
   badgeColor?: string
   flagInfo?: { reason: string; reviewer: string }
+  /** Whether the reviewer has fully played this podcast. When false, review buttons are disabled. */
+  completed?: boolean
 }
 
 /** Review card — shows author info + action buttons.
@@ -771,9 +785,11 @@ function ReviewCard({
   badgeText = '待审核',
   badgeColor = '#f59e0b',
   flagInfo,
+  completed = true,
 }: ReviewCardProps) {
   const cover = coverUrl(podcast.coverPath)
   const authorLabel = `${podcast.author.name} · 学号 ${podcast.author.studentId}`
+  const canReview = completed
 
   return (
     <View
@@ -844,9 +860,9 @@ function ReviewCard({
               <View
                 onClick={(e) => {
                   e.stopPropagation?.()
-                  onApprove()
+                  if (canReview) onApprove()
                 }}
-                className='flex items-center gap-1 rounded-full active:scale-95'
+                className={`flex items-center gap-1 rounded-full ${canReview ? 'active:scale-95' : 'opacity-40'}`}
                 style={{ backgroundColor: 'rgba(47, 143, 94, 0.12)', padding: '4px 12px', transition: 'transform 0.2s' }}
               >
                 <Icon name='check' style={{ fontSize: '14px', color: '#2f8f5e' }} />
@@ -857,9 +873,9 @@ function ReviewCard({
               <View
                 onClick={(e) => {
                   e.stopPropagation?.()
-                  onFlag()
+                  if (canReview) onFlag()
                 }}
-                className='flex items-center gap-1 rounded-full active:scale-95'
+                className={`flex items-center gap-1 rounded-full ${canReview ? 'active:scale-95' : 'opacity-40'}`}
                 style={{ backgroundColor: 'rgba(139, 90, 43, 0.12)', padding: '4px 12px', transition: 'transform 0.2s' }}
               >
                 <Icon name='help' style={{ fontSize: '14px', color: '#8b5a2b' }} />
@@ -869,9 +885,9 @@ function ReviewCard({
             <View
               onClick={(e) => {
                 e.stopPropagation?.()
-                onReject()
+                if (canReview) onReject()
               }}
-              className='flex items-center gap-1 rounded-full active:scale-95'
+              className={`flex items-center gap-1 rounded-full ${canReview ? 'active:scale-95' : 'opacity-40'}`}
               style={{ backgroundColor: 'rgba(186, 26, 26, 0.10)', padding: '4px 12px', transition: 'transform 0.2s' }}
             >
               <Icon name='close' style={{ fontSize: '14px', color: '#ba1a1a' }} />
@@ -879,6 +895,13 @@ function ReviewCard({
             </View>
           </View>
         </View>
+        {!canReview && (
+          <View className='mt-2 rounded-lg p-2' style={{ backgroundColor: 'rgba(77, 98, 101, 0.08)' }}>
+            <Text className='block text-xs' style={{ color: '#4d6265' }}>
+              请先完整播放此播客后再进行审核（暂理论上不支持倍速播放，但是有的同学反馈说可以，建议尝试一下）
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   )

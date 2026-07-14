@@ -13,10 +13,10 @@ import type {
   Tag,
   FlaggedPodcastItem,
 } from '@qingmalaya/shared';
-import { COMMON_REJECT_REASONS } from '@qingmalaya/shared';
+import { COMMON_REJECT_REASONS, REJECT_REASON_CATEGORIES } from '@qingmalaya/shared';
 import { del, get, post, put } from '@/utils/request';
 
-export { COMMON_REJECT_REASONS };
+export { COMMON_REJECT_REASONS, REJECT_REASON_CATEGORIES };
 
 export interface AdminPodcastListParams {
   keyword?: string;

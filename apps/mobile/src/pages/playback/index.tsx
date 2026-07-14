@@ -39,13 +39,6 @@ const TAG_COLORS: Record<TagColor, { text: string; bg: string }> = {
   amber: { text: '#b8860b', bg: 'rgba(184, 134, 11, 0.15)' },
 }
 
-/** Glassmorphism spec from DESIGN.md: 20px backdrop-blur + 80% white fill. */
-const GLASS_STYLE: CSSProperties = {
-  backdropFilter: 'blur(20px)',
-  WebkitBackdropFilter: 'blur(20px)',
-  backgroundColor: 'rgba(251, 249, 248, 0.8)',
-}
-
 /** Subtle frosted glass card for the text block over the fluid background. */
 const TEXT_GLASS: CSSProperties = {
   backdropFilter: 'blur(12px) saturate(1.1)',
@@ -80,10 +73,6 @@ export default function Playback() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [commentCount, setCommentCount] = useState(0)
   const [exiting, setExiting] = useState(false)
-
-  // --- Description modal (picture-in-picture for long descriptions) ---
-  const [descModalMounted, setDescModalMounted] = useState(false)
-  const [descModalVisible, setDescModalVisible] = useState(false)
 
   // --- Local slider drag value (decouples drag from store position updates) ---
   const [dragValue, setDragValue] = useState<number | null>(null)
@@ -318,18 +307,6 @@ export default function Playback() {
     }, 300)
   }, [])
 
-  const openDescModal = useCallback((): void => {
-    setDescModalMounted(true)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setDescModalVisible(true))
-    })
-  }, [])
-
-  const closeDescModal = useCallback((): void => {
-    setDescModalVisible(false)
-    setTimeout(() => setDescModalMounted(false), 200)
-  }, [])
-
   const animClass = exiting ? 'playback-slide-down' : 'playback-slide-up'
 
   // --- Render guards ---
@@ -369,16 +346,6 @@ export default function Playback() {
   const authorClass = podcast.author.classId
     ? classMap.get(podcast.author.classId)
     : null
-
-  const isLongDesc = !!podcast.description && podcast.description.length > 80
-
-  const clampedDescStyle: CSSProperties = {
-    display: '-webkit-box',
-    WebkitLineClamp: 3,
-    WebkitBoxOrient: 'vertical',
-    overflow: 'hidden',
-    wordBreak: 'break-word',
-  }
 
   return (
     <View
@@ -495,25 +462,6 @@ export default function Playback() {
               )}
             </View>
 
-            {/* Description — short ones show fully; long ones clamp
-                with a "更多" button that opens a picture-in-picture modal */}
-            {podcast.description && (
-              <View className='mt-3'>
-                <Text
-                  className='block text-sm leading-relaxed text-on-surface-variant'
-                  style={isLongDesc ? clampedDescStyle : undefined}
-                >
-                  {podcast.description}
-                </Text>
-                {isLongDesc && (
-                  <View onClick={openDescModal} className='mt-1'>
-                    <Text className='text-xs font-semibold text-primary'>
-                      更多
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
           </View>
         </View>
       </ScrollView>
@@ -698,62 +646,6 @@ export default function Playback() {
         onCommentAdded={() => setCommentCount((c) => c + 1)}
         onCommentDeleted={() => setCommentCount((c) => Math.max(0, c - 1))}
       />
-
-      {/* ---- Description picture-in-picture modal ---- */}
-      {descModalMounted && (
-        <View
-          onClick={closeDescModal}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '24px',
-            opacity: descModalVisible ? 1 : 0,
-            transition: 'opacity 0.2s ease-out',
-          }}
-        >
-          <View
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              ...GLASS_STYLE,
-              maxWidth: '400px',
-              width: '100%',
-              maxHeight: '70vh',
-              borderRadius: '16px',
-              padding: '24px',
-              overflowY: 'auto',
-              transform: descModalVisible ? 'scale(1)' : 'scale(0.9)',
-              opacity: descModalVisible ? 1 : 0,
-              transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
-            }}
-          >
-            <Text className='block text-base font-semibold text-on-surface'>
-              简介
-            </Text>
-            <Text
-              className='mt-3 block text-sm leading-relaxed text-on-surface-variant'
-              style={{ wordBreak: 'break-word' }}
-            >
-              {podcast.description}
-            </Text>
-            <View
-              onClick={closeDescModal}
-              className='mt-4 flex justify-center'
-            >
-              <Text className='rounded-full bg-primary px-6 py-2 text-sm font-semibold text-on-primary'>
-                关闭
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   )
 }

@@ -300,8 +300,8 @@ export class PodcastService {
    * Single-podcast detail (GET /podcasts/:id). Returns author + tags + liked
    * + favorited for the current user. Throws 404 when the podcast is missing
    * or not PUBLISHED so non-published states are never leaked to students.
-   * Teachers/operators/super_admins bypass the status check so they can
-   * preview pending podcasts for review.
+   * Teachers/operators/super_admins and student admins bypass the status
+   * check so they can preview pending podcasts for review.
    */
   async detail(
     id: number,
@@ -312,10 +312,7 @@ export class PodcastService {
       where: { id },
       include: PODCAST_INCLUDE,
     });
-    const canPreview =
-      userRole === 'TEACHER' ||
-      userRole === 'OPERATOR' ||
-      userRole === 'SUPER_ADMIN';
+    const canPreview = await this.canPreviewNonPublished(userId, userRole);
     if (!row || (row.status !== 'PUBLISHED' && !canPreview)) {
       throw new NotFoundException('播客不存在或已下架');
     }
@@ -411,11 +408,11 @@ export class PodcastService {
       throw new NotFoundException('播客不存在');
     }
     if (
-      existing.authorId !== userId &&
+      userRole !== 'TEACHER' &&
       userRole !== 'OPERATOR' &&
       userRole !== 'SUPER_ADMIN'
     ) {
-      throw new ForbiddenException('只能编辑自己的播客');
+      throw new ForbiddenException('无权编辑播客');
     }
 
     const data: Prisma.PodcastUpdateInput = {};
@@ -468,6 +465,7 @@ export class PodcastService {
     }
     if (
       existing.authorId !== userId &&
+      userRole !== 'TEACHER' &&
       userRole !== 'OPERATOR' &&
       userRole !== 'SUPER_ADMIN'
     ) {
@@ -671,10 +669,7 @@ export class PodcastService {
     start: boolean,
     userRole?: string,
   ): Promise<PlayProgressResponse> {
-    const canPreview =
-      userRole === 'TEACHER' ||
-      userRole === 'OPERATOR' ||
-      userRole === 'SUPER_ADMIN';
+    const canPreview = await this.canPreviewNonPublished(userId, userRole ?? '');
     const podcast = canPreview
       ? await this.prisma.podcast.findUnique({
           where: { id },
@@ -746,5 +741,29 @@ export class PodcastService {
       throw new NotFoundException('播客不存在或已下架');
     }
     return { id: podcast.id, authorId: podcast.authorId, title: podcast.title };
+  }
+
+  /**
+   * Whether the current user may preview non-PUBLISHED podcasts. Returns
+   * true for teachers/operators/super_admins (checked via JWT role) and for
+   * student admins (checked via DB since `isStudentAdmin` is not in the JWT).
+   */
+  private async canPreviewNonPublished(
+    userId: number,
+    userRole: string,
+  ): Promise<boolean> {
+    if (
+      userRole === 'TEACHER' ||
+      userRole === 'OPERATOR' ||
+      userRole === 'SUPER_ADMIN'
+    ) {
+      return true;
+    }
+    if (userRole !== 'STUDENT') return false;
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isStudentAdmin: true },
+    });
+    return user?.isStudentAdmin === true;
   }
 }

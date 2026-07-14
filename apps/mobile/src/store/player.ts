@@ -36,6 +36,8 @@ export interface PlayerState {
   position: number // seconds elapsed
   duration: number // seconds total
   playbackRate: number // 0.75 | 1 | 1.25 | 1.5 | 2
+  /** IDs of podcasts the user has fully played (in this session). */
+  completedPodcastIds: Set<number>
   // Actions
   /** Load a podcast into the store + set audio src. No-op if same podcast. Returns true if newly loaded. */
   load: (podcast: PodcastWithRelations) => boolean
@@ -46,6 +48,8 @@ export interface PlayerState {
   setPlaybackRate: (rate: number) => void
   /** Sync liked/likeCount on the current podcast after a like API call. */
   setLiked: (liked: boolean, likeCount: number) => void
+  /** Mark a podcast as fully played. */
+  markCompleted: (id: number) => void
   stop: () => void
 }
 
@@ -55,6 +59,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   position: 0,
   duration: 0,
   playbackRate: 1,
+  completedPodcastIds: new Set<number>(),
 
   load: (podcast) => {
     const cur = get().currentPodcast
@@ -108,6 +113,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const cur = get().currentPodcast
     if (!cur) return
     set({ currentPodcast: { ...cur, liked, likeCount } })
+  },
+
+  markCompleted: (id) => {
+    const set_ = get().completedPodcastIds
+    if (set_.has(id)) return
+    const next = new Set(set_)
+    next.add(id)
+    set({ completedPodcastIds: next })
   },
 
   stop: () => {

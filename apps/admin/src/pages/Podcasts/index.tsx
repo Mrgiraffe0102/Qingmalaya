@@ -50,7 +50,7 @@ import {
   batchPublishAdminPodcasts,
   batchTagAdminPodcasts,
   batchTakedownAdminPodcasts,
-  COMMON_REJECT_REASONS,
+  REJECT_REASON_CATEGORIES,
   deleteAdminPodcast,
   listAdminPodcasts,
   listAllTags,
@@ -764,13 +764,35 @@ const PodcastsPage: React.FC = () => {
             <Checkbox.Group
               value={rejectReasonTags}
               onChange={(vals) => setRejectReasonTags(vals as number[])}
-              style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 0' }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
             >
-              {COMMON_REJECT_REASONS.map((reason, idx) => (
-                <Checkbox key={idx} value={idx} style={{ marginLeft: 0, width: '50%' }}>
-                  {reason}
-                </Checkbox>
-              ))}
+              {REJECT_REASON_CATEGORIES.map((cat, catIdx) => {
+                let baseIdx = 0;
+                for (let i = 0; i < catIdx; i++) {
+                  baseIdx += REJECT_REASON_CATEGORIES[i].reasons.length;
+                }
+                return (
+                  <div key={catIdx} style={{ marginTop: catIdx > 0 ? 8 : 0 }}>
+                    <Text type='secondary' style={{ fontSize: 12, fontWeight: 600 }}>
+                      {cat.title}
+                    </Text>
+                    <div style={{ marginTop: 4 }}>
+                      {cat.reasons.map((reason, i) => {
+                        const globalIdx = baseIdx + i;
+                        return (
+                          <Checkbox
+                            key={globalIdx}
+                            value={globalIdx}
+                            style={{ marginLeft: 0, width: '100%' }}
+                          >
+                            {reason}
+                          </Checkbox>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </Checkbox.Group>
           </div>
         </div>

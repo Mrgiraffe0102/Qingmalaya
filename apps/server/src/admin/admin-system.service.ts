@@ -6,6 +6,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import type { User, Paginated } from '@qingmalaya/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { SystemSettingService } from '../system/system-setting.service';
 import { AdminAdminCreateDto } from './dto/admin-admin-create.dto';
 import { AdminAdminUpdateDto } from './dto/admin-admin-update.dto';
 import { AdminLogsQueryDto } from './dto/admin-logs-query.dto';
@@ -189,7 +190,10 @@ export class AdminAdminsService {
  */
 @Injectable()
 export class AdminSettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly systemSettings: SystemSettingService,
+  ) {}
 
   /** Return all settings as a { key: value } object. */
   async findAll(): Promise<Record<string, string>> {
@@ -208,15 +212,10 @@ export class AdminSettingsService {
   ): Promise<Record<string, string>> {
     const entries = Object.entries(values);
 
-    await this.prisma.$transaction(
-      entries.map(([key, value]) =>
-        this.prisma.systemSetting.upsert({
-          where: { key },
-          update: { value: String(value) },
-          create: { key, value: String(value) },
-        }),
-      ),
-    );
+    // Use SystemSettingService.set() so the in-memory cache stays in sync.
+    for (const [key, value] of entries) {
+      await this.systemSettings.set(key, String(value));
+    }
 
     await this.prisma.adminLog.create({
       data: {
