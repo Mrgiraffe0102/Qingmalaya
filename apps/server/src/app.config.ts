@@ -27,6 +27,12 @@ const envSchema = z.object({
     .positive()
     .default(200 * 1024 * 1024),
   MAX_AUDIO_DURATION: z.coerce.number().int().positive().default(3600),
+
+  DASHSCOPE_API_KEY: z.string().optional(),
+  DASHSCOPE_BASE_URL: z
+    .string()
+    .default('https://ws-um5sso2u7rtdjsel.cn-beijing.maas.aliyuncs.com/api/v1'),
+  PUBLIC_BASE_URL: z.string().default('http://localhost:3000'),
 });
 
 export type AppConfig = {
@@ -46,6 +52,11 @@ export type AppConfig = {
     maxAudioSize: number;
     maxAudioDuration: number;
   };
+  dashscope: {
+    apiKey: string;
+    baseUrl: string;
+  };
+  publicBaseUrl: string;
 };
 
 export type RawEnv = Record<string, string | undefined>;
@@ -74,6 +85,11 @@ export function buildConfig(env: RawEnv = process.env): AppConfig {
       maxAudioSize: parsed.MAX_AUDIO_SIZE,
       maxAudioDuration: parsed.MAX_AUDIO_DURATION,
     },
+    dashscope: {
+      apiKey: parsed.DASHSCOPE_API_KEY ?? '',
+      baseUrl: parsed.DASHSCOPE_BASE_URL,
+    },
+    publicBaseUrl: parsed.PUBLIC_BASE_URL,
   };
 }
 

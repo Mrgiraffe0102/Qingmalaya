@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PodcastService } from './podcast.service';
+import { TranscriptService } from './transcript.service';
 import { CreatePodcastDto } from './dto/create-podcast.dto';
 import { UpdatePodcastDto } from './dto/update-podcast.dto';
 import { ListPodcastDto } from './dto/list-podcast.dto';
@@ -39,7 +40,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
  */
 @Controller('podcasts')
 export class PodcastController {
-  constructor(private readonly podcast: PodcastService) {}
+  constructor(
+    private readonly podcast: PodcastService,
+    private readonly transcript: TranscriptService,
+  ) {}
 
   @Get('discovery')
   @UseGuards(JwtAuthGuard)
@@ -141,5 +145,17 @@ export class PodcastController {
     @CurrentUser('role') userRole: string,
   ) {
     return this.podcast.play(id, userId, dto.position ?? 0, dto.start ?? false, userRole);
+  }
+
+  @Get(':id/transcript')
+  @UseGuards(JwtAuthGuard)
+  getTranscript(@Param('id', ParseIntPipe) id: number) {
+    return this.transcript.getTranscript(id);
+  }
+
+  @Post(':id/transcript')
+  @UseGuards(JwtAuthGuard)
+  generateTranscript(@Param('id', ParseIntPipe) id: number) {
+    return this.transcript.generateTranscript(id);
   }
 }

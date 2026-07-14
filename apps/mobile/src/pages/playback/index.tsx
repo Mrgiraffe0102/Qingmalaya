@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import { useAuthRedirect } from '../../utils/route-guard'
@@ -7,47 +7,56 @@ import { usePlayerStore, setSeeking } from '../../store/player'
 import { get, post, del } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
 import CommentDrawer from '../../components/CommentDrawer'
-import FluidBackground from '../../components/FluidBackground'
 import AMLLBackground from '../../components/AMLLBackground'
-import type { PodcastWithRelations, Class, TagColor } from '@qingmalaya/shared'
+import FluidBackground from '../../components/FluidBackground'
+import type { PodcastWithRelations, Class, TagColor, TranscriptResponse } from '@qingmalaya/shared'
 
 /**
- * Playback detail page (Task 19).
+ * Playback detail page.
  *
- * Full-screen page (no AppLayout) with its own custom nav bar. Audio playback
- * is handled by the global <GlobalAudioPlayer> (mounted at the app root) — this
- * page only drives the store via `load`/`togglePlayPause`/`seek`. Because the
- * Audio element is global, playback continues and the PlaybackBar stays visible
- * when the user navigates back.
- *
- * Layout: flex column — pinned top bar, scrollable cover/info, pinned controls
- * (progress + play/pause + speed), pinned bottom action bar (like/comment/fav),
- * and the comment drawer overlay.
+ * Layout: flex column —
+ *  1. Top bar (back + share)
+ *  2. Frosted glass info island (cover thumbnail + author/class/tags + transcript button)
+ *  3. Middle transcript area (auto-scrolling, white text with text-shadow)
+ *  4. Player controls (progress + play/pause + speed)
+ *  5. Bottom action bar (like/comment/favorite)
+ *  6. Comment drawer overlay
+ *  7. Full transcript modal overlay
  */
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2]
 
-/** Tag chip palette — 15% tint background + matching text (matches browse page). */
-const TAG_COLORS: Record<TagColor, { text: string; bg: string }> = {
-  mint: { text: '#2f8f5e', bg: 'rgba(47, 143, 94, 0.15)' },
-  purple: { text: '#7c4dd1', bg: 'rgba(124, 77, 209, 0.15)' },
-  orange: { text: '#c9701f', bg: 'rgba(201, 112, 31, 0.15)' },
-  rose: { text: '#d6336c', bg: 'rgba(214, 51, 108, 0.15)' },
-  sky: { text: '#1c7ed6', bg: 'rgba(28, 126, 214, 0.15)' },
-  teal: { text: '#0ca678', bg: 'rgba(12, 166, 120, 0.15)' },
-  indigo: { text: '#4263eb', bg: 'rgba(66, 99, 235, 0.15)' },
-  amber: { text: '#b8860b', bg: 'rgba(184, 134, 11, 0.15)' },
+/** Tag chip palette — bright text colors for dark backgrounds (no background capsule). */
+const TAG_COLORS: Record<TagColor, string> = {
+  mint: '#5ccb8f',
+  purple: '#b388ff',
+  orange: '#ffb74d',
+  rose: '#ff80ab',
+  sky: '#64b5f6',
+  teal: '#4db6ac',
+  indigo: '#7c8dff',
+  amber: '#ffd54f',
 }
 
-/** Subtle frosted glass card for the text block over the fluid background. */
-const TEXT_GLASS: CSSProperties = {
-  backdropFilter: 'blur(12px) saturate(1.1)',
-  WebkitBackdropFilter: 'blur(12px) saturate(1.1)',
-  backgroundColor: 'rgba(255, 255, 255, 0.72)',
+/** Frosted glass style for the info island bar. */
+const FROSTED_GLASS: CSSProperties = {
+  backdropFilter: 'blur(16px) saturate(1.2)',
+  WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+  backgroundColor: 'rgba(255, 255, 255, 0.15)',
   borderRadius: '16px',
+  border: '1px solid rgba(255, 255, 255, 0.2)',
 }
 
-/** Inline Material Symbols icon (font linked in src/index.html on H5). */
+/** Frosted glass for the full transcript modal. */
+const MODAL_GLASS: CSSProperties = {
+  backdropFilter: 'blur(20px) saturate(1.2)',
+  WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
+  backgroundColor: 'rgba(30, 30, 30, 0.85)',
+  borderRadius: '16px',
+  border: '1px solid rgba(255, 255, 255, 0.15)',
+}
+
+/** Inline Material Symbols icon. */
 function Icon({ name, style }: { name: string; style?: CSSProperties }) {
   return (
     <Text className='material-symbols-outlined' style={{ fontSize: '18px', ...style }}>
@@ -74,8 +83,14 @@ export default function Playback() {
   const [commentCount, setCommentCount] = useState(0)
   const [exiting, setExiting] = useState(false)
 
-  // --- Local slider drag value (decouples drag from store position updates) ---
+  // --- Local slider drag value ---
   const [dragValue, setDragValue] = useState<number | null>(null)
+
+  // --- Transcript state ---
+  const [transcript, setTranscript] = useState<TranscriptResponse | null>(null)
+  const [showFullTranscript, setShowFullTranscript] = useState(false)
+  const [scrollTarget, setScrollTarget] = useState('')
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // --- Player store ---
   const {
@@ -90,16 +105,9 @@ export default function Playback() {
     setPlaybackRate,
   } = usePlayerStore()
 
-  // Ref for the custom progress bar track element (pointer events).
   const trackRef = useRef<HTMLElement | null>(null)
-  // Local drag guard — distinct from the global setSeeking flag so pointer
-  // handlers can synchronously check if a drag is active.
   const draggingRef = useRef(false)
 
-  // Resolve the podcast ID from the route query ONCE. Recomputing on every
-  // render breaks because Taro.getCurrentInstance().router changes during
-  // navigateBack — the param becomes undefined, podcastId turns NaN, and the
-  // fetch effect re-fires showing "无效的播客ID".
   const [podcastId] = useState(() => {
     const instance = Taro.getCurrentInstance()
     const id = Number(instance.router?.params.id)
@@ -128,10 +136,6 @@ export default function Playback() {
         setFavorited(!!p.favorited)
         setCommentCount(p.commentCount)
 
-        // Load into the global player. If this is a fresh load (different
-        // podcast), fetch the resume position and seek to it. If the podcast
-        // is already loaded (user returning to the page), the global player
-        // already has the correct position — do nothing.
         const wasNew = load(p)
         if (wasNew) {
           post<{ position: number }>(`/podcasts/${p.id}/play`, { position: 0, start: true })
@@ -149,6 +153,95 @@ export default function Playback() {
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok, podcastId])
+
+  // --- Fetch transcript status on mount ---
+  useEffect(() => {
+    if (!ok || !podcastId) return
+    get<TranscriptResponse>(`/podcasts/${podcastId}/transcript`, { silent: true })
+      .then((res) => {
+        setTranscript(res)
+        // If already processing, start polling
+        if (res.status === 'processing') {
+          startPolling()
+        }
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ok, podcastId])
+
+  // --- Cleanup polling on unmount ---
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+  }, [])
+
+  // --- Polling logic ---
+  const startPolling = useCallback(() => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await get<TranscriptResponse>(
+          `/podcasts/${podcastId}/transcript`,
+          { silent: true },
+        )
+        setTranscript(res)
+        if (res.status === 'ready' || res.status === 'failed') {
+          if (pollRef.current) {
+            clearInterval(pollRef.current)
+            pollRef.current = null
+          }
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    }, 3000)
+  }, [podcastId])
+
+  // --- Current transcript segment (based on playback position) ---
+  const currentSegmentIndex = useMemo(() => {
+    if (!transcript?.segments || transcript.segments.length === 0) return -1
+    const pos = position
+    for (let i = 0; i < transcript.segments.length; i++) {
+      const seg = transcript.segments[i]
+      if (pos >= seg.beginTime && pos < seg.endTime) return i
+    }
+    // Past all segments → highlight last
+    const last = transcript.segments.length - 1
+    if (pos >= transcript.segments[last].endTime) return last
+    return -1
+  }, [transcript, position])
+
+  // --- Auto-scroll to current segment ---
+  useEffect(() => {
+    if (currentSegmentIndex >= 0) {
+      setScrollTarget(`segment-${currentSegmentIndex}`)
+    }
+  }, [currentSegmentIndex])
+
+  // --- Generate transcript ---
+  const handleGenerateTranscript = useCallback(async (): Promise<void> => {
+    if (!podcastId) return
+    try {
+      await post(`/podcasts/${podcastId}/transcript`)
+      setTranscript({ status: 'processing' })
+      startPolling()
+    } catch {
+      // Error toast handled by request wrapper
+    }
+  }, [podcastId, startPolling])
+
+  // --- Copy full transcript ---
+  const handleCopyTranscript = useCallback((): void => {
+    if (!transcript?.fullText) return
+    Taro.setClipboardData({
+      data: transcript.fullText,
+      success: () => Taro.showToast({ title: '已复制文稿', icon: 'success' }),
+    })
+  }, [transcript])
 
   // --- Playback controls ---
   const handleTogglePlay = useCallback((): void => {
@@ -176,7 +269,7 @@ export default function Playback() {
     [duration, podcast, seek],
   )
 
-  // --- Progress bar pointer events (works with both mouse and touch) ---
+  // --- Progress bar pointer events ---
   useEffect(() => {
     const el = trackRef.current
     if (!el) return
@@ -225,7 +318,6 @@ export default function Playback() {
       el.removeEventListener('pointermove', onMove)
       el.removeEventListener('pointerup', onUp)
       el.removeEventListener('pointercancel', onUp)
-      // Reset the global seeking flag in case the component unmounts mid-drag.
       setSeeking(false)
     }
   }, [handleSeeking, handleSeek])
@@ -240,7 +332,6 @@ export default function Playback() {
   const handleLike = useCallback(async (): Promise<void> => {
     if (!podcast) return
     const wasLiked = liked
-    // Optimistic update + bounce animation
     setLiked(!wasLiked)
     setLikeCount((c) => c + (wasLiked ? -1 : 1))
     if (!wasLiked) {
@@ -258,7 +349,6 @@ export default function Playback() {
         )
       }
     } catch {
-      // Revert on failure
       setLiked(wasLiked)
       setLikeCount((c) => c + (wasLiked ? 1 : -1))
     }
@@ -346,6 +436,7 @@ export default function Playback() {
   const authorClass = podcast.author.classId
     ? classMap.get(podcast.author.classId)
     : null
+  const maxContentWidth = isDesktop ? '672px' : '428px'
 
   return (
     <View
@@ -358,9 +449,9 @@ export default function Playback() {
         <FluidBackground src={cover} />
       )}
 
-      {/* ---- Top bar ---- */}
+      {/* ---- Top bar: back + share ---- */}
       <View
-        className='relative z-10 flex flex-shrink-0 items-center justify-between px-4 pb-2 pt-3'
+        className='relative z-10 flex flex-shrink-0 items-center justify-between px-4 pb-1 pt-3'
       >
         <View
           onClick={handleBack}
@@ -368,9 +459,6 @@ export default function Playback() {
         >
           <Icon name='expand_more' style={{ fontSize: '22px' }} />
         </View>
-        <Text className='text-sm font-semibold tracking-wide text-inverse-on-surface'>
-          万卷回响
-        </Text>
         <View
           onClick={handleShare}
           className='flex h-10 w-10 items-center justify-center rounded-full text-inverse-on-surface'
@@ -379,100 +467,203 @@ export default function Playback() {
         </View>
       </View>
 
-      {/* ---- Scrollable content: cover + meta ---- */}
-      <ScrollView scrollY className='relative z-10 flex-1' style={{ minHeight: 0 }}>
-        <View
-          className='mx-auto flex max-w-md flex-col px-5'
-          style={{
-            minHeight: '100%',
-            justifyContent: 'center',
-            ...(isDesktop ? { maxWidth: '672px' } : {}),
-          }}
-        >
-          {/* Cover */}
-          <View className='flex items-center justify-center py-6'>
-            {cover ? (
-              <Image
-                src={cover}
-                mode='aspectFill'
-                className='rounded-xl shadow-xl'
-                style={{ width: '280px', height: '280px' }}
-              />
-            ) : (
-              <View
-                className='flex items-center justify-center rounded-xl bg-primary/15 shadow-xl'
-                style={{ width: '280px', height: '280px' }}
-              >
-                <Text className='text-6xl font-bold text-on-primary-container'>
-                  {(podcast.title || '?').charAt(0)}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Tags */}
-          {podcast.tags.length > 0 && (
-            <View className='mb-3 flex flex-wrap gap-2'>
-              {podcast.tags.map((tag) => {
-                const c = TAG_COLORS[tag.color] || TAG_COLORS.mint
-                return (
-                  <View
-                    key={tag.id}
-                    className='rounded-full px-3 py-1'
-                    style={{
-                      backgroundColor: c.bg,
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                    }}
-                  >
-                    <Text
-                      className='text-xs font-medium'
-                      style={{ color: c.text }}
-                    >
-                      #{tag.name}
-                    </Text>
-                  </View>
-                )
-              })}
+      {/* ---- Frosted glass info island: cover + author/class/tags ---- */}
+      <View
+        className='relative z-10 mx-auto mb-2 w-full flex-shrink-0 px-4'
+        style={{ maxWidth: maxContentWidth }}
+      >
+        <View style={FROSTED_GLASS} className='flex items-center gap-3 p-2.5'>
+          {/* Cover thumbnail */}
+          {cover ? (
+            <Image
+              src={cover}
+              mode='aspectFill'
+              className='flex-shrink-0 rounded-lg'
+              style={{ width: '44px', height: '44px' }}
+            />
+          ) : (
+            <View
+              className='flex flex-shrink-0 items-center justify-center rounded-lg bg-primary/30'
+              style={{ width: '44px', height: '44px' }}
+            >
+              <Text className='text-lg font-bold text-on-primary-container'>
+                {(podcast.title || '?').charAt(0)}
+              </Text>
             </View>
           )}
 
-          {/* Title + author + description — wrapped in a glass card
-              for text readability over the fluid background. */}
-          <View style={TEXT_GLASS} className='p-4'>
+          {/* Author + class + tags */}
+          <View className='flex min-w-0 flex-1 flex-col gap-0.5'>
             {/* Title */}
-            <Text className='block text-2xl font-bold leading-tight text-on-surface'>
+            <Text
+              className='truncate text-sm font-bold text-white'
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+            >
               {podcast.title}
             </Text>
-
-            {/* Author + class pill */}
-            <View className='mt-2 flex flex-wrap items-center gap-2'>
-              <Text className='text-sm text-on-surface-variant'>
+            {/* Author + class */}
+            <View className='flex items-center gap-1.5 overflow-hidden'>
+              <Text
+                className='flex-shrink-0 text-xs text-white/80'
+                style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+              >
                 {podcast.author.name}
               </Text>
               {authorClass && (
-                <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-sm font-medium text-on-tertiary-container'>
+                <Text
+                  className='flex-shrink-0 text-xs font-medium text-white/90'
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+                >
                   {authorClass}
                 </Text>
               )}
               {podcast.author.role === 'TEACHER' && (
-                <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-sm font-medium text-on-secondary-container'>
+                <Text
+                  className='flex-shrink-0 text-xs font-medium text-white/90'
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+                >
                   教师
                 </Text>
               )}
+              {podcast.tags.length > 0 && (
+                <View className='flex flex-1 flex-wrap items-center gap-1 overflow-hidden'>
+                  {podcast.tags.slice(0, 2).map((tag) => {
+                    const color = TAG_COLORS[tag.color] || TAG_COLORS.mint
+                    return (
+                      <Text
+                        key={tag.id}
+                        className='flex-shrink-0 text-xs font-medium'
+                        style={{ color, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+                      >
+                        #{tag.name}
+                      </Text>
+                    )
+                  })}
+                  {podcast.tags.length > 2 && (
+                    <Text className='text-xs text-white/60'>
+                      +{podcast.tags.length - 2}
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
-
           </View>
+
+          {/* Full transcript button — only when transcript is ready */}
+          {transcript?.status === 'ready' && (
+            <View
+              onClick={() => setShowFullTranscript(true)}
+              className='flex flex-shrink-0 items-center justify-center rounded-full bg-white/20 px-2.5 py-1.5 active:scale-95'
+              style={{ transition: 'transform 0.15s' }}
+            >
+              <Icon name='description' style={{ fontSize: '16px', color: '#fff' }} />
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* ---- Middle: transcript area ---- */}
+      <ScrollView
+        scrollY
+        scrollIntoView={scrollTarget}
+        className='relative z-10 flex-1'
+        style={{ minHeight: 0 }}
+      >
+        <View
+          className='mx-auto px-5'
+          style={{ maxWidth: maxContentWidth, minHeight: '100%' }}
+        >
+          {transcript?.status === 'ready' && transcript.segments && transcript.segments.length > 0 ? (
+            <View className='py-4'>
+              {transcript.segments.map((seg, i) => (
+                <Text
+                  key={seg.sentenceId}
+                  // @ts-ignore — id works on H5 and WeApp
+                  id={`segment-${i}`}
+                  className='block py-1 leading-relaxed'
+                  style={{
+                    color: '#ffffff',
+                    textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                    opacity: i === currentSegmentIndex ? 1 : 0.4,
+                    fontSize: i === currentSegmentIndex ? '17px' : '15px',
+                    fontWeight: i === currentSegmentIndex ? '600' : '400',
+                    transition: 'opacity 0.3s, font-size 0.3s, font-weight 0.3s',
+                  }}
+                >
+                  {seg.text}
+                </Text>
+              ))}
+            </View>
+          ) : transcript?.status === 'processing' ? (
+            <View className='flex flex-col items-center justify-center gap-3 py-20'>
+              <View
+                className='h-6 w-6 animate-spin rounded-full'
+                style={{
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#ffffff',
+                }}
+              />
+              <Text
+                className='text-sm text-white/70'
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                AI文稿识别中...
+              </Text>
+              <Text
+                className='text-xs text-white/50'
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                长音频转写可能需要1-2分钟
+              </Text>
+            </View>
+          ) : transcript?.status === 'failed' ? (
+            <View className='flex flex-col items-center justify-center gap-4 py-20'>
+              <Text
+                className='text-sm text-white/70'
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                文稿识别失败
+              </Text>
+              <View
+                onClick={() => void handleGenerateTranscript()}
+                className='rounded-full bg-white/20 px-5 py-2 active:scale-95'
+                style={{ transition: 'transform 0.15s' }}
+              >
+                <Text className='text-sm font-medium text-white'>重试</Text>
+              </View>
+            </View>
+          ) : (
+            <View className='flex flex-col items-center justify-center gap-4 py-20'>
+              <View
+                className='flex h-14 w-14 items-center justify-center rounded-full bg-white/15'
+                style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+              >
+                <Icon name='auto_awesome' style={{ fontSize: '28px', color: '#fff' }} />
+              </View>
+              <Text
+                className='text-sm text-white/70'
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                暂无AI文稿
+              </Text>
+              <View
+                onClick={() => void handleGenerateTranscript()}
+                className='rounded-full bg-white/20 px-5 py-2 active:scale-95'
+                style={{ transition: 'transform 0.15s' }}
+              >
+                <Text className='text-sm font-medium text-white'>生成AI文稿</Text>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
       {/* ---- Controls: progress + play/pause + speed ---- */}
       <View
-        className='relative z-10 mx-auto w-full max-w-md flex-shrink-0 px-5 pb-2 pt-4'
-        style={isDesktop ? { maxWidth: '672px' } : undefined}
+        className='relative z-10 mx-auto w-full flex-shrink-0 px-5 pb-2 pt-3'
+        style={{ maxWidth: maxContentWidth }}
       >
-        {/* Progress bar — custom pointer-events track (Taro Slider only
-            supports touch on the knob, which breaks desktop drag) */}
+        {/* Progress bar */}
         <View
           ref={trackRef as any}
           style={{
@@ -528,10 +719,10 @@ export default function Playback() {
         </View>
 
         {/* Play/pause + speed */}
-        <View className='relative mt-3 flex items-center justify-center'>
+        <View className='relative mt-2 flex items-center justify-center'>
           <View
             onClick={handleTogglePlay}
-            className='flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full shadow-lg active:scale-95'
+            className='flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full shadow-lg active:scale-95'
             style={{ transition: 'transform 0.15s', backgroundColor: '#ffffff' }}
           >
             {isPlaying ? (
@@ -545,7 +736,7 @@ export default function Playback() {
                 <View
                   style={{
                     width: '5px',
-                    height: '22px',
+                    height: '20px',
                     borderRadius: '2px',
                     backgroundColor: '#1b1c1c',
                   }}
@@ -553,7 +744,7 @@ export default function Playback() {
                 <View
                   style={{
                     width: '5px',
-                    height: '22px',
+                    height: '20px',
                     borderRadius: '2px',
                     backgroundColor: '#1b1c1c',
                   }}
@@ -564,9 +755,9 @@ export default function Playback() {
                 style={{
                   width: 0,
                   height: 0,
-                  borderTop: '11px solid transparent',
-                  borderBottom: '11px solid transparent',
-                  borderLeft: '18px solid #1b1c1c',
+                  borderTop: '10px solid transparent',
+                  borderBottom: '10px solid transparent',
+                  borderLeft: '16px solid #1b1c1c',
                   marginLeft: '4px',
                 }}
               />
@@ -575,7 +766,7 @@ export default function Playback() {
 
           <View
             onClick={handleSpeedCycle}
-            className='absolute right-0 flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-inverse-on-surface'
+            className='absolute right-0 flex h-9 items-center justify-center rounded-full px-3 text-sm font-semibold text-inverse-on-surface'
             style={{ border: '1px solid rgba(255, 255, 255, 0.5)' }}
           >
             <Text>{speedLabel}</Text>
@@ -585,8 +776,8 @@ export default function Playback() {
 
       {/* ---- Bottom action bar: like / comment / favorite ---- */}
       <View
-        className='relative z-10 mx-auto flex w-full max-w-md flex-shrink-0 items-center justify-around border-t border-white/15 px-5 py-3'
-        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))', maxWidth: isDesktop ? '672px' : undefined }}
+        className='relative z-10 mx-auto flex w-full flex-shrink-0 items-center justify-around border-t border-white/15 px-5 py-2.5'
+        style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))', maxWidth: maxContentWidth }}
       >
         {/* Like */}
         <View
@@ -646,6 +837,52 @@ export default function Playback() {
         onCommentAdded={() => setCommentCount((c) => c + 1)}
         onCommentDeleted={() => setCommentCount((c) => Math.max(0, c - 1))}
       />
+
+      {/* ---- Full transcript modal ---- */}
+      {showFullTranscript && (
+        <View
+          className='fixed inset-0 z-50 flex items-center justify-center p-4'
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+          onClick={() => setShowFullTranscript(false)}
+        >
+          <View
+            style={MODAL_GLASS}
+            className='flex max-h-[75vh] w-full flex-col overflow-hidden p-4'
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <View className='mb-3 flex items-center justify-between'>
+              <Text className='text-base font-bold text-white'>完整文稿</Text>
+              <View className='flex items-center gap-2'>
+                <View
+                  onClick={handleCopyTranscript}
+                  className='flex items-center gap-1 rounded-full bg-white/20 px-3 py-1.5 active:scale-95'
+                  style={{ transition: 'transform 0.15s' }}
+                >
+                  <Icon name='content_copy' style={{ fontSize: '14px', color: '#fff' }} />
+                  <Text className='text-xs font-medium text-white'>复制</Text>
+                </View>
+                <View
+                  onClick={() => setShowFullTranscript(false)}
+                  className='flex h-7 w-7 items-center justify-center rounded-full bg-white/20'
+                >
+                  <Icon name='close' style={{ fontSize: '16px', color: '#fff' }} />
+                </View>
+              </View>
+            </View>
+
+            {/* Scrollable text */}
+            <ScrollView scrollY className='flex-1' style={{ minHeight: 0 }}>
+              <Text
+                className='text-sm leading-relaxed text-white/90'
+                style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+              >
+                {transcript?.fullText}
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </View>
   )
 }

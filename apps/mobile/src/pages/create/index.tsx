@@ -898,7 +898,7 @@ function ReviewCard({
         {!canReview && (
           <View className='mt-2 rounded-lg p-2' style={{ backgroundColor: 'rgba(77, 98, 101, 0.08)' }}>
             <Text className='block text-xs' style={{ color: '#4d6265' }}>
-              请先完整播放此播客后再进行审核（暂理论上不支持倍速播放，但是有的同学反馈说可以，建议尝试一下）
+              请先完整播放此播客后再进行审核
             </Text>
           </View>
         )}

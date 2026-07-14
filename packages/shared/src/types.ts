@@ -333,6 +333,31 @@ export interface FlaggedPodcastItem extends PodcastWithRelations {
   flagReviewer: UserSummary | null;
 }
 
+// --- Transcript (ASR) ---
+/** Single transcript segment with timing info (from Aliyun ASR). */
+export interface TranscriptSegment {
+  beginTime: number; // seconds
+  endTime: number;   // seconds
+  text: string;
+  sentenceId: number;
+}
+
+/** Transcript data stored in Podcast.transcript JSON field. */
+export interface TranscriptData {
+  status: 'processing' | 'ready' | 'failed';
+  segments?: TranscriptSegment[];
+  fullText?: string;
+  error?: string;
+}
+
+/** Response for GET /podcasts/:id/transcript. */
+export interface TranscriptResponse {
+  status: 'none' | 'processing' | 'ready' | 'failed';
+  segments?: TranscriptSegment[];
+  fullText?: string;
+  error?: string;
+}
+
 /** Comment with report info (for teacher's reported view). */
 export interface ReportedCommentItem {
   reportId: number;
