@@ -32,3 +32,11 @@ export const STATIC_ORIGIN: string =
   typeof __STATIC_ORIGIN__ === 'string' && __STATIC_ORIGIN__
     ? __STATIC_ORIGIN__
     : 'http://localhost:3000'
+
+/**
+ * App version info — bumped manually when a new APK is built.
+ * The server's AppRelease records use the same version/versionCode to
+ * trigger update prompts on Android and "已更新" popups on H5.
+ */
+export const APP_VERSION = '1.0.0'
+export const APP_VERSION_CODE = 1

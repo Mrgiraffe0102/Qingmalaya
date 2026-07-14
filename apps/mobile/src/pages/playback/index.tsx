@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback, useMemo, type CSSProperties }
 import Taro from '@tarojs/taro'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import { useAuthRedirect } from '../../utils/route-guard'
-import { useIsDesktop } from '../../components/AppLayout/useIsDesktop'
 import { usePlayerStore, setSeeking } from '../../store/player'
 import { get, post, del } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
@@ -67,7 +66,6 @@ function Icon({ name, style }: { name: string; style?: CSSProperties }) {
 
 export default function Playback() {
   const ok = useAuthRedirect()
-  const isDesktop = useIsDesktop()
 
   // --- Podcast data ---
   const [podcast, setPodcast] = useState<PodcastWithRelations | null>(null)
@@ -436,7 +434,7 @@ export default function Playback() {
   const authorClass = podcast.author.classId
     ? classMap.get(podcast.author.classId)
     : null
-  const maxContentWidth = isDesktop ? '672px' : '428px'
+  const maxContentWidth = '428px'
 
   return (
     <View
@@ -570,7 +568,7 @@ export default function Playback() {
         style={{ minHeight: 0 }}
       >
         <View
-          className='mx-auto px-5'
+          className='mx-auto flex flex-col px-5'
           style={{ maxWidth: maxContentWidth, minHeight: '100%' }}
         >
           {transcript?.status === 'ready' && transcript.segments && transcript.segments.length > 0 ? (
@@ -595,7 +593,7 @@ export default function Playback() {
               ))}
             </View>
           ) : transcript?.status === 'processing' ? (
-            <View className='flex flex-col items-center justify-center gap-3 py-20'>
+            <View className='flex flex-1 flex-col items-center justify-center gap-3 py-8'>
               <View
                 className='h-6 w-6 animate-spin rounded-full'
                 style={{
@@ -617,7 +615,7 @@ export default function Playback() {
               </Text>
             </View>
           ) : transcript?.status === 'failed' ? (
-            <View className='flex flex-col items-center justify-center gap-4 py-20'>
+            <View className='flex flex-1 flex-col items-center justify-center gap-4 py-8'>
               <Text
                 className='text-sm text-white/70'
                 style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
@@ -633,7 +631,7 @@ export default function Playback() {
               </View>
             </View>
           ) : (
-            <View className='flex flex-col items-center justify-center gap-4 py-20'>
+            <View className='flex flex-1 flex-col items-center justify-center gap-4 py-8'>
               <View
                 className='flex h-14 w-14 items-center justify-center rounded-full bg-white/15'
                 style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}

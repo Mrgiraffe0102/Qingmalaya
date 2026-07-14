@@ -119,7 +119,7 @@ export default function ChangePassword() {
   }
 
   return (
-    <View className="relative min-h-screen bg-surface px-5 py-8">
+    <View className="relative flex min-h-screen flex-col items-center justify-center bg-surface px-5 py-8">
       <View className="mx-auto w-full max-w-md">
         {/* Back button (only when navigated from account settings) */}
         {fromSettings && (

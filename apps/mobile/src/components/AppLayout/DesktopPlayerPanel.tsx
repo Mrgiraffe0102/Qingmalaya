@@ -1,31 +1,52 @@
-import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react'
+import Taro from '@tarojs/taro'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import { usePlayerStore, setSeeking } from '../../store/player'
 import { get, post, del } from '../../utils/request'
 import { coverUrl, formatDuration, formatCount } from '../../utils/format'
 import CommentDrawer from '../CommentDrawer'
 import AMLLBackground from '../AMLLBackground'
-import type { Class, TagColor } from '@qingmalaya/shared'
+import type { Class, TagColor, TranscriptResponse } from '@qingmalaya/shared'
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2]
 
-const TAG_COLORS: Record<TagColor, { text: string; bg: string }> = {
-  mint: { text: '#2f8f5e', bg: 'rgba(47, 143, 94, 0.15)' },
-  purple: { text: '#7c4dd1', bg: 'rgba(124, 77, 209, 0.15)' },
-  orange: { text: '#c9701f', bg: 'rgba(201, 112, 31, 0.15)' },
-  rose: { text: '#d6336c', bg: 'rgba(214, 51, 108, 0.15)' },
-  sky: { text: '#1c7ed6', bg: 'rgba(28, 126, 214, 0.15)' },
-  teal: { text: '#0ca678', bg: 'rgba(12, 166, 120, 0.15)' },
-  indigo: { text: '#4263eb', bg: 'rgba(66, 99, 235, 0.15)' },
-  amber: { text: '#b8860b', bg: 'rgba(184, 134, 11, 0.15)' },
+/** Tag chip palette — bright text colors for dark backgrounds (no background capsule). */
+const TAG_COLORS: Record<TagColor, string> = {
+  mint: '#5ccb8f',
+  purple: '#b388ff',
+  orange: '#ffb74d',
+  rose: '#ff80ab',
+  sky: '#64b5f6',
+  teal: '#4db6ac',
+  indigo: '#7c8dff',
+  amber: '#ffd54f',
 }
 
-/** Frosted glass card for text over the AMLL background. */
-const TEXT_GLASS: CSSProperties = {
-  backdropFilter: 'blur(12px) saturate(1.1)',
-  WebkitBackdropFilter: 'blur(12px) saturate(1.1)',
-  backgroundColor: 'rgba(255, 255, 255, 0.72)',
+/** Frosted glass style for the info island bar. */
+const FROSTED_GLASS: CSSProperties = {
+  backdropFilter: 'blur(16px) saturate(1.2)',
+  WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+  backgroundColor: 'rgba(255, 255, 255, 0.15)',
   borderRadius: '16px',
+  border: '1px solid rgba(255, 255, 255, 0.2)',
+}
+
+/** Frosted glass for the full transcript modal. */
+const MODAL_GLASS: CSSProperties = {
+  backdropFilter: 'blur(20px) saturate(1.2)',
+  WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
+  backgroundColor: 'rgba(30, 30, 30, 0.85)',
+  borderRadius: '16px',
+  border: '1px solid rgba(255, 255, 255, 0.15)',
+}
+
+/** Inline Material Symbols icon. */
+function Icon({ name, style }: { name: string; style?: CSSProperties }) {
+  return (
+    <Text className='material-symbols-outlined' style={{ fontSize: '18px', ...style }}>
+      {name}
+    </Text>
+  )
 }
 
 /**
@@ -33,8 +54,8 @@ const TEXT_GLASS: CSSProperties = {
  *
  * Reads from the global player store — when `currentPodcast` is null, shows a
  * guide message prompting the user to pick something. When a podcast is
- * loaded, displays the cover, metadata, progress bar, transport controls,
- * and like/favorite/comment actions.
+ * loaded, displays the same layout as the mobile playback page:
+ * frosted glass info island, transcript area, player controls, action bar.
  *
  * Like state is synced to the store via `setLiked` so the mini-player in the
  * top bar stays in sync. Favorite and comment count are managed locally.
@@ -58,23 +79,17 @@ export default function DesktopPlayerPanel() {
   const [commentCount, setCommentCount] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [dragValue, setDragValue] = useState<number | null>(null)
+  const [likeBounce, setLikeBounce] = useState(false)
   const [classes, setClasses] = useState<Class[]>([])
-  const [descModalMounted, setDescModalMounted] = useState(false)
-  const [descModalVisible, setDescModalVisible] = useState(false)
+
+  // --- Transcript state ---
+  const [transcript, setTranscript] = useState<TranscriptResponse | null>(null)
+  const [showFullTranscript, setShowFullTranscript] = useState(false)
+  const [scrollTarget, setScrollTarget] = useState('')
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const trackRef = useRef<HTMLElement | null>(null)
   const draggingRef = useRef(false)
-
-  const openDescModal = useCallback((): void => {
-    setDescModalMounted(true)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setDescModalVisible(true))
-    })
-  }, [])
-
-  const closeDescModal = useCallback((): void => {
-    setDescModalVisible(false)
-    setTimeout(() => setDescModalMounted(false), 200)
-  }, [])
 
   // Sync local state when the podcast changes
   useEffect(() => {
@@ -91,8 +106,101 @@ export default function DesktopPlayerPanel() {
       .catch(() => {})
   }, [])
 
-  const classMap = new Map<number, string>()
-  classes.forEach((c) => classMap.set(c.id, c.name))
+  // --- Fetch transcript when podcast changes ---
+  useEffect(() => {
+    if (!currentPodcast) {
+      setTranscript(null)
+      return
+    }
+    // Reset transcript state for new podcast
+    setTranscript(null)
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+    get<TranscriptResponse>(`/podcasts/${currentPodcast.id}/transcript`, { silent: true })
+      .then((res) => {
+        setTranscript(res)
+        if (res.status === 'processing') {
+          startPolling(currentPodcast.id)
+        }
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPodcast?.id])
+
+  // --- Cleanup polling on unmount ---
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+  }, [])
+
+  // --- Polling logic ---
+  const startPolling = useCallback((podcastId: number) => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await get<TranscriptResponse>(
+          `/podcasts/${podcastId}/transcript`,
+          { silent: true },
+        )
+        setTranscript(res)
+        if (res.status === 'ready' || res.status === 'failed') {
+          if (pollRef.current) {
+            clearInterval(pollRef.current)
+            pollRef.current = null
+          }
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    }, 3000)
+  }, [])
+
+  // --- Current transcript segment (based on playback position) ---
+  const currentSegmentIndex = useMemo(() => {
+    if (!transcript?.segments || transcript.segments.length === 0) return -1
+    const pos = position
+    for (let i = 0; i < transcript.segments.length; i++) {
+      const seg = transcript.segments[i]
+      if (pos >= seg.beginTime && pos < seg.endTime) return i
+    }
+    const last = transcript.segments.length - 1
+    if (pos >= transcript.segments[last].endTime) return last
+    return -1
+  }, [transcript, position])
+
+  // --- Auto-scroll to current segment ---
+  useEffect(() => {
+    if (currentSegmentIndex >= 0) {
+      setScrollTarget(`desktop-segment-${currentSegmentIndex}`)
+    }
+  }, [currentSegmentIndex])
+
+  // --- Generate transcript ---
+  const handleGenerateTranscript = useCallback(async (): Promise<void> => {
+    if (!currentPodcast) return
+    try {
+      await post(`/podcasts/${currentPodcast.id}/transcript`)
+      setTranscript({ status: 'processing' })
+      startPolling(currentPodcast.id)
+    } catch {
+      // Error toast handled by request wrapper
+    }
+  }, [currentPodcast, startPolling])
+
+  // --- Copy full transcript ---
+  const handleCopyTranscript = useCallback((): void => {
+    if (!transcript?.fullText) return
+    Taro.setClipboardData({
+      data: transcript.fullText,
+      success: () => Taro.showToast({ title: '已复制文稿', icon: 'success' }),
+    })
+  }, [transcript])
 
   const handleSeeking = useCallback(
     (val: number): void => {
@@ -172,6 +280,10 @@ export default function DesktopPlayerPanel() {
     const nextCount = pod.likeCount + (wasLiked ? -1 : 1)
     setLiked(!wasLiked, nextCount)
     setLikePending(true)
+    if (!wasLiked) {
+      setLikeBounce(true)
+      setTimeout(() => setLikeBounce(false), 200)
+    }
     try {
       if (wasLiked) {
         await del(`/podcasts/${pod.id}/like`)
@@ -190,16 +302,27 @@ export default function DesktopPlayerPanel() {
     if (!pod) return
     const wasFavorited = favorited
     setFavorited(!wasFavorited)
+    Taro.showToast({
+      title: wasFavorited ? '已取消收藏' : '已收藏',
+      icon: 'none',
+    })
     try {
       if (wasFavorited) {
         await del(`/podcasts/${pod.id}/favorite`, { silent: true })
       } else {
         await post(`/podcasts/${pod.id}/favorite`, undefined, { silent: true })
       }
-    } catch {
+    } catch (err) {
       setFavorited(wasFavorited)
+      Taro.showToast({
+        title: err instanceof Error ? err.message : '操作失败',
+        icon: 'none',
+      })
     }
   }, [currentPodcast, favorited])
+
+  const classMap = new Map<number, string>()
+  classes.forEach((c) => classMap.set(c.id, c.name))
 
   // --- Empty state ---
   if (!currentPodcast) {
@@ -228,122 +351,216 @@ export default function DesktopPlayerPanel() {
   const effectiveDuration = duration || pod.duration
   const progress = effectiveDuration > 0 ? Math.min(100, (position / effectiveDuration) * 100) : 0
   const sliderValue = dragValue !== null ? dragValue : progress
+  const speedLabel = `${playbackRate}x`
   const liked = !!pod.liked
   const likeCount = pod.likeCount
   const authorClass = pod.author.classId ? classMap.get(pod.author.classId) : null
-  const isLongDesc = !!pod.description && pod.description.length > 120
-
-  const clampedDescStyle: CSSProperties = {
-    display: '-webkit-box',
-    WebkitLineClamp: 5,
-    WebkitBoxOrient: 'vertical',
-    overflow: 'hidden',
-    wordBreak: 'break-word',
-  }
 
   return (
-    <View className='flex h-full flex-col' style={{ position: 'relative' }}>
+    <View className='flex h-full flex-col overflow-hidden' style={{ position: 'relative' }}>
       <AMLLBackground src={cover} />
-      <ScrollView scrollY className='relative z-10 flex-1' style={{ minHeight: 0 }}>
-        <View className='mx-auto flex min-h-full max-w-md flex-col justify-center px-6 py-8'>
-          {/* Cover */}
-          <View className='flex items-center justify-center pb-6'>
-            {cover ? (
-              <Image
-                src={cover}
-                mode='aspectFill'
-                className='rounded-2xl shadow-2xl'
-                style={{ width: '350px', height: '350px' }}
-              />
-            ) : (
-              <View
-                className='flex items-center justify-center rounded-2xl bg-primary/15 shadow-2xl'
-                style={{ width: '300px', height: '300px' }}
-              >
-                <Text className='text-5xl font-bold text-on-primary-container'>
-                  {(pod.title || '?').charAt(0)}
-                </Text>
-              </View>
-            )}
-          </View>
 
-          {/* Tags */}
-          {pod.tags.length > 0 && (
-            <View className='mb-3 flex flex-wrap justify-center gap-2'>
-              {pod.tags.map((tag) => {
-                const c = TAG_COLORS[tag.color] || TAG_COLORS.mint
-                return (
-                  <View
-                    key={tag.id}
-                    className='rounded-full px-3 py-1'
-                    style={{
-                      backgroundColor: c.bg,
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                    }}
-                  >
-                    <Text className='text-xs font-medium' style={{ color: c.text }}>
-                      #{tag.name}
-                    </Text>
-                  </View>
-                )
-              })}
+      {/* ---- Frosted glass info island: cover + author/class/tags ---- */}
+      <View
+        className='relative z-10 mx-auto w-full flex-shrink-0 px-4 pb-2 pt-4'
+      >
+        <View style={FROSTED_GLASS} className='flex items-center gap-3 p-2.5'>
+          {/* Cover thumbnail */}
+          {cover ? (
+            <Image
+              src={cover}
+              mode='aspectFill'
+              className='flex-shrink-0 rounded-lg'
+              style={{ width: '44px', height: '44px' }}
+            />
+          ) : (
+            <View
+              className='flex flex-shrink-0 items-center justify-center rounded-lg bg-primary/30'
+              style={{ width: '44px', height: '44px' }}
+            >
+              <Text className='text-lg font-bold text-on-primary-container'>
+                {(pod.title || '?').charAt(0)}
+              </Text>
             </View>
           )}
 
-          {/* Title + author + description — glass card for readability over AMLL bg */}
-          <View style={TEXT_GLASS} className='p-4'>
-            {/* Title + author + class — on the same line */}
-            <View className='flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1'>
-              <Text className='text-xl font-bold leading-tight text-on-surface'>
-                {pod.title}
-              </Text>
-              <Text className='text-sm text-on-surface-variant'>
+          {/* Author + class + tags */}
+          <View className='flex min-w-0 flex-1 flex-col gap-0.5'>
+            {/* Title */}
+            <Text
+              className='truncate text-sm font-bold text-white'
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+            >
+              {pod.title}
+            </Text>
+            {/* Author + class */}
+            <View className='flex items-center gap-1.5 overflow-hidden'>
+              <Text
+                className='flex-shrink-0 text-xs text-white/80'
+                style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+              >
                 {pod.author.name}
               </Text>
               {authorClass && (
-                <Text className='rounded-full bg-tertiary-container px-2 py-0.5 text-xs font-medium text-on-tertiary-container'>
+                <Text
+                  className='flex-shrink-0 text-xs font-medium text-white/90'
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+                >
                   {authorClass}
                 </Text>
               )}
               {pod.author.role === 'TEACHER' && (
-                <Text className='rounded-full bg-secondary-container px-2 py-0.5 text-xs font-medium text-on-secondary-container'>
+                <Text
+                  className='flex-shrink-0 text-xs font-medium text-white/90'
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+                >
                   教师
                 </Text>
               )}
-            </View>
-
-            {/* Description */}
-            {pod.description && (
-              <View className='mt-3'>
-                <Text
-                  className='block text-sm leading-relaxed text-on-surface-variant'
-                  style={isLongDesc ? clampedDescStyle : undefined}
-                >
-                  {pod.description}
-                </Text>
-                {isLongDesc && (
-                  <View onClick={openDescModal} className='mt-1'>
-                    <Text className='text-xs font-semibold text-primary'>
-                      更多
+              {pod.tags.length > 0 && (
+                <View className='flex flex-1 flex-wrap items-center gap-1 overflow-hidden'>
+                  {pod.tags.slice(0, 2).map((tag) => {
+                    const color = TAG_COLORS[tag.color] || TAG_COLORS.mint
+                    return (
+                      <Text
+                        key={tag.id}
+                        className='flex-shrink-0 text-xs font-medium'
+                        style={{ color, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+                      >
+                        #{tag.name}
+                      </Text>
+                    )
+                  })}
+                  {pod.tags.length > 2 && (
+                    <Text className='text-xs text-white/60'>
+                      +{pod.tags.length - 2}
                     </Text>
-                  </View>
-                )}
-              </View>
-            )}
+                  )}
+                </View>
+              )}
+            </View>
           </View>
+
+          {/* Full transcript button — only when transcript is ready */}
+          {transcript?.status === 'ready' && (
+            <View
+              onClick={() => setShowFullTranscript(true)}
+              className='flex flex-shrink-0 items-center justify-center rounded-full bg-white/20 px-2.5 py-1.5 active:scale-95'
+              style={{ transition: 'transform 0.15s' }}
+            >
+              <Icon name='description' style={{ fontSize: '16px', color: '#fff' }} />
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* ---- Middle: transcript area ---- */}
+      <ScrollView
+        scrollY
+        scrollIntoView={scrollTarget}
+        className='relative z-10 flex-1'
+        style={{ minHeight: 0 }}
+      >
+        <View
+          className='mx-auto flex flex-col px-5'
+          style={{ minHeight: '100%' }}
+        >
+          {transcript?.status === 'ready' && transcript.segments && transcript.segments.length > 0 ? (
+            <View className='py-4'>
+              {transcript.segments.map((seg, i) => (
+                <Text
+                  key={seg.sentenceId}
+                  // @ts-ignore — id works on H5 and WeApp
+                  id={`desktop-segment-${i}`}
+                  className='block py-1 leading-relaxed'
+                  style={{
+                    color: '#ffffff',
+                    textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                    opacity: i === currentSegmentIndex ? 1 : 0.4,
+                    fontSize: i === currentSegmentIndex ? '17px' : '15px',
+                    fontWeight: i === currentSegmentIndex ? '600' : '400',
+                    transition: 'opacity 0.3s, font-size 0.3s, font-weight 0.3s',
+                  }}
+                >
+                  {seg.text}
+                </Text>
+              ))}
+            </View>
+          ) : transcript?.status === 'processing' ? (
+            <View className='flex flex-1 flex-col items-center justify-center gap-3 py-8'>
+              <View
+                className='h-6 w-6 animate-spin rounded-full'
+                style={{
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#ffffff',
+                }}
+              />
+              <Text
+                className='text-sm text-white/70'
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                AI文稿识别中...
+              </Text>
+              <Text
+                className='text-xs text-white/50'
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                长音频转写可能需要1-2分钟
+              </Text>
+            </View>
+          ) : transcript?.status === 'failed' ? (
+            <View className='flex flex-1 flex-col items-center justify-center gap-4 py-8'>
+              <Text
+                className='text-sm text-white/70'
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                文稿识别失败
+              </Text>
+              <View
+                onClick={() => void handleGenerateTranscript()}
+                className='rounded-full bg-white/20 px-5 py-2 active:scale-95'
+                style={{ transition: 'transform 0.15s' }}
+              >
+                <Text className='text-sm font-medium text-white'>重试</Text>
+              </View>
+            </View>
+          ) : (
+            <View className='flex flex-1 flex-col items-center justify-center gap-4 py-8'>
+              <View
+                className='flex h-14 w-14 items-center justify-center rounded-full bg-white/15'
+                style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+              >
+                <Icon name='auto_awesome' style={{ fontSize: '28px', color: '#fff' }} />
+              </View>
+              <Text
+                className='text-sm text-white/70'
+                style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+              >
+                暂无AI文稿
+              </Text>
+              <View
+                onClick={() => void handleGenerateTranscript()}
+                className='rounded-full bg-white/20 px-5 py-2 active:scale-95'
+                style={{ transition: 'transform 0.15s' }}
+              >
+                <Text className='text-sm font-medium text-white'>生成AI文稿</Text>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
-      {/* Controls: progress + play/pause + speed */}
-      <View className='relative z-10 mx-auto w-full max-w-md flex-shrink-0 px-6 pb-3 pt-2'>
+      {/* ---- Controls: progress + play/pause + speed ---- */}
+      <View
+        className='relative z-10 mx-auto w-full flex-shrink-0 px-5 pb-2 pt-3'
+      >
         {/* Progress bar */}
         <View
           ref={trackRef as any}
           style={{
             position: 'relative',
             width: '100%',
-            height: '28px',
+            height: '32px',
             display: 'flex',
             alignItems: 'center',
             touchAction: 'none',
@@ -353,7 +570,8 @@ export default function DesktopPlayerPanel() {
           <View
             style={{
               position: 'absolute',
-              left: 0, right: 0,
+              left: 0,
+              right: 0,
               height: '4px',
               borderRadius: '2px',
               backgroundColor: 'rgba(255, 255, 255, 0.28)',
@@ -373,8 +591,8 @@ export default function DesktopPlayerPanel() {
             style={{
               position: 'absolute',
               left: `${sliderValue}%`,
-              width: '16px',
-              height: '16px',
+              width: '18px',
+              height: '18px',
               borderRadius: '50%',
               backgroundColor: '#ffffff',
               transform: 'translateX(-50%)',
@@ -391,88 +609,116 @@ export default function DesktopPlayerPanel() {
           </Text>
         </View>
 
-        {/* Play/pause + speed + like + favorite + comment */}
-        <View className='relative mt-2 flex items-center justify-center gap-4'>
-          {/* Like */}
-          <View onClick={() => void handleLike()} className='flex w-12 flex-col items-center gap-1'>
-            <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Text
-                className='material-symbols-outlined'
-                style={{ fontSize: '22px', lineHeight: '24px', color: liked ? '#ff5252' : '#f2f0f0' }}
-              >
-                {liked ? 'favorite' : 'favorite_border'}
-              </Text>
-            </View>
-            <Text className='text-xs text-inverse-on-surface'>
-              {formatCount(likeCount)}
-            </Text>
-          </View>
-
-          {/* Comment */}
-          <View
-            onClick={() => setDrawerOpen(true)}
-            className='flex w-12 flex-col items-center gap-1'
-          >
-            <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Text
-                className='material-symbols-outlined'
-                style={{ fontSize: '22px', lineHeight: '24px', color: '#f2f0f0' }}
-              >
-                chat_bubble_outline
-              </Text>
-            </View>
-            <Text className='text-xs text-inverse-on-surface'>
-              {formatCount(commentCount)}
-            </Text>
-          </View>
-
-          {/* Play/pause */}
+        {/* Play/pause + speed */}
+        <View className='relative mt-2 flex items-center justify-center'>
           <View
             onClick={togglePlayPause}
             className='flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full shadow-lg active:scale-95'
             style={{ transition: 'transform 0.15s', backgroundColor: '#ffffff' }}
           >
             {isPlaying ? (
-              <View style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <View style={{ width: '4px', height: '18px', borderRadius: '2px', backgroundColor: '#1b1c1c' }} />
-                <View style={{ width: '4px', height: '18px', borderRadius: '2px', backgroundColor: '#1b1c1c' }} />
+              <View
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <View
+                  style={{
+                    width: '5px',
+                    height: '20px',
+                    borderRadius: '2px',
+                    backgroundColor: '#1b1c1c',
+                  }}
+                />
+                <View
+                  style={{
+                    width: '5px',
+                    height: '20px',
+                    borderRadius: '2px',
+                    backgroundColor: '#1b1c1c',
+                  }}
+                />
               </View>
             ) : (
-              <View style={{
-                width: 0, height: 0,
-                borderTop: '9px solid transparent',
-                borderBottom: '9px solid transparent',
-                borderLeft: '14px solid #1b1c1c',
-                marginLeft: '3px',
-              }} />
+              <View
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderTop: '10px solid transparent',
+                  borderBottom: '10px solid transparent',
+                  borderLeft: '16px solid #1b1c1c',
+                  marginLeft: '4px',
+                }}
+              />
             )}
           </View>
 
-          {/* Favorite */}
-          <View onClick={() => void handleFavorite()} className='flex w-12 flex-col items-center gap-1'>
-            <View style={{ height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Text
-                className='material-symbols-outlined'
-                style={{ fontSize: '22px', lineHeight: '24px', color: favorited ? '#ffd54f' : '#f2f0f0' }}
-              >
-                {favorited ? 'star' : 'star_border'}
-              </Text>
-            </View>
-            <Text className='text-xs text-inverse-on-surface'>收藏</Text>
-          </View>
-
-          {/* Speed */}
           <View
             onClick={handleSpeedCycle}
-            className='flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold text-inverse-on-surface'
+            className='absolute right-0 flex h-9 items-center justify-center rounded-full px-3 text-sm font-semibold text-inverse-on-surface'
             style={{ border: '1px solid rgba(255, 255, 255, 0.5)' }}
           >
-            <Text>{playbackRate}x</Text>
+            <Text>{speedLabel}</Text>
           </View>
         </View>
       </View>
 
-      {/* Comment drawer */}
+      {/* ---- Bottom action bar: like / comment / favorite ---- */}
+      <View
+        className='relative z-10 mx-auto flex w-full flex-shrink-0 items-center justify-around px-5 py-2.5'
+      >
+        {/* Like */}
+        <View
+          onClick={() => void handleLike()}
+          className='flex flex-col items-center gap-1'
+        >
+          <View
+            style={{
+              transform: likeBounce ? 'scale(1.3)' : 'scale(1)',
+              transition: 'transform 0.2s',
+            }}
+          >
+            <Text
+              className='text-2xl'
+              style={{ color: liked ? '#ff5252' : '#f2f0f0' }}
+            >
+              {liked ? '♥' : '♡'}
+            </Text>
+          </View>
+          <Text className='text-xs text-inverse-on-surface'>
+            {formatCount(likeCount)}
+          </Text>
+        </View>
+
+        {/* Comment */}
+        <View
+          onClick={() => setDrawerOpen(true)}
+          className='flex flex-col items-center gap-1'
+        >
+          <Icon name='chat_bubble_outline' style={{ fontSize: '24px', color: '#f2f0f0' }} />
+          <Text className='text-xs text-inverse-on-surface'>
+            {formatCount(commentCount)}
+          </Text>
+        </View>
+
+        {/* Favorite */}
+        <View
+          onClick={() => void handleFavorite()}
+          className='flex flex-col items-center gap-1'
+        >
+          <Text
+            className='text-2xl'
+            style={{ color: favorited ? '#ffd54f' : '#f2f0f0' }}
+          >
+            {favorited ? '★' : '☆'}
+          </Text>
+          <Text className='text-xs text-inverse-on-surface'>收藏</Text>
+        </View>
+      </View>
+
+      {/* ---- Comment drawer ---- */}
       <CommentDrawer
         podcastId={pod.id}
         visible={drawerOpen}
@@ -483,58 +729,48 @@ export default function DesktopPlayerPanel() {
         variant='desktop'
       />
 
-      {/* Description modal */}
-      {descModalMounted && (
+      {/* ---- Full transcript modal ---- */}
+      {showFullTranscript && (
         <View
-          onClick={closeDescModal}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '24px',
-            opacity: descModalVisible ? 1 : 0,
-            transition: 'opacity 0.2s ease-out',
-          }}
+          className='fixed inset-0 z-50 flex items-center justify-center p-4'
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+          onClick={() => setShowFullTranscript(false)}
         >
           <View
+            style={MODAL_GLASS}
+            className='flex max-h-[75vh] w-full flex-col overflow-hidden p-4'
             onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '400px',
-              width: '100%',
-              maxHeight: '70vh',
-              borderRadius: '16px',
-              backgroundColor: '#fbf9f8',
-              padding: '24px',
-              overflowY: 'auto',
-              transform: descModalVisible ? 'scale(1)' : 'scale(0.9)',
-              opacity: descModalVisible ? 1 : 0,
-              transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
-            }}
           >
-            <Text className='block text-base font-semibold text-on-surface'>
-              简介
-            </Text>
-            <Text
-              className='mt-3 block text-sm leading-relaxed text-on-surface-variant'
-              style={{ wordBreak: 'break-word' }}
-            >
-              {pod.description}
-            </Text>
-            <View
-              onClick={closeDescModal}
-              className='mt-4 flex justify-center'
-            >
-              <Text className='rounded-full bg-primary px-6 py-2 text-sm font-semibold text-on-primary'>
-                关闭
-              </Text>
+            {/* Header */}
+            <View className='mb-3 flex items-center justify-between'>
+              <Text className='text-base font-bold text-white'>完整文稿</Text>
+              <View className='flex items-center gap-2'>
+                <View
+                  onClick={handleCopyTranscript}
+                  className='flex items-center gap-1 rounded-full bg-white/20 px-3 py-1.5 active:scale-95'
+                  style={{ transition: 'transform 0.15s' }}
+                >
+                  <Icon name='content_copy' style={{ fontSize: '14px', color: '#fff' }} />
+                  <Text className='text-xs font-medium text-white'>复制</Text>
+                </View>
+                <View
+                  onClick={() => setShowFullTranscript(false)}
+                  className='flex h-7 w-7 items-center justify-center rounded-full bg-white/20'
+                >
+                  <Icon name='close' style={{ fontSize: '16px', color: '#fff' }} />
+                </View>
+              </View>
             </View>
+
+            {/* Scrollable text */}
+            <ScrollView scrollY className='flex-1' style={{ minHeight: 0 }}>
+              <Text
+                className='text-sm leading-relaxed text-white/90'
+                style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
+              >
+                {transcript?.fullText}
+              </Text>
+            </ScrollView>
           </View>
         </View>
       )}

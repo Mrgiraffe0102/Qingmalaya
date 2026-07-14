@@ -86,6 +86,15 @@ export default function MessageBell() {
     }
   }, [token])
 
+  // Re-fetch unread count when the page becomes visible again (e.g. navigating
+  // back from the messages page) so the red badge updates immediately.
+  Taro.useDidShow(() => {
+    if (!token) return
+    getUnreadCount()
+      .then((count) => setUnread(count))
+      .catch(() => {})
+  })
+
   const fetchNotifications = useCallback(async () => {
     setLoading(true)
     try {

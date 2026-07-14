@@ -372,3 +372,20 @@ export interface ReportedCommentItem {
     podcast: { id: number; title: string };
   };
 }
+
+// --- AppRelease (APP 更新管理) ---
+export interface AppRelease {
+  id: number;
+  version: string;
+  versionCode: number;
+  updateContent: string;
+  apkPath: string | null;
+  /** Full download URL for the APK (constructed by the server). */
+  downloadUrl: string | null;
+  createdAt: ISODateString;
+}
+
+/** Response for GET /releases/latest (public endpoint). */
+export interface LatestReleaseResponse {
+  latest: AppRelease | null;
+}

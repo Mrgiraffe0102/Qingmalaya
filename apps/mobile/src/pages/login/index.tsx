@@ -3,6 +3,8 @@ import Taro from '@tarojs/taro'
 import { View, Text, Input, Button } from '@tarojs/components'
 import { post } from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
+import { checkUpdateOnLogin } from '../../utils/version-check'
+import { startNotificationPolling } from '../../utils/system-notification'
 import type { LoginResponse } from '@qingmalaya/shared'
 
 /**
@@ -57,9 +59,17 @@ export default function Login() {
       // request.ts for the Authorization header.
       Taro.setStorageSync('token', data.accessToken)
 
+      // Start system notification polling now that the user is authenticated.
+      startNotificationPolling()
+
       if (data.mustChangePassword) {
         Taro.redirectTo({ url: '/pages/change-password/index' })
       } else {
+        // Android (RN): check for app updates after login.
+        // H5: version check is handled on app open in app.tsx.
+        if (process.env.TARO_ENV === 'rn') {
+          void checkUpdateOnLogin()
+        }
         Taro.switchTab({ url: '/pages/discovery/index' })
       }
     } catch (err) {

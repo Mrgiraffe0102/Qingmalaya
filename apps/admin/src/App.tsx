@@ -21,6 +21,7 @@ import AdminsPage from '@/pages/Admins';
 import SettingsPage from '@/pages/Settings';
 import LogsPage from '@/pages/Logs';
 import SuperLogsPage from '@/pages/SuperLogs';
+import ReleasesPage from '@/pages/Releases';
 import { isAuthenticated } from '@/store/auth';
 import { ClassScopeProvider } from '@/store/class-scope';
 
@@ -62,6 +63,7 @@ const App: React.FC = () => {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="logs" element={<LogsPage />} />
           <Route path="super-logs" element={<SuperLogsPage />} />
+          <Route path="releases" element={<ReleasesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

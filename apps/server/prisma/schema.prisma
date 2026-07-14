@@ -454,3 +454,14 @@ model CommentReport {
   @@index([reporterId])
   @@index([status])
 }
+
+model AppRelease {
+  id           Int      @id @default(autoincrement())
+  version      String   @unique
+  versionCode  Int      @unique
+  updateContent String  @db.Text
+  apkPath      String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}

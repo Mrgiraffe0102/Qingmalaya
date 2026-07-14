@@ -387,6 +387,20 @@ export default function Create() {
             )
           ) : (
             <View className='px-4 pb-6 pt-4'>
+              {/* ===== Persistent review notice ===== */}
+              {(isStudentAdmin || isTeacher) && (reviewQueue.length > 0 || flagged.length > 0 || pending.length > 0) && (
+                <View
+                  className='mb-4 flex items-center gap-2 rounded-xl p-3'
+                  style={{ backgroundColor: 'rgba(77, 98, 101, 0.06)', ...CARD_STYLE }}
+                >
+                  <Text className='material-symbols-outlined' style={{ fontSize: '16px', color: '#4d6265' }}>
+                    info
+                  </Text>
+                  <Text className='text-xs' style={{ color: '#4d6265', lineHeight: '18px' }}>
+                    请先完整播放此播客后再进行审核
+                  </Text>
+                </View>
+              )}
               {/* ===== Student admin mode ===== */}
               {isStudentAdmin && (
                 <>
@@ -862,10 +876,10 @@ function ReviewCard({
                   e.stopPropagation?.()
                   if (canReview) onApprove()
                 }}
-                className={`flex items-center gap-1 rounded-full ${canReview ? 'active:scale-95' : 'opacity-40'}`}
-                style={{ backgroundColor: 'rgba(47, 143, 94, 0.12)', padding: '4px 12px', transition: 'transform 0.2s' }}
+                className={`flex items-center gap-0.5 ${canReview ? 'active:scale-95' : 'opacity-40'}`}
+                style={{ padding: '4px 6px', transition: 'transform 0.2s' }}
               >
-                <Icon name='check' style={{ fontSize: '14px', color: '#2f8f5e' }} />
+                <Icon name='check' style={{ fontSize: '16px', color: '#2f8f5e' }} />
                 <Text style={{ fontSize: '12px', fontWeight: '600', color: '#2f8f5e' }}>通过</Text>
               </View>
             )}
@@ -875,10 +889,10 @@ function ReviewCard({
                   e.stopPropagation?.()
                   if (canReview) onFlag()
                 }}
-                className={`flex items-center gap-1 rounded-full ${canReview ? 'active:scale-95' : 'opacity-40'}`}
-                style={{ backgroundColor: 'rgba(139, 90, 43, 0.12)', padding: '4px 12px', transition: 'transform 0.2s' }}
+                className={`flex items-center gap-0.5 ${canReview ? 'active:scale-95' : 'opacity-40'}`}
+                style={{ padding: '4px 6px', transition: 'transform 0.2s' }}
               >
-                <Icon name='help' style={{ fontSize: '14px', color: '#8b5a2b' }} />
+                <Icon name='help' style={{ fontSize: '16px', color: '#8b5a2b' }} />
                 <Text style={{ fontSize: '12px', fontWeight: '600', color: '#8b5a2b' }}>存疑</Text>
               </View>
             )}
@@ -887,21 +901,14 @@ function ReviewCard({
                 e.stopPropagation?.()
                 if (canReview) onReject()
               }}
-              className={`flex items-center gap-1 rounded-full ${canReview ? 'active:scale-95' : 'opacity-40'}`}
-              style={{ backgroundColor: 'rgba(186, 26, 26, 0.10)', padding: '4px 12px', transition: 'transform 0.2s' }}
+              className={`flex items-center gap-0.5 ${canReview ? 'active:scale-95' : 'opacity-40'}`}
+              style={{ padding: '4px 6px', transition: 'transform 0.2s' }}
             >
-              <Icon name='close' style={{ fontSize: '14px', color: '#ba1a1a' }} />
+              <Icon name='close' style={{ fontSize: '16px', color: '#ba1a1a' }} />
               <Text style={{ fontSize: '12px', fontWeight: '600', color: '#ba1a1a' }}>驳回</Text>
             </View>
           </View>
         </View>
-        {!canReview && (
-          <View className='mt-2 rounded-lg p-2' style={{ backgroundColor: 'rgba(77, 98, 101, 0.08)' }}>
-            <Text className='block text-xs' style={{ color: '#4d6265' }}>
-              请先完整播放此播客后再进行审核
-            </Text>
-          </View>
-        )}
       </View>
     </View>
   )

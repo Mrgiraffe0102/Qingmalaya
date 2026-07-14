@@ -7,6 +7,7 @@ import { useAuthRedirect } from '../../utils/route-guard'
 import { get } from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { STATIC_ORIGIN } from '../../config/env'
+import { manualCheckUpdate } from '../../utils/version-check'
 import type { User, Class } from '@qingmalaya/shared'
 
 /**
@@ -132,6 +133,13 @@ export default function Profile() {
   ]
 
   const supportItems: FunctionItem[] = [
+    {
+      key: 'check-update',
+      label: '检查更新',
+      icon: '↑',
+      tint: 'text-primary',
+      onTap: () => manualCheckUpdate()
+    },
     {
       key: 'about',
       label: '关于我们',
