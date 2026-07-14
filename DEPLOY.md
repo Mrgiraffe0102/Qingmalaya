@@ -32,6 +32,8 @@
 
 所有端共享 `@qingmalaya/shared` 包(枚举、类型、Zod schema),由 server 端通过 `dist` 解析,前端通过源码路径(由各 webpack/Metro 规则)解析。
 
+> **AI 语音转文字(ASR)**:播放页的"文稿"功能依赖阿里云百炼 DashScope API(`fun-asr` 模型)。server 端将本地音频上传至 DashScope 临时 OSS → 提交异步转写任务 → 轮询结果 → 缓存到 `Podcast.transcript` JSON 字段。需配置 `DASHSCOPE_API_KEY`,否则文稿功能不可用(不影响其他功能)。
+
 ***
 
 ## 1. 环境前置
@@ -58,7 +60,7 @@
 | 路径                                                   | 作用                        | 何时改             |
 | ---------------------------------------------------- | ------------------------- | --------------- |
 | `docker-compose.yml`                                 | 一键编排 4 个容器                | 改端口、卷、环境变量      |
-| `apps/server/.env` (或 `.env.example`)                | server 运行时配置              | 改域名/DB/JWT/上传限制 |
+| `apps/server/.env` (或 `.env.example`)                | server 运行时配置              | 改域名/DB/JWT/上传限制/ASR |
 | `apps/server/Dockerfile`                             | server 镜像构建               | 极少改             |
 | `apps/admin/nginx.conf`                              | admin 的 nginx + `/api` 反代 | 改反代目标           |
 | `apps/mobile/nginx.conf`                             | mobile H5 的 nginx         | 改反代目标           |
@@ -213,6 +215,11 @@ services:
       DATABASE_URL: 'mysql://qingmalaya:qingmalaya123@mysql:3306/qingmalaya'
       # 2) JWT 密钥:必须改!改成 64 位随机串
       JWT_SECRET: 'GENERATE-A-64-BYTE-RANDOM-STRING-HERE'
+      # 3) AI 语音转文字(阿里云百炼 DashScope)— 不填则文稿功能不可用
+      DASHSCOPE_API_KEY: 'sk-ws-xxxxxxxxxxxxx'
+      DASHSCOPE_BASE_URL: 'https://ws-um5sso2u7rtdjsel.cn-beijing.maas.aliyuncs.com/api/v1'
+      # 4) server 对外可访问的基础 URL(ASR 需要用到,也可用于其他场景)
+      PUBLIC_BASE_URL: 'https://api.example.com'
 ```
 
 `JWT_SECRET` 建议这样生成:
@@ -222,6 +229,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
 > MySQL 用户名/密码与 `docker/mysql/init/01-grants.sql` 必须保持一致;改了 compose 里的密码,init 脚本要同步改(或者干脆先 `docker compose down -v` 再起)。
+>
+> `DASHSCOPE_API_KEY` 在阿里云百炼控制台获取([获取 API Key](https://help.aliyun.com/zh/model-studio/get-api-key))。`DASHSCOPE_BASE_URL` 中的 workspace ID(`ws-um5sso2u7rtdjsel`)需替换为你自己的百炼工作空间 ID。`PUBLIC_BASE_URL` 必须是公网可访问的地址,因为 ASR 任务提交后阿里云需要能访问到音频文件。
 
 ### 4.2 首次启动
 
@@ -499,8 +508,11 @@ server {
 | `MAX_COVER_SIZE`     | `5242880`(5 MB)                                          | 封面图最大字节           |
 | `MAX_AUDIO_SIZE`     | `209715200`(200 MB)                                      | 音频文件最大字节          |
 | `MAX_AUDIO_DURATION` | `3600`(秒)                                                | 音频最大时长(秒)         |
+| `DASHSCOPE_API_KEY`   | _(空,需手动填)_                                            | 阿里云百炼 API Key,用于 AI 语音转文字(ASR)。不填则文稿功能不可用 |
+| `DASHSCOPE_BASE_URL`  | `https://ws-um5sso2u7rtdjsel.cn-beijing.maas.aliyuncs.com/api/v1` | DashScope API 地址,workspace ID 需替换为自己的 |
+| `PUBLIC_BASE_URL`     | `http://localhost:3000`                                | server 对外可访问的基础 URL,ASR 转写需要公网可访问的音频地址 |
 
-> `appConfig()` 启动时用 Zod 强校验,缺/错关键变量会直接拒启 —— 这是一道防线,不要绕过。
+> `appConfig()` 启动时用 Zod 强校验,缺/错关键变量会直接拒启 —— 这是一道防线,不要绕过。`DASHSCOPE_API_KEY` 是 optional 的,不填不会阻止启动,但文稿功能会报 `DASHSCOPE_API_KEY is not configured`。
 
 ### 7.2 Admin / Mobile
 
@@ -565,6 +577,9 @@ docker builder prune
 - [ ] 配置日志收集(可选 Loki / ELK)
 - [ ] 监控 server 容器健康(`docker compose ps` / 探针)
 - [ ] CORS:生产环境把 `app.enableCors({ origin: true })` 改为白名单(`https://admin.example.com`、`https://m.example.com`)
+- [ ] `DASHSCOPE_API_KEY` 填入阿里云百炼 API Key(不填则 AI 文稿功能不可用)
+- [ ] `DASHSCOPE_BASE_URL` 中的 workspace ID 替换为自己的百炼工作空间 ID
+- [ ] `PUBLIC_BASE_URL` 设为公网可访问的 server 地址(如 `https://api.example.com`),ASR 需要公网访问音频
 
 ***
 
@@ -581,6 +596,10 @@ docker builder prune
 | 上传 200MB 音频被拒                             | nginx `client_max_body_size 200M;`、server `MAX_AUDIO_SIZE`、`Multer` 三处都要 ≥ 实际值 |
 | 容器重启后数据丢失                                 | 用了 `docker compose down -v` 删了卷;或 bind mount 路径写错(检查 `./uploads` 在仓库根)         |
 | 微信小程序无法播放音频                               | 音频域名必须在 `downloadFile 合法域名` 中,且为 https                                         |
+| 播放页"文稿"按钮报 `DASHSCOPE_API_KEY is not configured` | `.env` 或 compose 中未设 `DASHSCOPE_API_KEY`,填入阿里云百炼 API Key 后重启 server            |
+| 文稿状态一直 `processing` 不返回                      | 查看 `docker compose logs server` 是否有 ASR 报错;可能原因:API Key 无效、workspace ID 错误、音频文件过大、阿里云服务端超时 |
+| 文稿状态 `failed`                                    | server 日志会记录具体 error;常见原因:音频格式不支持、OSS 临时上传失败、DashScope 余额不足           |
+| `DASHSCOPE_BASE_URL` 配置后 ASR 仍失败               | URL 中的 workspace ID(`ws-xxxxx`)必须与你的百炼工作空间一致,且 API Key 属于同一地域            |
 
 ***
 
@@ -591,6 +610,7 @@ docker builder prune
 3. **WeApp**:在微信开发者工具导入 → 真机扫码预览 → 播客能上传、播放、互动
 4. **RN App**(若发布):TestFlight / 蒲公英包内完整跑通核心流程
 5. **通知中心**:审核通过播客后作者能在通知中心看到 `PODCAST_APPROVED` 消息
+6. **AI 文稿(语音转文字)**:进入已上线播客的播放页 → 点击"文稿"按钮 → 触发 ASR 转写 → 等待 `processing` → `ready` 后查看带时间戳的文稿段落 → 随播放自动滚动高亮 → 弹窗查看完整文稿并一键复制
 
 ***
 
@@ -601,4 +621,6 @@ docker builder prune
 - [微信小程序运营规范](https://developers.weixin.qq.com/miniprogram/product/)
 - [Let's Encrypt 申请](https://letsencrypt.org/)
 - [Expo EAS Build](https://docs.expo.dev/build/introduction/)
+- [阿里云百炼 DashScope ASR 文档](https://help.aliyun.com/zh/model-studio/developer-reference/paraformer-batch-file-transcription-api)
+- [获取百炼 API Key](https://help.aliyun.com/zh/model-studio/get-api-key)
 

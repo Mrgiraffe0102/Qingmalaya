@@ -1,26 +1,23 @@
 import Taro from '@tarojs/taro'
 import { get } from '../utils/request'
 import type { Paginated, NotificationItem } from '@qingmalaya/shared'
+// Platform-specific import — resolves to show-notification.h5.ts (H5),
+// show-notification.rn.ts (RN), or show-notification.ts (fallback).
+// This prevents webpack from ever seeing the expo-notifications import.
+import { showSystemNotification } from './show-notification'
 
 /**
- * System notification utility — fires OS-level notifications when the app
- * receives new in-app notifications.
+ * System notification polling — checks for new in-app notifications every
+ * 2 minutes while the app is in the foreground and fires OS-level
+ * notifications via the platform-specific show-notification module.
  *
- * H5: uses the browser Notification API (requests permission on first use).
- * RN (Android): uses expo-notifications if available (conditional require so
- *   the H5/WeApp builds don't try to bundle it).
- *
- * A polling loop checks /notifications/unread-count every 2 minutes while the
- * app is in the foreground. When the unread count increases, it fetches the
- * new notifications and fires a system notification for each.
+ * H5: browser Notification API
+ * RN (Android): expo-notifications
+ * Other: no-op
  */
 
 const POLL_INTERVAL = 120_000 // 2 minutes
 const LAST_NOTIFIED_ID_KEY = 'lastNotifiedNotificationId'
-
-/** expo-notifications module (lazy-loaded on RN only). */
-let expoNotifications: any = null
-let expoNotificationsInitialized = false
 
 /** Whether system notifications are supported on this platform. */
 function isSupported(): boolean {
@@ -28,66 +25,9 @@ function isSupported(): boolean {
     return typeof Notification !== 'undefined'
   }
   if (process.env.TARO_ENV === 'rn') {
-    return true // expo-notifications will be loaded on demand
+    return true
   }
   return false
-}
-
-/** Lazily load and configure expo-notifications on RN. */
-async function ensureRnNotifications(): Promise<void> {
-  if (expoNotificationsInitialized) return
-  expoNotificationsInitialized = true
-
-  if (process.env.TARO_ENV !== 'rn') return
-
-  try {
-    expoNotifications = require('expo-notifications')
-
-    // Configure how notifications are presented when the app is in the foreground.
-    expoNotifications.setNotificationHandler({
-      handleNotification: () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
-    })
-
-    // Request permission on Android (API 33+ requires POST_NOTIFICATIONS).
-    const { status } = await expoNotifications.requestPermissionsAsync()
-    if (status !== 'granted') {
-      console.warn('[system-notification] Permission not granted')
-    }
-  } catch (e) {
-    console.warn('[system-notification] expo-notifications not available:', e)
-  }
-}
-
-/** Show a system notification (cross-platform). */
-async function showSystemNotification(
-  title: string,
-  body: string,
-): Promise<void> {
-  if (process.env.TARO_ENV === 'h5') {
-    if (typeof Notification === 'undefined') return
-    if (Notification.permission === 'default') {
-      await Notification.requestPermission()
-    }
-    if (Notification.permission === 'granted') {
-      new Notification(title, { body })
-    }
-    return
-  }
-
-  if (process.env.TARO_ENV === 'rn') {
-    await ensureRnNotifications()
-    if (expoNotifications) {
-      await expoNotifications.scheduleNotificationAsync({
-        content: { title, body, sound: 'default' },
-        trigger: null, // immediately
-      })
-    }
-    return
-  }
 }
 
 // --- Polling logic ---
