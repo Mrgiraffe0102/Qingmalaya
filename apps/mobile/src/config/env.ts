@@ -26,17 +26,17 @@ declare const __STATIC_ORIGIN__: string
 export const API_BASE_URL: string =
   typeof __API_BASE_URL__ === 'string' && __API_BASE_URL__
     ? __API_BASE_URL__
-    : 'http://localhost:3000/api'
+    : 'https://api.qhfzwjhx.cn/api'
 
 export const STATIC_ORIGIN: string =
   typeof __STATIC_ORIGIN__ === 'string' && __STATIC_ORIGIN__
     ? __STATIC_ORIGIN__
-    : 'http://localhost:3000'
+    : 'https://static.qhfzwjhx.cn'
 
 /**
  * App version info — bumped manually when a new APK is built.
  * The server's AppRelease records use the same version/versionCode to
  * trigger update prompts on Android and "已更新" popups on H5.
  */
-export const APP_VERSION = '1.0.0'
+export const APP_VERSION = '1.1.0'
 export const APP_VERSION_CODE = 1

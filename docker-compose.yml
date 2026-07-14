@@ -51,6 +51,11 @@ services:
       MAX_COVER_SIZE: '5242880'
       MAX_AUDIO_SIZE: '209715200'
       MAX_AUDIO_DURATION: '3600'
+      # Aliyun DashScope (AI 文稿识别 ASR)
+      DASHSCOPE_API_KEY: sk-ws-H.EDHYPMI.b1SB.MEUCIGoW3TpkLfvt9LZLzZGpZteVLJd94-JTFyoWusiNI29DAiEA3FCams862g0DJXgJQ3TbyLPxj41gv6gRHPy2O-Xn9uA
+      DASHSCOPE_BASE_URL: https://ws-um5sso2u7rtdjsel.cn-beijing.maas.aliyuncs.com/api/v1
+      # 服务端公开访问地址（用于生成上传文件的公网 URL 供 ASR 下载）
+      PUBLIC_BASE_URL: http://localhost:3000
     ports:
       - '3000:3000'
     volumes:

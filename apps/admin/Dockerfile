@@ -34,7 +34,10 @@ RUN npm install -g pnpm@10.33.0
 WORKDIR /app
 
 # Copy workspace manifests first for layer caching.
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+# Create .npmrc inline so the build doesn't depend on the hidden file
+# being present in the build context (easy to miss when uploading).
+RUN printf 'auto-install-peers=true\nstrict-peer-dependencies=false\nshamefully-hoist=true\n' > .npmrc
 COPY apps/server/package.json apps/server/
 COPY apps/admin/package.json apps/admin/
 COPY apps/mobile/package.json apps/mobile/
@@ -52,6 +55,9 @@ COPY apps/admin/ apps/admin/
 # Build shared types package (admin imports from its source via Vite alias,
 # but we build it so the dist/ output is available for tsc resolution too).
 RUN pnpm --filter @qingmalaya/shared build
+
+# Increase Node.js heap limit — Vite/Rollup can OOM on memory-constrained servers.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 # Build the admin SPA (tsc && vite build → apps/admin/dist).
 RUN pnpm --filter @qingmalaya/admin build

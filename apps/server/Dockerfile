@@ -35,7 +35,10 @@ RUN npm install -g pnpm@10.33.0
 WORKDIR /app
 
 # Copy workspace manifests first for better Docker layer caching.
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+# Create .npmrc inline so the build doesn't depend on the hidden file
+# being present in the build context (easy to miss when uploading).
+RUN printf 'auto-install-peers=true\nstrict-peer-dependencies=false\nshamefully-hoist=true\n' > .npmrc
 COPY apps/server/package.json apps/server/
 COPY apps/admin/package.json apps/admin/
 COPY apps/mobile/package.json apps/mobile/

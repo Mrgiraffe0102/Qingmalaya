@@ -42,7 +42,10 @@ RUN npm install -g pnpm@10.33.0
 WORKDIR /app
 
 # Copy workspace manifests first for layer caching.
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+# Create .npmrc inline so the build doesn't depend on the hidden file
+# being present in the build context (easy to miss when uploading).
+RUN printf 'auto-install-peers=true\nstrict-peer-dependencies=false\nshamefully-hoist=true\n' > .npmrc
 COPY apps/server/package.json apps/server/
 COPY apps/admin/package.json apps/admin/
 COPY apps/mobile/package.json apps/mobile/
@@ -69,6 +72,9 @@ COPY apps/mobile/ apps/mobile/
 
 # Build shared types package.
 RUN pnpm --filter @qingmalaya/shared build
+
+# Increase Node.js heap limit — Taro/webpack can OOM on memory-constrained servers.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 # Build the Taro H5 bundle (taro build --type h5 → apps/mobile/dist).
 RUN pnpm --filter @qingmalaya/mobile build:h5
