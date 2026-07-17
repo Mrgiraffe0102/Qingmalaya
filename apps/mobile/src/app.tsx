@@ -1,6 +1,7 @@
 import { Component, PropsWithChildren } from 'react'
 import './app.css'
 import GlobalAudioPlayer from './components/GlobalAudioPlayer'
+import SitePopup from './components/SitePopup'
 import { useAuthStore, isAuthenticated } from './store/auth'
 import { checkUpdateOnWebOpen } from './utils/version-check'
 import { startNotificationPolling } from './utils/system-notification'
@@ -30,6 +31,8 @@ class App extends Component<PropsWithChildren> {
     return (
       <>
         <GlobalAudioPlayer />
+        {/* 全局强制弹窗——根层级挂载，登录页和所有页面都生效 */}
+        <SitePopup />
         {this.props.children}
       </>
     )

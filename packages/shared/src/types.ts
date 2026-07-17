@@ -389,3 +389,26 @@ export interface AppRelease {
 export interface LatestReleaseResponse {
   latest: AppRelease | null;
 }
+
+// --- Site-wide popup (全局弹窗) ---
+
+/** 全站强制弹窗（公开 GET /popup/active + 管理 GET /admin/popup 共用）。 */
+export interface SitePopup {
+  id: number;
+  title: string;
+  content: string;
+  enabled: boolean;
+  updatedAt: ISODateString;
+}
+
+/** 管理员 upsert 弹窗的请求体（PUT /admin/popup）。 */
+export interface PopupUpdatePayload {
+  title: string;
+  content: string;
+  enabled?: boolean;
+}
+
+/** GET /popup/active 的响应体——enabled=true 时返回，否则返回 null。 */
+export interface ActivePopupResponse {
+  popup: SitePopup | null;
+}

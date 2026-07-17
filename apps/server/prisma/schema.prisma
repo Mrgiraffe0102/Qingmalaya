@@ -465,3 +465,14 @@ model AppRelease {
 
   @@index([createdAt])
 }
+
+/// 全局强制弹窗（站点打开时第一时间弹出）。始终只有一条记录（id=1）。
+/// enabled=false 表示禁用，弹窗不显示。记录本身保留以便管理员随时启用。
+model Popup {
+  id        Int      @id @default(autoincrement())
+  title     String   @db.VarChar(120)
+  content   String   @db.Text
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
