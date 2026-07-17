@@ -108,6 +108,13 @@ export default function Upload() {
   const [audioFileName, setAudioFileName] = useState('')
   const [duration, setDuration] = useState(0)
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([])
+  /**
+   * Names of tags the user has typed but that don't exist in the system yet.
+   * These are NOT created server-side until the podcast is published, so a
+   * user who abandons the form does not pollute the global tag list. The
+   * backend find-or-creates each name on POST /podcasts.
+   */
+  const [newTagNames, setNewTagNames] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [tagError, setTagError] = useState('')
   const [allTags, setAllTags] = useState<Tag[]>([])
@@ -163,6 +170,9 @@ export default function Upload() {
   async function addTag(rawName: string) {
     const name = rawName.trim().replace(/^#+\s*/, '')
     if (!name) return
+    // Reject duplicates against existing-tag selection, new-tag list, and
+    // the local allTags cache (which also covers duplicates of a name the
+    // user is about to type a second time).
     const found = allTags.find((t) => t.name === name)
     if (found) {
       if (selectedTagIds.includes(found.id)) {
@@ -174,24 +184,28 @@ export default function Upload() {
       setTagError('')
       return
     }
-    try {
-      const tag = await post<Tag>('/tags', { name })
-      setAllTags([...allTags, tag])
-      setSelectedTagIds([...selectedTagIds, tag.id])
-      setTagInput('')
-      setTagError('')
-    } catch {
-      setTagError('创建标签失败')
+    if (newTagNames.includes(name)) {
+      setTagError('已添加该标签')
+      return
     }
+    // Defer creation to publish time. We only stage the name locally so a
+    // user who abandons the form does not pollute the global tag list.
+    setNewTagNames([...newTagNames, name])
+    setTagInput('')
+    setTagError('')
   }
 
-  function removeTag(id: number) {
+  function removeExistingTag(id: number) {
     setSelectedTagIds(selectedTagIds.filter((t) => t !== id))
+  }
+
+  function removeNewTag(name: string) {
+    setNewTagNames(newTagNames.filter((t) => t !== name))
   }
 
   function toggleHotTag(id: number) {
     if (selectedTagIds.includes(id)) {
-      removeTag(id)
+      removeExistingTag(id)
     } else {
       setSelectedTagIds([...selectedTagIds, id])
     }
@@ -324,6 +338,7 @@ export default function Upload() {
         audioPath,
         duration,
         tagIds: selectedTagIds,
+        newTagNames,
       }
       if (editingId) {
         await put(`/podcasts/${editingId}`, body)
@@ -495,20 +510,20 @@ export default function Upload() {
             <Text className='mt-1 block px-1 text-xs text-error'>{tagError}</Text>
           )}
 
-          {/* Selected tags */}
-          {selectedTagIds.length > 0 && (
+          {/* Selected tags — existing (solid) + new (outlined, marked 新) */}
+          {(selectedTagIds.length > 0 || newTagNames.length > 0) && (
             <View className='mt-3 flex flex-wrap gap-2'>
               {selectedTagIds.map((id) => {
                 const tag = allTags.find((t) => t.id === id)
                 if (!tag) return null
                 return (
                   <View
-                    key={id}
+                    key={`existing-${id}`}
                     className='flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-on-primary'
                   >
                     <Text>{tag.name}</Text>
                     <Text
-                      onClick={() => removeTag(id)}
+                      onClick={() => removeExistingTag(id)}
                       className='ml-1 text-sm leading-none'
                     >
                       ×
@@ -516,6 +531,26 @@ export default function Upload() {
                   </View>
                 )
               })}
+              {newTagNames.map((name) => (
+                <View
+                  key={`new-${name}`}
+                  className='flex items-center gap-1.5 rounded-full border border-dashed border-primary px-3 py-1.5 text-sm font-medium text-primary'
+                >
+                  <Text>{name}</Text>
+                  <Text
+                    className='rounded-full bg-primary/10 px-2 text-xs font-semibold'
+                    style={{ lineHeight: '18px' }}
+                  >
+                    新
+                  </Text>
+                  <Text
+                    onClick={() => removeNewTag(name)}
+                    className='ml-0.5 text-base leading-none'
+                  >
+                    ×
+                  </Text>
+                </View>
+              ))}
             </View>
           )}
 

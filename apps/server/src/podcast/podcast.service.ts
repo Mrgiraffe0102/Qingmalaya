@@ -13,6 +13,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
+import { TagsService } from '../tags/tags.service';
 import { CreatePodcastDto } from './dto/create-podcast.dto';
 import { UpdatePodcastDto } from './dto/update-podcast.dto';
 import { ListPodcastDto } from './dto/list-podcast.dto';
@@ -119,7 +120,30 @@ export class PodcastService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly activityLog: ActivityLogService,
+    private readonly tagsService: TagsService,
   ) {}
+
+  /**
+   * Resolve a list of tag IDs plus a list of new tag names into a deduplicated
+   * set of tag IDs. New names are find-or-created via TagsService, so callers
+   * (create/update) don't have to manage the creation separately. Empty /
+   * whitespace-only names are dropped silently; duplicate IDs are removed via
+   * a Set.
+   */
+  private async resolveTagIds(
+    tagIds: number[] | undefined,
+    newTagNames: string[] | undefined,
+  ): Promise<number[]> {
+    const ids = new Set<number>(tagIds ?? []);
+    const names = (newTagNames ?? [])
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+    for (const name of names) {
+      const tag = await this.tagsService.findOrCreate(name);
+      ids.add(tag.id);
+    }
+    return Array.from(ids);
+  }
 
   /**
    * Discovery aggregate (GET /podcasts/discovery). Returns online banners in
@@ -356,7 +380,7 @@ export class PodcastService {
       throw new NotFoundException('用户不存在');
     }
 
-    const tagIds = dto.tagIds ?? [];
+    const tagIds = await this.resolveTagIds(dto.tagIds, dto.newTagNames);
     const row = await this.prisma.podcast.create({
       data: {
         title: dto.title,
@@ -421,10 +445,11 @@ export class PodcastService {
     if (dto.coverPath !== undefined) data.coverPath = dto.coverPath;
     if (dto.audioPath !== undefined) data.audioPath = dto.audioPath;
     if (dto.duration !== undefined) data.duration = dto.duration;
-    if (dto.tagIds !== undefined) {
+    if (dto.tagIds !== undefined || dto.newTagNames !== undefined) {
+      const tagIds = await this.resolveTagIds(dto.tagIds, dto.newTagNames);
       data.tags = {
         deleteMany: {},
-        create: dto.tagIds.map((tagId) => ({
+        create: tagIds.map((tagId) => ({
           tag: { connect: { id: tagId } },
         })),
       };

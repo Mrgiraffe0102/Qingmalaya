@@ -46,4 +46,16 @@ export class CreatePodcastDto {
   @IsOptional()
   @Type(() => Number)
   tagIds?: number[];
+
+  /**
+   * Names of new tags the user wants to introduce with this podcast. Each
+   * name is find-or-created on the server during create/update, so the user
+   * does not pollute the global tag list by typing names and abandoning the
+   * form — only submitted podcasts contribute new tags to the system.
+   */
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(30, { each: true })
+  @IsOptional()
+  newTagNames?: string[];
 }
