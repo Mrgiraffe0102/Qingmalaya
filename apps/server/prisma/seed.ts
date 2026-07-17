@@ -1,10 +1,18 @@
 /**
- * Prisma seed script for the 万卷回响 campus podcast platform (Task 7).
+ * Prisma seed script for the 万卷回响 campus podcast platform.
  *
- * Idempotent: safe to run repeatedly. Uses upsert for entities with a unique
- * business key (User.studentId, Tag.name, SystemSetting.key) and a
- * find-then-update-or-create pattern for entities without one (Class, Banner,
- * Announcement). Podcasts are recreated by title (PodcastTag rows cascade).
+ * Seeds a fresh G25 cohort sourced from `g25-data.json`:
+ *   - 19 classes named G2501..G2519, grade G25
+ *   - 10 teachers whose studentId is the pinyin of their name
+ *   - 816 students distributed across the 19 classes
+ *   - 4 student admins per class (the first 4 by studentId)
+ *   - Each teacher manages 1-2 classes via TeacherClass
+ *
+ * Idempotent: safe to run repeatedly. Cleans up any non-matching legacy
+ * rows from the previous seed (2024-grade classes, 2024001..2024020 students,
+ * the T2024 teacher, and any podcasts that referenced them) before
+ * re-seeding. The OPERATOR, SUPER_ADMIN accounts and other shared resources
+ * (tags, banner, announcement, system settings) are preserved.
  *
  * Run via: pnpm --filter @qingmalaya/server prisma:seed
  */
@@ -14,13 +22,14 @@ import {
   PrismaClient,
   Role,
   UserStatus,
-  PodcastStatus,
   TagColor,
   BannerLinkType,
   BannerStatus,
   AnnouncementStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -29,25 +38,31 @@ function hash(plain: string): string {
   return bcrypt.hashSync(plain, 10);
 }
 
-/** Inclusive random integer in [min, max]. */
-function randInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+interface G25Class {
+  name: string;
+  grade: string;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function daysAgo(days: number): Date {
-  return new Date(Date.now() - days * DAY_MS);
+interface G25Student {
+  studentId: string;
+  name: string;
+  className: string;
+  isStudentAdmin: boolean;
 }
 
-function daysFromNow(days: number): Date {
-  return new Date(Date.now() + days * DAY_MS);
+interface G25Teacher {
+  name: string;
+  studentId: string; // pinyin
+  classNames: string[];
 }
 
-/**
- * Upsert a Class by its (non-unique) name. Class has no unique business key
- * besides the autoincrement id, so look it up by name then update or create.
- */
+interface G25Data {
+  classes: G25Class[];
+  students: G25Student[];
+  teachers: G25Teacher[];
+}
+
+/** Upsert a Class by (non-unique) name. */
 async function upsertClass(def: {
   name: string;
   grade: string;
@@ -63,110 +78,164 @@ async function upsertClass(def: {
 }
 
 async function main(): Promise<void> {
-  console.log('[seed] Start seeding 万卷回响 database...');
+  console.log('[seed] Start seeding 万卷回响 G25 database...');
+
+  // Load G25 data from the sibling JSON file.
+  const dataPath = path.join(__dirname, 'g25-data.json');
+  const raw = fs.readFileSync(dataPath, 'utf-8');
+  const data: G25Data = JSON.parse(raw);
+  const { classes, students, teachers } = data;
+
+  console.log(
+    `[seed] Loaded G25 data: ${classes.length} classes, ${students.length} students, ${teachers.length} teachers`,
+  );
+
+  // ----------------------------------------------------------------- Cleanup
+  // Remove legacy rows from the previous (2024) seed so we can re-seed
+  // cleanly. The OPERATOR + SUPER_ADMIN accounts and shared resources
+  // (tags, banner, announcement, system settings) are left intact.
+  console.log('[seed] Cleaning up legacy 2024 data...');
+
+  // Legacy podcasts by title (cascades to comments/likes/etc. via authorId).
+  const legacyPodcastTitles = [
+    '关于存在主义的思考',
+    'UI设计入门心得',
+    '校园音乐节的那些事',
+    '从算法看世界',
+    '心理学与日常生活',
+  ];
+  for (const title of legacyPodcastTitles) {
+    await prisma.podcast.deleteMany({ where: { title } });
+  }
+
+  // Legacy student IDs (2024001..2024020). Cascade their likes/favorites/
+  // play histories/notifications. AdminLog entries authored by them are
+  // deleted first (AdminLog has no onDelete cascade).
+  const legacyStudentIds: string[] = [];
+  for (let i = 1; i <= 20; i++) {
+    legacyStudentIds.push(`2024${String(i).padStart(3, '0')}`);
+  }
+  for (const sid of legacyStudentIds) {
+    await prisma.adminLog.deleteMany({ where: { admin: { studentId: sid } } });
+  }
+  await prisma.user.deleteMany({ where: { studentId: { in: legacyStudentIds } } });
+
+  // Legacy teacher T2024.
+  await prisma.adminLog.deleteMany({ where: { admin: { studentId: 'T2024' } } });
+  await prisma.user.deleteMany({ where: { studentId: 'T2024' } });
+
+  // Legacy classes (2024 grade) — safe to delete now since their users are
+  // gone. TeacherClass rows for legacy teachers are removed with cascade.
+  await prisma.class.deleteMany({
+    where: { name: { in: ['计算机2024-1班', '计算机2024-2班', '哲学2024班'] } },
+  });
 
   // ----------------------------------------------------------------- Classes
-  console.log('[seed] Classes (3)');
-  const cs1 = await upsertClass({
-    name: '计算机2024-1班',
-    grade: '2024',
-  });
-  const cs2 = await upsertClass({
-    name: '计算机2024-2班',
-    grade: '2024',
-  });
-  const ph = await upsertClass({
-    name: '哲学2024班',
-    grade: '2024',
-  });
+  console.log(`[seed] Classes (${classes.length})`);
+  const classByName = new Map<string, { id: number; name: string }>();
+  for (const c of classes) {
+    const created = await upsertClass(c);
+    classByName.set(created.name, created);
+  }
 
   // ---------------------------------------------------------------- Students
-  // 20 students: 2024001-2024020. Distribution:
-  //   2024001-2024008 -> CS2024-1
-  //   2024009-2024016 -> CS2024-2
-  //   2024017-2024020 -> PH2024
-  console.log('[seed] Students (20)');
-  const studentNames = [
-    '张伟', '王芳', '李明', '陈静', '刘洋', '杨晨', '赵雪', '周涛',
-    '孙琳', '朱琪', '徐磊', '胡敏', '郭鹏', '何婷', '高峰', '林娜',
-    '郑浩', '梁玉', '谢军', '唐丽',
-  ];
-  const createdStudents: { studentId: string; id: number; classId: number | null }[] = [];
-  for (let i = 1; i <= 20; i++) {
-    const studentId = `2024${String(i).padStart(3, '0')}`; // 2024001 .. 2024020
-    const name = studentNames[i - 1];
-    // Password = last 6 characters of the studentId (e.g. "024001" for "2024001").
-    const password = studentId.slice(-6);
-    let classId: number;
-    if (i >= 17) classId = ph.id;
-    else if (i >= 9) classId = cs2.id;
-    else classId = cs1.id;
+  console.log(`[seed] Students (${students.length})`);
+  const studentById = new Map<
+    string,
+    { id: number; studentId: string; classId: number | null }
+  >();
+  // Bulk pre-fetch existing students to keep the loop fast.
+  const existingStudents = await prisma.user.findMany({
+    where: {
+      studentId: { in: students.map((s) => s.studentId) },
+    },
+    select: { id: true, studentId: true, classId: true },
+  });
+  for (const e of existingStudents) {
+    studentById.set(e.studentId, e);
+  }
 
+  for (const s of students) {
+    const classId = classByName.get(s.className)?.id ?? null;
     const user = await prisma.user.upsert({
-      where: { studentId },
+      where: { studentId: s.studentId },
       update: {
-        name,
+        name: s.name,
         classId,
-        passwordHash: hash(password),
+        passwordHash: hash(s.studentId),
         role: Role.STUDENT,
         status: UserStatus.ACTIVE,
         mustChangePassword: true,
         firstLogin: true,
-        totalListens: randInt(0, 500),
-        totalLikes: randInt(0, 200),
+        isStudentAdmin: s.isStudentAdmin,
       },
       create: {
-        studentId,
-        name,
+        studentId: s.studentId,
+        name: s.name,
         classId,
-        passwordHash: hash(password),
+        passwordHash: hash(s.studentId),
         role: Role.STUDENT,
         status: UserStatus.ACTIVE,
         mustChangePassword: true,
         firstLogin: true,
-        totalListens: randInt(0, 500),
-        totalLikes: randInt(0, 200),
+        isStudentAdmin: s.isStudentAdmin,
+        totalListens: 0,
+        totalLikes: 0,
       },
     });
-    createdStudents.push({ studentId: user.studentId, id: user.id, classId: user.classId });
+    studentById.set(user.studentId, {
+      id: user.id,
+      studentId: user.studentId,
+      classId: user.classId,
+    });
   }
 
   // ----------------------------------------------------------------- Teacher
-  console.log('[seed] Teacher (1)');
-  const teacher = await prisma.user.upsert({
-    where: { studentId: 'T2024' },
-    update: {
-      name: '王老师',
-      classId: cs1.id,
-      passwordHash: hash('teacher123'),
-      role: Role.TEACHER,
-      status: UserStatus.ACTIVE,
-      mustChangePassword: true,
-      firstLogin: true,
-      manageAllClasses: false,
-    },
-    create: {
-      studentId: 'T2024',
-      name: '王老师',
-      classId: cs1.id,
-      passwordHash: hash('teacher123'),
-      role: Role.TEACHER,
-      status: UserStatus.ACTIVE,
-      mustChangePassword: true,
-      firstLogin: true,
-      manageAllClasses: false,
-    },
-  });
+  console.log(`[seed] Teachers (${teachers.length})`);
+  for (const t of teachers) {
+    // No classId for teachers; their managed classes are tracked via
+    // TeacherClass. manageAllClasses=false → scope to assigned classes only.
+    const teacher = await prisma.user.upsert({
+      where: { studentId: t.studentId },
+      update: {
+        name: t.name,
+        classId: null,
+        passwordHash: hash(t.studentId),
+        role: Role.TEACHER,
+        status: UserStatus.ACTIVE,
+        mustChangePassword: true,
+        firstLogin: true,
+        manageAllClasses: false,
+      },
+      create: {
+        studentId: t.studentId,
+        name: t.name,
+        classId: null,
+        passwordHash: hash(t.studentId),
+        role: Role.TEACHER,
+        status: UserStatus.ACTIVE,
+        mustChangePassword: true,
+        firstLogin: true,
+        manageAllClasses: false,
+      },
+    });
 
-  // Assign teacher to manage cs1 + cs2
-  console.log('[seed] Teacher class assignments (2)');
-  await prisma.teacherClass.deleteMany({ where: { teacherId: teacher.id } });
-  await prisma.teacherClass.createMany({
-    data: [
-      { teacherId: teacher.id, classId: cs1.id },
-      { teacherId: teacher.id, classId: cs2.id },
-    ],
-  });
+    // Replace TeacherClass rows for this teacher.
+    await prisma.teacherClass.deleteMany({ where: { teacherId: teacher.id } });
+    const teacherClassIds: number[] = [];
+    for (const cn of t.classNames) {
+      const cls = classByName.get(cn);
+      if (cls) teacherClassIds.push(cls.id);
+    }
+    if (teacherClassIds.length > 0) {
+      await prisma.teacherClass.createMany({
+        data: teacherClassIds.map((classId) => ({
+          teacherId: teacher.id,
+          classId,
+        })),
+      });
+    }
+  }
 
   // ---------------------------------------------------------------- Operator
   console.log('[seed] Operator (1)');
@@ -230,86 +299,6 @@ async function main(): Promise<void> {
     });
   }
 
-  // ---------------------------------------------------------------- Podcasts
-  // 5 published podcasts authored by students from different classes.
-  console.log('[seed] Podcasts (5)');
-  const podcastDefs: {
-    title: string;
-    description: string;
-    authorStudentId: string;
-    tagNames: string[];
-  }[] = [
-    {
-      title: '关于存在主义的思考',
-      description:
-        '存在主义是20世纪重要的哲学流派,强调个人自由与选择。本期播客我们从萨特、加缪谈起,聊聊如何在平凡生活中寻找属于自己的意义。',
-      authorStudentId: '2024017',
-      tagNames: ['哲学', '文学', '心理'],
-    },
-    {
-      title: 'UI设计入门心得',
-      description:
-        '作为计算机专业的学生,我在自学UI设计的过程中总结了一些经验。从配色、排版到组件库的使用,这里分享给同样刚入门的你。',
-      authorStudentId: '2024001',
-      tagNames: ['设计', '科技'],
-    },
-    {
-      title: '校园音乐节的那些事',
-      description:
-        '去年的校园音乐节是我大学生活最难忘的回忆之一。从筹备到正式演出,台前幕后都有哪些有趣的故事?一起来听听吧。',
-      authorStudentId: '2024009',
-      tagNames: ['音乐', '校园生活'],
-    },
-    {
-      title: '从算法看世界',
-      description:
-        '算法不只是代码,更是一种思维方式。本集聊聊排序、搜索背后的思想,以及它们如何潜移默化地影响我们看待世界的角度。',
-      authorStudentId: '2024003',
-      tagNames: ['科技', '哲学'],
-    },
-    {
-      title: '心理学与日常生活',
-      description:
-        '心理学离我们并不遥远。从情绪管理到人际交往,本期分享几个实用的心理学小知识,帮助你更好地理解自己与他人。',
-      authorStudentId: '2024011',
-      tagNames: ['心理', '校园生活', '文学'],
-    },
-  ];
-
-  for (let i = 0; i < podcastDefs.length; i++) {
-    const def = podcastDefs[i];
-    const author = createdStudents.find((s) => s.studentId === def.authorStudentId);
-    if (!author) {
-      throw new Error(`Author student not found: ${def.authorStudentId}`);
-    }
-
-    // Idempotent: remove any previously seeded podcast with this title (cascades
-    // PodcastTag), then recreate with fresh random stats and tag links.
-    await prisma.podcast.deleteMany({ where: { title: def.title } });
-
-    await prisma.podcast.create({
-      data: {
-        title: def.title,
-        description: def.description,
-        coverPath: null,
-        audioPath: `uploads/2024/07/sample-${i + 1}.mp3`,
-        duration: randInt(300, 3600),
-        authorId: author.id,
-        classId: author.classId,
-        status: PodcastStatus.PUBLISHED,
-        publishedAt: daysAgo(randInt(1, 60)),
-        playCount: randInt(50, 5000),
-        likeCount: randInt(10, 1000),
-        commentCount: randInt(0, 100),
-        tags: {
-          create: def.tagNames.map((name) => ({
-            tag: { connect: { name } },
-          })),
-        },
-      },
-    });
-  }
-
   // ------------------------------------------------------------------ Banner
   console.log('[seed] Banner (1)');
   const bannerTitle = 'G25 播客大赛火热进行中';
@@ -319,8 +308,8 @@ async function main(): Promise<void> {
     linkType: BannerLinkType.NONE,
     sort: 0,
     status: BannerStatus.ONLINE,
-    startAt: daysAgo(7),
-    endAt: daysFromNow(30),
+    startAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    endAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   };
   const existingBanner = await prisma.banner.findFirst({ where: { title: bannerTitle } });
   if (existingBanner) {
@@ -368,13 +357,21 @@ async function main(): Promise<void> {
     });
   }
 
+  // Summary
+  const studentAdminCount = students.filter((s) => s.isStudentAdmin).length;
   console.log('[seed] Done. Summary:');
-  console.log('  - Students: 20 (2024001-2024020, password = last 6 digits of studentId)');
-  console.log('  - Teacher: T2024 (password: teacher123)');
+  console.log(`  - Classes: ${classes.length} (G2501..G2519, grade G25)`);
+  console.log(`  - Students: ${students.length} (password = studentId)`);
+  console.log(`  - Student admins: ${studentAdminCount} (4 per class)`);
+  console.log(
+    `  - Teachers: ${teachers.length} (username/password = pinyin, e.g. zhangjiaqi / zhangjiaqi)`,
+  );
+  for (const t of teachers) {
+    console.log(`      · ${t.name} (${t.studentId}) → ${t.classNames.join(', ')}`);
+  }
   console.log('  - Operator: operator (password: operator123)');
   console.log('  - Super Admin: admin (password: admin123)');
-  console.log(`  - Classes: 3 | Tags: ${tagDefs.length} | Podcasts: ${podcastDefs.length}`);
-  console.log('  - Banner: 1 | Announcement: 1 | SystemSettings: 4');
+  console.log(`  - Tags: ${tagDefs.length} | Banner: 1 | Announcement: 1 | SystemSettings: 4`);
 }
 
 main()
