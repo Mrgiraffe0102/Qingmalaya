@@ -22,8 +22,7 @@ import { CreateTagDto } from './dto/create-tag.dto';
  *                   tag management.
  */
 @Controller('tags')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('OPERATOR', 'SUPER_ADMIN')
+@UseGuards(JwtAuthGuard)
 export class TagsController {
   constructor(private readonly tags: TagsService) {}
 
@@ -39,6 +38,8 @@ export class TagsController {
 
   @Post()
   @HttpCode(200)
+  @UseGuards(RolesGuard)
+  @Roles('OPERATOR', 'SUPER_ADMIN')
   create(@Body() dto: CreateTagDto) {
     return this.tags.findOrCreate(dto.name);
   }

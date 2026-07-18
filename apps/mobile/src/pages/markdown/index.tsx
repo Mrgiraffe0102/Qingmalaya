@@ -3,6 +3,8 @@ import Taro from '@tarojs/taro'
 import { View, Text } from '@tarojs/components'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
+import rehypeRaw from 'rehype-raw'
 import AppLayout from '../../components/AppLayout'
 import PageContainer from '../../components/AppLayout/PageContainer'
 import { useAuthRedirect } from '../../utils/route-guard'
@@ -28,6 +30,22 @@ function resolveImgSrc(src: string): string {
   if (src.startsWith('/')) return `${STATIC_ORIGIN}/static${src}`
   return `${STATIC_ORIGIN}/static/${src}`
 }
+
+// Reusable style for the inline `<code>` chip. The block-level `<pre><code>`
+// is fully styled by .markdown-body in app.css (surface-container-low with
+// a soft border); inline code uses a very low-alpha primary tint so it
+// reads as a different kind of element at a glance, without screaming for
+// attention — same restrained tone as cards in the rest of the app.
+const inlineCodeStyle = {
+  background: 'rgba(77, 98, 101, 0.08)',
+  color: '#424849',
+  padding: '2px 6px',
+  borderRadius: '4px',
+  fontSize: '0.88em',
+  fontFamily:
+    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+  fontWeight: 500,
+} as const
 
 export default function MarkdownPage() {
   const ok = useAuthRedirect()
@@ -106,133 +124,311 @@ export default function MarkdownPage() {
             <View
               className='markdown-body'
               style={{
-                color: '#1c1b1f',
+                color: '#1b1c1c',
                 fontSize: '15px',
-                lineHeight: '1.8',
+                lineHeight: '1.85',
               }}
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw, [rehypeHighlight, { detect: true }]]}
                 components={{
+                  // Inline elements
                   img: ({ src, alt }) => (
                     <img
                       src={resolveImgSrc(src ?? '')}
                       alt={alt ?? ''}
                       style={{
                         maxWidth: '100%',
-                        borderRadius: '8px',
-                        margin: '12px 0',
+                        borderRadius: '12px',
+                        margin: '14px 0',
+                        boxShadow: '0 2px 8px rgba(28, 28, 28, 0.06)',
                       }}
                     />
-                  ),
-                  h1: ({ children }) => (
-                    <h1 style={{ fontSize: '22px', fontWeight: 700, margin: '20px 0 12px', color: '#1c1b1f' }}>
-                      {children}
-                    </h1>
-                  ),
-                  h2: ({ children }) => (
-                    <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '18px 0 10px', color: '#1c1b1f' }}>
-                      {children}
-                    </h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, margin: '16px 0 8px', color: '#1c1b1f' }}>
-                      {children}
-                    </h3>
-                  ),
-                  p: ({ children }) => (
-                    <p style={{ margin: '8px 0' }}>{children}</p>
-                  ),
-                  ul: ({ children }) => (
-                    <ul style={{ paddingLeft: '24px', margin: '8px 0' }}>{children}</ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol style={{ paddingLeft: '24px', margin: '8px 0' }}>{children}</ol>
-                  ),
-                  li: ({ children }) => (
-                    <li style={{ margin: '4px 0' }}>{children}</li>
                   ),
                   a: ({ children, href }) => (
                     <a
                       href={href}
-                      style={{ color: '#4d6265', textDecoration: 'underline' }}
+                      style={{ color: '#4d6265' }}
                       target='_blank'
                       rel='noopener noreferrer'
                     >
                       {children}
                     </a>
                   ),
+                  // rehype-highlight emits a <code> with class="language-xxx"
+                  // for both <pre><code> and inline <code> when not inside a
+                  // <pre>. We only want to style inline code; pre > code is
+                  // handled by the highlight.js theme in app.css.
+                  code: ({ inline, className, children, ...props }: any) => {
+                    if (inline) {
+                      return (
+                        <code className={className} style={inlineCodeStyle} {...props}>
+                          {children}
+                        </code>
+                      )
+                    }
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    )
+                  },
+                  // Headings — full visual treatment lives in app.css
+                  // (h1 with bottom rule, h2 with brand gradient bar,
+                  // h3-h6 with progressively lighter weight/color). The
+                  // inline styles here are minimum guarantees so the
+                  // elements render correctly even if CSS is cached stale.
+                  h1: ({ children }) => (
+                    <h1
+                      style={{
+                        fontSize: '24px',
+                        fontWeight: 700,
+                        margin: '28px 0 14px',
+                        paddingBottom: '10px',
+                        borderBottom: '1px solid rgba(194, 199, 200, 0.5)',
+                        color: '#1b1c1c',
+                      }}
+                    >
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2
+                      style={{
+                        fontSize: '20px',
+                        fontWeight: 700,
+                        margin: '24px 0 10px',
+                        color: '#1b1c1c',
+                        borderLeft: '3px solid #4d6265',
+                        paddingLeft: '12px',
+                      }}
+                    >
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3
+                      style={{
+                        fontSize: '17px',
+                        fontWeight: 600,
+                        margin: '20px 0 8px',
+                        color: '#424849',
+                      }}
+                    >
+                      {children}
+                    </h3>
+                  ),
+                  h4: ({ children }) => (
+                    <h4
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        margin: '16px 0 6px',
+                        color: '#424849',
+                      }}
+                    >
+                      {children}
+                    </h4>
+                  ),
+                  h5: ({ children }) => (
+                    <h5
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        margin: '14px 0 6px',
+                        color: '#424849',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}
+                    >
+                      {children}
+                    </h5>
+                  ),
+                  h6: ({ children }) => (
+                    <h6
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        margin: '12px 0 4px',
+                        color: '#727879',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                      }}
+                    >
+                      {children}
+                    </h6>
+                  ),
+                  p: ({ children }) => (
+                    <p style={{ margin: '10px 0' }}>{children}</p>
+                  ),
+                  // Lists
+                  ul: ({ children }) => (
+                    // listStyle must be set inline because Tailwind's
+                    // preflight (`@tailwind base`) applies `list-style: none`
+                    // to all ul/ol — without an explicit listStyle the
+                    // bullets/numbers are stripped and lists look like plain
+                    // stacked text.
+                    <ul
+                      style={{
+                        paddingLeft: '26px',
+                        margin: '10px 0',
+                        listStyle: 'disc outside',
+                      }}
+                    >
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children, start, type }: any) => (
+                    <ol
+                      start={start}
+                      type={type}
+                      style={{
+                        paddingLeft: '26px',
+                        margin: '10px 0',
+                        listStyle:
+                          type === 'a'
+                            ? 'lower-alpha outside'
+                            : type === 'A'
+                              ? 'upper-alpha outside'
+                              : type === 'i'
+                                ? 'lower-roman outside'
+                                : type === 'I'
+                                  ? 'upper-roman outside'
+                                  : 'decimal outside',
+                      }}
+                    >
+                      {children}
+                    </ol>
+                  ),
+                  li: ({ children }) => (
+                    // display: list-item keeps the bullet/number anchored to
+                    // the item; preflight inherits the parent list-style.
+                    <li style={{ margin: '6px 0', display: 'list-item' }}>
+                      {children}
+                    </li>
+                  ),
+                  // Block elements
                   blockquote: ({ children }) => (
                     <blockquote
                       style={{
-                        borderLeft: '3px solid #4d6265',
-                        paddingLeft: '12px',
-                        margin: '12px 0',
-                        color: '#727879',
+                        background: 'rgba(77, 98, 101, 0.06)',
+                        borderLeft: '2px solid #4d6265',
+                        borderRadius: '0 8px 8px 0',
+                        padding: '10px 14px',
+                        margin: '14px 0',
+                        color: '#424849',
                       }}
                     >
                       {children}
                     </blockquote>
                   ),
-                  code: ({ children }) => (
-                    <code
-                      style={{
-                        background: 'rgba(114,120,121,0.1)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '13px',
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      {children}
-                    </code>
-                  ),
-                  pre: ({ children }) => (
+                  pre: ({ children, ...props }: any) => (
                     <pre
+                      {...props}
                       style={{
-                        background: 'rgba(114,120,121,0.08)',
-                        padding: '12px',
+                        background: '#f5f3f3',
+                        border: '1px solid rgba(194, 199, 200, 0.45)',
+                        padding: '12px 14px',
                         borderRadius: '8px',
                         overflow: 'auto',
-                        margin: '12px 0',
+                        margin: '14px 0',
+                        fontSize: '13px',
+                        lineHeight: 1.7,
+                        color: '#1b1c1c',
                       }}
                     >
                       {children}
                     </pre>
                   ),
-                  table: ({ children }) => (
-                    <table
+                  hr: () => (
+                    <hr
                       style={{
-                        width: '100%',
-                        borderCollapse: 'collapse',
-                        margin: '12px 0',
+                        border: 'none',
+                        borderTop: '1px solid rgba(194, 199, 200, 0.5)',
+                        margin: '20px 0',
                       }}
-                    >
-                      {children}
-                    </table>
+                    />
                   ),
-                  th: ({ children }) => (
+                  // Tables (GFM)
+                  table: ({ children }) => (
+                    <div style={{ overflowX: 'auto', margin: '14px 0' }}>
+                      <table
+                        style={{
+                          width: '100%',
+                          borderCollapse: 'separate',
+                          borderSpacing: 0,
+                          fontSize: '14px',
+                          border: '1px solid rgba(194, 199, 200, 0.45)',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  thead: ({ children }) => (
+                    <thead style={{ background: 'rgba(77, 98, 101, 0.06)' }}>
+                      {children}
+                    </thead>
+                  ),
+                  tbody: ({ children }) => <tbody>{children}</tbody>,
+                  tr: ({ children }) => <tr>{children}</tr>,
+                  th: ({ children, style }: any) => (
                     <th
                       style={{
-                        border: '1px solid rgba(114,120,121,0.2)',
-                        padding: '8px',
+                        borderBottom: '1px solid rgba(194, 199, 200, 0.45)',
+                        padding: '10px 12px',
                         textAlign: 'left',
                         fontWeight: 600,
+                        color: '#424849',
+                        background: 'rgba(77, 98, 101, 0.06)',
+                        ...(style ?? {}),
                       }}
                     >
                       {children}
                     </th>
                   ),
-                  td: ({ children }) => (
+                  td: ({ children, style }: any) => (
                     <td
                       style={{
-                        border: '1px solid rgba(114,120,121,0.2)',
-                        padding: '8px',
+                        borderTop: '1px solid rgba(194, 199, 200, 0.25)',
+                        padding: '10px 12px',
+                        color: '#1b1c1c',
+                        background: '#ffffff',
+                        ...(style ?? {}),
                       }}
                     >
                       {children}
                     </td>
                   ),
+                  // GFM task list checkboxes — react-markdown already
+                  // renders an <input type="checkbox" disabled> at the
+                  // start of the <li>. Tailwind preflight also hides
+                  // native checkboxes by default, so we restore a
+                  // visible one with our own accent color.
+                  input: ({ type, checked, disabled, ...rest }: any) => {
+                    if (type === 'checkbox') {
+                      return (
+                        <input
+                          type='checkbox'
+                          checked={!!checked}
+                          disabled={disabled}
+                          readOnly
+                          {...rest}
+                          style={{
+                            marginRight: '8px',
+                            verticalAlign: 'middle',
+                            width: '16px',
+                            height: '16px',
+                            accentColor: '#4d6265',
+                          }}
+                        />
+                      )
+                    }
+                    return <input type={type} {...rest} />
+                  },
                 }}
               >
                 {content}

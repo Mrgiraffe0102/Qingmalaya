@@ -4,12 +4,21 @@
  * Left pane is a textarea, right pane renders the markdown via react-markdown.
  * The toolbar has an "insert image" button that uploads an image and inserts
  * the markdown image syntax at the cursor position.
+ *
+ * Preview uses the same plugin set as the mobile banner page
+ * (apps/mobile/src/pages/markdown/index.tsx): remark-gfm + rehype-raw +
+ * rehype-highlight, so what the admin sees here is exactly what users see on
+ * mobile. Custom components only override inline styles (Tailwind preflight
+ * does not apply on the admin side, so the .markdown-body CSS in app.css
+ * already covers the defaults).
  */
 import React, { useRef, useState } from 'react';
 import { App, Button, Modal, Upload, type UploadProps } from 'antd';
 import { PictureOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import rehypeRaw from 'rehype-raw';
 import type { UploadedFile } from '@qingmalaya/shared';
 import { uploadImage, listUploads } from '@/api/uploads';
 import { coverUrl } from '@/utils/file';
@@ -121,6 +130,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value = '', onChange })
           }}
         />
         <div
+          className="markdown-body"
           style={{
             flex: 1,
             minHeight: 300,
@@ -128,9 +138,23 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value = '', onChange })
             border: '1px solid #d9d9d9',
             borderRadius: 6,
             overflow: 'auto',
+            color: '#1c1b1f',
+            fontSize: 14,
+            lineHeight: 1.7,
+            background: '#fff',
           }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw, [rehypeHighlight, { detect: true }]]}
+            components={{
+              a: ({ children, href }) => (
+                <a href={href} target="_blank" rel="noopener noreferrer">
+                  {children}
+                </a>
+              ),
+            }}
+          >
             {value || '*预览区*'}
           </ReactMarkdown>
         </div>

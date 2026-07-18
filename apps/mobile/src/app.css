@@ -146,6 +146,388 @@ page {
   animation-fill-mode: forwards;
 }
 
+/* Markdown body — overrides Tailwind preflight inside the .markdown-body
+ * container so react-markdown's HTML output renders correctly on H5,
+ * styled to match the 万卷回响 design system (Material 3 muted teal/sage
+ * palette, Inter, 4/8/12/16 spacing, 8/12/16 radii).
+ *
+ * Design tokens referenced (see packages/shared/src/design-tokens.ts):
+ *   surface-container-low    #f5f3f3   — code block surface, striped rows
+ *   surface-container-lowest #ffffff   — table cells, kbd
+ *   outline-variant          #c2c7c8   — borders/dividers (low alpha)
+ *   on-surface               #1b1c1c   — primary text
+ *   on-surface-variant       #424849   — secondary text
+ *   primary                  #4d6265   — links, accents, list markers
+ *   secondary                #326578   — deeper teal accent
+ *   tertiary                 #556158   — sage accent
+ *
+ * Note on tinted surfaces: the design tokens expose `primary-container`
+ * (#e0f7fa) and `tertiary-container` (#e9f6ea) but those are too vivid
+ * for body-content callouts in a long-form reading layout. We use
+ * `rgba(77, 98, 101, 0.06-0.10)` (primary at very low alpha) for
+ * blockquote / inline code / table headers instead — same teal hue,
+ * dialed down to the same restrained tone used by cards in the rest
+ * of the app (e.g. about page `rgba(77, 98, 101, 0.1)` icon chips).
+ *
+ * Tailwind preflight (@tailwind base) resets the following — we restore
+ * them or override them with design-system values:
+ *   - ul/ol/menu → list-style: none; margin: 0; padding: 0
+ *   - h1–h6     → font-size: inherit; font-weight: inherit
+ *   - p / blockquote / pre → margin: 0
+ *   - a         → color: inherit; text-decoration: inherit
+ *   - img       → display: block; max-width: 100%
+ *   - table     → border-color: inherit; border-collapse: collapse
+ *   - sub/sup   → vertical-align: baseline; position: static
+ *   - del/ins/mark/u → text-decoration/style reset
+ *   - kbd       → font-family reset
+ *   - dl/dt/dd  → margin: 0
+ *   - hr        → color/height reset
+ *
+ * The banner markdown page applies per-element inline styles on top of
+ * these for finer control (colors, spacing). This CSS provides the
+ * baseline so HTML allowed via rehype-raw (<sub>, <sup>, <mark>, <kbd>,
+ * <u>, <dl>, etc.) and any future markdown renderers without inline
+ * styles stay on-brand. */
+.markdown-body {
+  color: #1b1c1c;
+  font-family: 'Inter', system-ui, -apple-system, 'PingFang SC', sans-serif;
+  font-size: 15px;
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+  word-wrap: break-word;
+  /* Slightly tighter max width so long lines feel like editorial reading
+   * rather than a stretched feed. */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Headings — Material 3 type scale, on-surface text, with subtle
+ * separation between the heading and the body that follows. */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  color: #1b1c1c;
+  font-weight: 700;
+  display: block;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+.markdown-body h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 28px 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(194, 199, 200, 0.5);
+}
+.markdown-body h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 24px 0 10px;
+  border-left: 3px solid #4d6265;
+  padding-left: 12px;
+}
+.markdown-body h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 20px 0 8px;
+  color: #424849;
+}
+.markdown-body h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 16px 0 6px;
+  color: #424849;
+}
+.markdown-body h5 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 14px 0 6px;
+  color: #424849;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.markdown-body h6 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 4px;
+  color: #727879;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Paragraphs — relaxed rhythm matching Inter at 15px. */
+.markdown-body p {
+  margin: 10px 0;
+  display: block;
+  color: #1b1c1c;
+}
+.markdown-body strong { color: #1b1c1c; font-weight: 700; }
+.markdown-body em { font-style: italic; color: #1b1c1c; }
+
+/* Links — primary color with a subtle underline that lifts on hover.
+ * Matches the .text-primary + .underline pattern used elsewhere in the app. */
+.markdown-body a {
+  color: #4d6265;
+  text-decoration: none;
+  background-image: linear-gradient(180deg, transparent 88%, rgba(77, 98, 101, 0.35) 88%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transition: color 0.15s ease, background-image 0.15s ease;
+}
+.markdown-body a:hover {
+  color: #326578;
+  background-image: linear-gradient(180deg, transparent 80%, rgba(50, 101, 120, 0.5) 80%);
+}
+
+/* Lists — discs/dashes colored to match the primary palette, soft
+ * padding rhythm. `marker-color` is what gives the bullets a brand
+ * color while keeping the text body color. */
+.markdown-body ul {
+  list-style: disc;
+  padding-left: 26px;
+  margin: 10px 0;
+}
+.markdown-body ol {
+  list-style: decimal;
+  padding-left: 26px;
+  margin: 10px 0;
+}
+.markdown-body li {
+  display: list-item;
+  margin: 6px 0;
+  padding-left: 4px;
+}
+.markdown-body li::marker {
+  color: #4d6265;
+}
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin: 4px 0;
+}
+.markdown-body li > p {
+  margin: 4px 0;
+}
+
+/* Blockquote — subtle primary-tinted surface + thin primary left rule.
+ * Uses a very low-alpha primary tint (not the bright primary-container
+ * token) so the callout feels editorial, not loud. */
+.markdown-body blockquote {
+  margin: 14px 0;
+  padding: 10px 14px;
+  background: rgba(77, 98, 101, 0.06);
+  border-left: 2px solid #4d6265;
+  border-radius: 0 8px 8px 0;
+  color: #424849;
+  font-style: normal;
+}
+.markdown-body blockquote p {
+  margin: 4px 0;
+  color: #424849;
+}
+.markdown-body blockquote blockquote {
+  background: rgba(77, 98, 101, 0.04);
+  margin: 8px 0;
+}
+
+/* Code — surface-container-low for blocks (matches card surface),
+ * a barely-tinted chip for inline so the two read as distinct but
+ * both stay quiet against the body. */
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.88em;
+  background: rgba(77, 98, 101, 0.08);
+  color: #424849;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.markdown-body pre {
+  background: #f5f3f3;
+  border: 1px solid rgba(194, 199, 200, 0.45);
+  padding: 12px 14px;
+  border-radius: 8px;
+  overflow: auto;
+  margin: 14px 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #1b1c1c;
+}
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 13px;
+  color: inherit;
+  border-radius: 0;
+  font-weight: 400;
+}
+
+/* Tables — subtle primary-tinted header, white cells, soft outline. */
+.markdown-body table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 14px 0;
+  display: table;
+  font-size: 14px;
+  border: 1px solid rgba(194, 199, 200, 0.45);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.markdown-body thead {
+  background: rgba(77, 98, 101, 0.06);
+}
+.markdown-body th {
+  text-align: left;
+  font-weight: 600;
+  color: #424849;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(194, 199, 200, 0.45);
+  background: rgba(77, 98, 101, 0.06);
+}
+.markdown-body td {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(194, 199, 200, 0.25);
+  color: #1b1c1c;
+  background: #ffffff;
+}
+.markdown-body tbody tr:first-child td {
+  border-top: none;
+}
+.markdown-body tbody tr:nth-child(even) td {
+  background: #f5f3f3;
+}
+
+/* Images — soft rounded corners. */
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 14px 0;
+  display: block;
+}
+
+/* Horizontal rule — subtle outline-variant line. */
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid rgba(194, 199, 200, 0.5);
+  margin: 20px 0;
+  height: 0;
+}
+
+/* Task list checkboxes — accent-color to match the brand. */
+.markdown-body input[type='checkbox'] {
+  margin-right: 8px;
+  vertical-align: middle;
+  width: 16px;
+  height: 16px;
+  accent-color: #4d6265;
+}
+
+/* Inline emphasis variants allowed via rehype-raw. */
+.markdown-body del {
+  color: #727879;
+  text-decoration: line-through;
+  text-decoration-color: rgba(114, 120, 121, 0.5);
+}
+.markdown-body sub,
+.markdown-body sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+.markdown-body sub { bottom: -0.25em; }
+.markdown-body sup { top: -0.5em; }
+
+/* Mark — tertiary-tinted chip on a low-alpha tertiary background. Stays
+ * on-palette but doesn't compete with the body text. */
+.markdown-body mark {
+  background: rgba(85, 97, 88, 0.18);
+  color: #1b1c1c;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+.markdown-body u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(77, 98, 101, 0.55);
+}
+
+/* Kbd — white pill with subtle shadow, brand-tinted text. */
+.markdown-body kbd {
+  background: #ffffff;
+  border: 1px solid rgba(194, 199, 200, 0.6);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+  font-size: 12px;
+  color: #424849;
+  box-shadow: 0 1px 0 rgba(28, 28, 28, 0.04);
+  min-width: 18px;
+  text-align: center;
+  display: inline-block;
+}
+
+/* Definition list — term/description pair. */
+.markdown-body dl { margin: 12px 0; }
+.markdown-body dt {
+  font-weight: 600;
+  margin-top: 10px;
+  color: #1b1c1c;
+}
+.markdown-body dt::before {
+  content: '◆ ';
+  color: #4d6265;
+  font-size: 0.8em;
+  margin-right: 4px;
+}
+.markdown-body dd {
+  margin-left: 20px;
+  margin-top: 4px;
+  color: #424849;
+}
+
+/* Custom highlight.js theme tuned for the 万卷回响 muted teal/sage
+ * palette. All token colors are desaturated and stay in the same
+ * tonal range as the rest of the design system — no vivid greens,
+ * oranges, or purples that would clash with the muted body content. */
+.markdown-body .hljs { color: #1b1c1c; background: transparent; }
+.markdown-body .hljs-comment,
+.markdown-body .hljs-quote { color: #727879; font-style: italic; }
+.markdown-body .hljs-keyword,
+.markdown-body .hljs-selector-tag,
+.markdown-body .hljs-literal,
+.markdown-body .hljs-section,
+.markdown-body .hljs-link { color: #4d6265; font-weight: 600; }
+.markdown-body .hljs-string,
+.markdown-body .hljs-attr,
+.markdown-body .hljs-template-tag,
+.markdown-body .hljs-template-variable,
+.markdown-body .hljs-addition { color: #5a6b4d; }
+.markdown-body .hljs-number,
+.markdown-body .hljs-symbol,
+.markdown-body .hljs-bullet,
+.markdown-body .hljs-meta { color: #8a6a4a; }
+.markdown-body .hljs-title,
+.markdown-body .hljs-name,
+.markdown-body .hljs-attribute,
+.markdown-body .hljs-built_in,
+.markdown-body .hljs-class .hljs-title { color: #326578; font-weight: 500; }
+.markdown-body .hljs-type,
+.markdown-body .hljs-tag { color: #556158; }
+.markdown-body .hljs-variable,
+.markdown-body .hljs-regexp,
+.markdown-body .hljs-deletion { color: #944a4f; }
+.markdown-body .hljs-params { color: #424849; }
+.markdown-body .hljs-emphasis { font-style: italic; }
+.markdown-body .hljs-strong { font-weight: 700; }
+
 /* ---- Apple Music-style fluid dynamic background ----
  * 5 organic blob animations with long, non-synchronized durations.
  * Each uses irregular keyframe stops to avoid mechanical repetition.
